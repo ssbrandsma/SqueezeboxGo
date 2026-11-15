@@ -13,11 +13,20 @@ chain) — see `../kernel/patches/oot-patch-list.md`.
 
 ## OOT files (this directory)
 
-- `rg35xx-h-display-oot.dtsi.template` — display pipeline template. Placeholder
-  addresses/timings; rename to `.dtsi` only after dtc build + hardware picture.
-  Final include order: board dts -> OOT dtsi -> in-tree h616.dtsi.
+- `rg35xx-h-display-oot.dtsi` — FINALIZED WP3 display pipeline (board-level:
+  PWM backlight, LCD regulator, spi-gpio panel, enables). DTB build clean;
+  hardware picture still gated. Master copy, mirrored into the kernel tree
+  by `../kernel/patches/0005` (keep in sync).
+- `rg35xx-h-display-oot.dtsi.template` — HISTORICAL placeholder, superseded
+  by the finalized `.dtsi` above. Kept for WP1/WP2 archaeology only;
+  build-kernel.sh never picks it up.
+- `BRINGUP_PANEL.md` — panel debug runbook (deferred probe, PWM backlight,
+  kmsdrm blanking) for first boot on hardware.
+- Final include order: -H.dts -> -plus -> -2024 -> in-tree h616.dtsi -> OOT
+  dtsi (the OOT include sits at the end of the -H.dts include chain so all
+  SoC labels exist before use).
 
-## Build (WP2, after DISP-* land)
+## Build (WP3: DISP-SOC-01 + DISP-PANEL-01 landed, HW-gated)
 
 ```sh
 # inside the kernel tree with OOT files copied to dts/allwinner/:
@@ -31,6 +40,10 @@ DTB is installed as **`dtb.img`** (ADR-0001): `boot.scr` loads it to
 
 ## Validation gates (each needs evidence in `docs/test-results/`)
 
-1. `dtc -I dts -O dtb` clean build, zero warnings.
+1. `dtc -I dts -O dtb` clean build, zero warnings. PASS WP3 via the kernel
+   `dtbs` target (15/15 h616-family DTBs, 0 warnings); standalone dtc 1.7.0
+   shows only pre-existing/precedent warnings (see `docs/test-results/wp3-panel.md`).
 2. Boot on hardware: stable 640x480, correct colors, backlight control works.
+   NOT RUN (no hardware; runbook: `BRINGUP_PANEL.md`).
 3. No regression: evdev + ALSA + Wi-Fi probes still pass with OOT DTB.
+   NOT RUN (needs hardware; sibling DTBs build clean).

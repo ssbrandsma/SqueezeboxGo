@@ -1,0 +1,17 @@
+# Display-pipeline config delta for RG35XX-H (WP3 panel bring-up).
+# For Agent 1: merge into platform/rg35xx-h/kernel/config/linux-rg35xx-h-aarch64.conf
+# (Display section) once the series in kernel/patches/ is accepted. All symbols
+# verified present at linux v7.3.4. Built-in (=y) so the panel lights without
+# an initramfs / module load on first boot.
+#
+# Chain: panel-nv3052c needs SPI_GPIO + BACKLIGHT_PWM (already =y in the
+# fragment) + REGULATOR_FIXED_VOLTAGE; DRM_MIPI_DBI is auto-selected.
+
+# --- WP3 display delta (append to linux-rg35xx-h-aarch64.conf) ---
+CONFIG_SPI=y
+CONFIG_SPI_GPIO=y
+CONFIG_REGULATOR_FIXED_VOLTAGE=y
+CONFIG_DRM_PANEL_NEWVISION_NV3052C=y
+# NOTE: CONFIG_DRM_SUN8I_TCON_TOP defaults on via DRM_SUN4I+DRM_SUN8I_MIXER.
+# MAYBE (HW-gated fallback): CONFIG_BACKLIGHT_GPIO=m — only if PWM backlight
+# proves wrong on hardware; see device-tree/BRINGUP_PANEL.md.
