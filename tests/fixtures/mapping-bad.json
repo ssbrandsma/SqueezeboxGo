@@ -1,0 +1,9 @@
+{
+  "device": "rg35xx-h",
+  "note": "Fixture: missing required actions + one invented action.",
+  "bindings": {
+    "ButtonA": "Select",
+    "ButtonB": "Back",
+    "ButtonX": "Teleport"
+  }
+}

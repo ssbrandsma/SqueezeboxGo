@@ -1,0 +1,42 @@
+# Allowed ELF NEEDED entries for the aarch64 target (fnmatch, one per line).
+# Owned by QA (Agent 6); Agent 2 proposes additions when new deps land.
+# Keep tight: every entry must be satisfiable by the target sysroot.
+
+# glibc runtime
+libc.so.6
+libm.so.6
+libdl.so.2
+libpthread.so.0
+librt.so.1
+libresolv.so.2
+libutil.so.1
+
+# audio
+libasound.so.2
+
+# graphics / SDL stack
+libSDL-1.2.so.0
+libSDL2-2.0.so.0
+libGLESv2.so.2
+libEGL.so.1
+libdrm.so.2
+libgbm.so.1
+libGLESv1_CM.so.1
+
+# codecs / image / misc libs used by squeezeplay
+libjpeg.so.8
+libjpeg.so.62
+libpng16.so.16
+libz.so.1
+libexpat.so.1
+libFLAC.so.*
+libogg.so.0
+libvorbis.so.0
+libvorbisfile.so.3
+libmad.so.0
+libfaad.so.2
+libmpg123.so.0
+
+# lua (PUC 5.1.5 shared)
+liblua.so.5.1
+liblua5.1.so.0
