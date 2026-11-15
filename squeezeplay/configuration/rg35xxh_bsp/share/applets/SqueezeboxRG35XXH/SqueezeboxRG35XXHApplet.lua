@@ -15,7 +15,7 @@
 --     power-supply / codec card names are unknown until hardware exists.
 --     Every probe failure degrades to log + nil, never a crash.
 
-local tonumber, tostring, pairs = tonumber, tostring, pairs
+local pcall, type, tonumber, tostring, pairs = pcall, type, tonumber, tostring, pairs
 
 -- board specific driver (uevent pump; keys intentionally not grabbed)
 local rg35xxh_bsp = require("rg35xxh_bsp")
@@ -281,19 +281,20 @@ function initPower(self)
 	local base = "/sys/class/power_supply"
 	local ok, dir = pcall(lfs.dir, base)
 	if ok and dir then
+		-- Single pass: lfs closes the DIR* at exhaustion, so the
+		-- iterator cannot be rewound for a second loop.
+		local first = nil
 		for entry in dir do
 			if entry == "battery" or entry == "BAT0" or entry == "axp20x-battery" then
 				self._psPath = base .. "/" .. entry
 				break
 			end
-		end
-		if not self._psPath then
-			for entry in dir do
-				if entry ~= "." and entry ~= ".." then
-					self._psPath = base .. "/" .. entry
-					break
-				end
+			if entry ~= "." and entry ~= ".." and not first then
+				first = entry
 			end
+		end
+		if not self._psPath and first then
+			self._psPath = base .. "/" .. first
 		end
 	end
 	if self._psPath then
