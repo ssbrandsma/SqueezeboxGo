@@ -1,0 +1,12 @@
+*.img
+*.img.xz
+*.sha256
+build/cache/
+*.o
+*.a
+*.so
+__pycache__/
+.env
+*.key
+*.pem
+secrets/
