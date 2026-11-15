@@ -1,0 +1,440 @@
+################################################################################
+# Squeezeplay makefile for Linux aarch64 (Squeezebox RG35XX H)
+# Copyright 2007 Logitech
+# Copyright 2021-2024 Ralph Irving
+# Copyright 2026 Squeezebox RG35XX H contributors (aarch64 port)
+################################################################################
+#
+# Lineage: upstream src/Makefile.linux (desktop, squeezeplay@758bc11) merged
+# with the tcz-jivelite@4bdf677 aarch64 recipe (Makefile.picoreplayer-aarch64,
+# squeezeplay-lua-aarch64.patch), retuned per docs/interface-contracts.md:
+#   target aarch64-linux-gnu, -march=armv8-a+crc -mtune=cortex-a53,
+#   PREFIX=/opt/squeezeplay, PUC Lua 5.1.5 shared-lib.
+#
+# Deliberate deviations from the tcz recipe:
+# - No tslib (RG35XX H has no touchscreen; input is evdev->SDL keys, Agent 4).
+# - No X11/SDL-tslib video: SDL is built for headers + link ABI only; runtime
+#   video/audio comes from sdl12-compat on SDL2/KMSDRM (Agent 4, WP1 UI).
+# - DESTDIR staging: binaries carry the FINAL rpath /opt/squeezeplay/lib.
+# - libmad 0.15.1b-11 without x86-only patches (as tcz); fdk-aac 2.0.3,
+#   zlib 1.2.11, freetype 2.4.2, dejavu fonts (as desktop baseline).
+# - Jive audio uses its own ALSA backend (decode_alsa.c); SDL audio disabled.
+#
+# Cross build (default, needs aarch64 cross gcc + arm64 sysroot with ALSA):
+#   cp squeezeplay/configuration/Makefile.linux-aarch64 <sp>/src/Makefile.linux-aarch64
+#   cd <sp>/src && patch -p1 < <tree>/squeezeplay/patches/0001-*.patch ...
+#   make -f Makefile.linux-aarch64
+#
+# Native validation build on x86_64 (same dependency chain, host arch):
+#   make -f Makefile.linux-aarch64 CROSS_COMPILE= ARCHFLAGS="-march=x86-64" \
+#       LUA_ARCHFLAGS="-s -O2"
+#
+# Knobs: CROSS_COMPILE, SYSROOT, PREFIX, STAGING, ARCHFLAGS, LUA_ARCHFLAGS,
+#        STRIPFLAGS (empty keeps symbols), SQUEEZEPLAY_RELEASE (version label),
+#        SOURCE_DATE_EPOCH (reproducibility), EXTRA_CFLAGS/EXTRA_LDFLAGS
+#        (native ALSA prefix etc; see build/toolchain/build-native-deps.sh).
+#
+# Absolute path to top of SQUEEZEPLAY directories
+#
+
+SRC_DIR = $(realpath ${PWD})
+BASE_DIR = $(dir ${SRC_DIR})
+
+# DESTDIR-style staging dir holding the future rootfs subtree.
+STAGING ?= $(BASE_DIR)build/linux-aarch64
+# Final runtime prefix (baked into rpaths and install paths).
+PREFIX ?= /opt/squeezeplay
+# Build-time prefix: where files land and -I/-L point.
+SPREFIX = $(STAGING)$(PREFIX)
+
+# Cross toolchain. Empty CROSS_COMPILE = native build (validation only).
+CROSS_COMPILE ?= aarch64-linux-gnu-
+HOST_TRIPLE ?= aarch64-linux-gnu
+BUILD_TRIPLE ?= $(shell gcc -dumpmachine 2>/dev/null || echo x86_64-linux-gnu)
+
+ifeq ($(strip $(CROSS_COMPILE)),)
+CONFIGURE_CROSS =
+else
+CONFIGURE_CROSS = --host=$(HOST_TRIPLE) --build=$(BUILD_TRIPLE)
+endif
+
+# Target sysroot for --sysroot ("/" = toolchain default; Debian cross gcc
+# already searches /usr/aarch64-linux-gnu, so "/" is correct in the container).
+SYSROOT ?= /
+ifeq ($(SYSROOT),/)
+SYSROOTFLAGS =
+else
+SYSROOTFLAGS = --sysroot=$(SYSROOT)
+endif
+
+ARCHFLAGS ?= -march=armv8-a+crc -mtune=cortex-a53
+STRIPFLAGS ?= -s
+# Site flags appended after everything else (native ALSA prefix, custom
+# sysroot extra dirs). Set via environment or command line.
+EXTRA_CFLAGS ?=
+EXTRA_LDFLAGS ?=
+export LUA_ARCHFLAGS ?= $(ARCHFLAGS) -s -O2
+
+export CC = $(CROSS_COMPILE)gcc
+export CXX = $(CROSS_COMPILE)g++
+export AR = $(CROSS_COMPILE)ar
+export RANLIB = $(CROSS_COMPILE)ranlib
+export STRIP = $(CROSS_COMPILE)strip
+
+export CFLAGS = -I$(SPREFIX)/include -I$(SPREFIX)/include/SDL -I$(SPREFIX)/include/freetype2 -pipe $(STRIPFLAGS) -O2 -fPIC $(ARCHFLAGS) $(SYSROOTFLAGS) $(EXTRA_CFLAGS)
+export CPPFLAGS = -I$(SPREFIX)/include -I$(SPREFIX)/include/SDL -I$(SPREFIX)/include/freetype2 $(EXTRA_CFLAGS)
+export CXXFLAGS = -I$(SPREFIX)/include -I$(SPREFIX)/include/SDL -I$(SPREFIX)/include/freetype2 -pipe $(STRIPFLAGS) -O2 -fPIC $(ARCHFLAGS) $(SYSROOTFLAGS) -fno-exceptions -fno-rtti $(EXTRA_CFLAGS)
+# -rpath-link: under --sysroot, -L is not consulted for TRANSITIVE DT_NEEDED
+# deps (direct -l works, the .so->.so chase does not); rpath-link covers it.
+# Build-time only: nothing is embedded in the binaries. NOTE: written as two
+# 2-part -Wl args because libtool 1.5.x mangles 3-part -Wl,-rpath-link,<dir>
+# (it drops the directory).
+export LDFLAGS = $(STRIPFLAGS) -L$(SPREFIX)/lib -Wl,-rpath-link -Wl,$(SPREFIX)/lib -Wl,-rpath,$(PREFIX)/lib $(SYSROOTFLAGS) $(EXTRA_LDFLAGS)
+
+export TOOLPATH = $(shell dirname `which $(CC)`)
+export SDL_CONFIG = $(SPREFIX)/bin/sdl-config
+
+# Reproducible build timestamp (upstream commit date by default).
+SOURCE_DATE_EPOCH ?= $(shell cd $(SRC_DIR) && git log -1 --format=%ct 2>/dev/null)
+ifneq ($(SOURCE_DATE_EPOCH),)
+export SOURCE_DATE_EPOCH
+endif
+
+ENABLE_SHAREDLIBS = --enable-shared=yes --enable-static=no
+USE_MMX = --disable-mmx
+
+# Override to yes to build closed source squeezeplay libraries
+SPPRIVATE = no
+
+ifeq ($(SPPRIVATE),yes)
+	ENABLE_SPPRIVATE = --with-spprivate
+	SPPRIVATE_TARGETS = axtls squeezeplay_private
+endif
+
+
+#
+# Top level targets
+#
+.PHONY: all
+all: check-deps sdl-all lua-all app
+
+
+# Fail fast when the (cross) compiler or target ALSA headers are missing.
+.PHONY: check-deps
+check-deps:
+	@echo "--- check-deps: CC=$(CC) CXX=$(CXX) SYSROOT=$(SYSROOT) PREFIX=$(PREFIX)"
+	@command -v $(CC) >/dev/null || (echo "ERROR: $(CC) not found" && exit 1)
+	@command -v $(CXX) >/dev/null || (echo "ERROR: $(CXX) not found" && exit 1)
+	@echo '#include <alsa/asoundlib.h>' | $(CC) $(CFLAGS) -E - -o /dev/null || \
+		(echo "ERROR: target ALSA headers not usable (need libasound2-dev for $(HOST_TRIPLE))" && exit 1)
+	@echo "check-deps: OK"
+
+
+#####
+# SDL
+#####
+
+.PHONY: sdl-all freetype sdl sdl-image sdl-tff sdl-gfx c-ares
+sdl-all: zlib expat freetype sdl libpng libjpeg sdl-image sdl-ttf sdl-gfx
+
+generated:
+	mkdir -p generated
+
+# zlib
+zlib-1.2.11/Makefile:
+	cd zlib-1.2.11; ./configure --shared --prefix=${PREFIX}
+
+zlib: zlib-1.2.11/Makefile
+	cd zlib-1.2.11; make; make DESTDIR=${STAGING} prefix=${PREFIX} install
+	-rm -f ${SPREFIX}/lib/libz.a
+
+# expat
+expat-2.0.1/Makefile:
+	cd expat-2.0.1; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+expat: expat-2.0.1/Makefile
+	cd expat-2.0.1; make; make DESTDIR=${STAGING} install
+
+# freetype
+freetype-2.4.2/config.mk:
+	cd freetype-2.4.2; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+freetype: freetype-2.4.2/config.mk
+	cd freetype-2.4.2; make; make DESTDIR=${STAGING} install
+
+# png
+libpng-1.2.59/Makefile:
+	cd libpng-1.2.59; ./configure $(CONFIGURE_CROSS) --enable-static=no --prefix=${PREFIX}
+
+libpng: libpng-1.2.59/Makefile
+	cd libpng-1.2.59; make && make DESTDIR=${STAGING} install
+
+# jpeg
+jpeg-9d/Makefile:
+	-mkdir -p ${STAGING}/man/man1
+	cd jpeg-9d; ./configure $(CONFIGURE_CROSS) --enable-static=no --prefix=${PREFIX}
+
+libjpeg: jpeg-9d/Makefile
+	cd jpeg-9d; make && make DESTDIR=${STAGING} install
+
+# sdl: headers + link ABI only. No X11/tslib/audio backends; at runtime
+# sdl12-compat (Agent 4) provides libSDL-1.2.so.0 on SDL2/KMSDRM. Dummy/fbcon
+# video stay enabled so configure always finds >=1 video driver.
+SDL-1.2.15/Makefile:
+	cd SDL-1.2.15; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS} --enable-audio=no --enable-video --enable-events --enable-joystick=no --enable-cdrom=no --enable-threads --enable-timers --enable-file --enable-loadso --enable-oss=no --enable-alsa=no --enable-esd=no --enable-arts=no --enable-esd-shared=no --enable-clock_gettime --enable-video-x11=no --enable-video-opengl=no --enable-video-directfb=no --enable-pulseaudio=no
+
+sdl: SDL-1.2.15/Makefile
+	cd SDL-1.2.15; make && make DESTDIR=${STAGING} install
+
+# sdl_image (requires jpeg tiff png)
+SDL_image-1.2.5/Makefile:
+	cd SDL_image-1.2.5; SDL_CONFIG=${SDL_CONFIG} ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS} --disable-tif ${LIBPNG} ${LIBJPEG}
+
+sdl-image: SDL_image-1.2.5/Makefile
+	cd SDL_image-1.2.5; make && make DESTDIR=${STAGING} install
+
+# sdl_ttf
+SDL_ttf-2.0.11/Makefile:
+	cd SDL_ttf-2.0.11; SDL_CONFIG=${SDL_CONFIG} ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS} --with-freetype-prefix=${SPREFIX} --without-opengl
+
+sdl-ttf: SDL_ttf-2.0.11/Makefile
+	cd SDL_ttf-2.0.11; make && make DESTDIR=${STAGING} install
+
+# sdl_gfx
+SDL_gfx-2.0.15/Makefile:
+	cd SDL_gfx-2.0.15; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS} ${USE_MMX}
+
+sdl-gfx: SDL_gfx-2.0.15/Makefile
+	cd SDL_gfx-2.0.15; make && make DESTDIR=${STAGING} install
+
+
+#####
+# lua
+#####
+
+.PHONY: lua-all lua luasocket slnunicode luacjson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5
+
+lua-all: lua tolua++ luasocket slnunicode luacjson loop luaexpat luafilesystem luaprofiler luazipfilter luamd5
+
+# lua (PUC 5.1.5 + patch 0001: shared lib, aarch64, no readline/ncurses)
+# NOTE: INSTALL_TOP takes the staging-prefixed absolute path (no DESTDIR
+# support in lua's own Makefile); the baked rpath is still $(PREFIX)/lib.
+lua:
+	cd lua-5.1.5; make linux INSTALL_TOP=${SPREFIX} && make install INSTALL_TOP=${SPREFIX}
+
+# luasocket (requires lua). CC/LD come from our toolchain vars; MYLDFLAGS is
+# passed explicitly so custom SYSROOTs also apply at link time.
+luasocket: lua
+	cd luasocket-2.0.2; make install LD="$(CC) -shared" INSTALL_TOP=${SPREFIX} PLATFORM=linux MYLDFLAGS="$(LDFLAGS) -O -fpic -shared"
+
+slnunicode: lua
+	cd slnunicode-1.1; make install LD="$(CC) -shared" INSTALL_TOP=${SPREFIX} PLATFORM=linux MYLDFLAGS="$(LDFLAGS) -O -fpic -shared"
+
+luacjson: lua
+	cd lua-cjson-2.1.0; make PREFIX=${SPREFIX} && mkdir -p ${SPREFIX}/lib/lua/5.1 && cp -p cjson.so ${SPREFIX}/lib/lua/5.1/cjson.so
+
+luazipfilter/Makefile:
+	cd luazipfilter; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX}
+
+luazipfilter: luazipfilter/Makefile
+	cd luazipfilter; make && mkdir -p ${SPREFIX}/lib/lua/5.1 && cp .libs/zipfilter.so ${SPREFIX}/lib/lua/5.1/zipfilter.so
+
+# luamd5 hardcodes CC=gcc, so CC/G/MYLDFLAGS are injected (tcz-style).
+luamd5:
+	cd luamd5; make CC="$(CC)" G="$(CFLAGS)" LUA=${SPREFIX} MYNAME=sha1 MYLDFLAGS="$(LDFLAGS)"
+	cd luamd5; make CC="$(CC)" G="$(CFLAGS)" LUA=${SPREFIX} MYNAME=md5 MYLDFLAGS="$(LDFLAGS)"
+	mkdir -p ${SPREFIX}/lib/lua/5.1
+	cp luamd5/md5.so ${SPREFIX}/lib/lua/5.1/md5.so
+	cp luamd5/sha1.so ${SPREFIX}/lib/lua/5.1/sha1.so
+
+loop:
+	-mkdir -p ${SPREFIX}/share/lua/5.1/loop/collection ${SPREFIX}/share/lua/5.1/loop/debug
+	cd loop-2.2-alpha; install loop/base.lua ${SPREFIX}/share/lua/5.1/loop/.
+	cd loop-2.2-alpha; install loop/simple.lua ${SPREFIX}/share/lua/5.1/loop/.
+	cd loop-2.2-alpha; install loop/table.lua ${SPREFIX}/share/lua/5.1/loop/.
+	cd loop-2.2-alpha; install loop/collection/ObjectCache.lua ${SPREFIX}/share/lua/5.1/loop/collection/.
+	cd loop-2.2-alpha; install loop/debug/Viewer.lua ${SPREFIX}/share/lua/5.1/loop/debug/.
+
+# luaexpat/luafilesystem hardcode CFLAGS in their configs, so arch/sysroot
+# flags are injected explicitly (luafilesystem via WARN, luaexpat via CFLAGS).
+luaexpat: lua expat
+	cd luaexpat-1.0.2; make PREFIX=${SPREFIX} PLATFORM=linux CC="$(CC)" CFLAGS="$(CFLAGS) -I${SPREFIX}/include" && make install PREFIX=${SPREFIX} PLATFORM=linux
+
+luafilesystem:
+	cd luafilesystem-1.2 && make install PREFIX=${SPREFIX} PLATFORM=linux WARN="$(ARCHFLAGS) $(SYSROOTFLAGS) -O2 -Wall -fPIC"
+
+luaprofiler:
+	cd luaprofiler-2.0.2 && make -f Makefile.linux install PREFIX=${SPREFIX} WARN="$(ARCHFLAGS) $(SYSROOTFLAGS)" LD="$(CROSS_COMPILE)ld"
+
+# tolua++ runtime lib only (tcz-style, no scons; the .pkg->.c binding step is
+# intentionally NOT re-run: our tree ships pregenerated lua_jiveui.c, see
+# the squeezeplay target below).
+.PHONY: tolua++
+tolua++: lua
+	cd tolua++-1.0.92/src/lib; $(CC) $(CFLAGS) -shared -fPIC -o libtolua++.so -I../../include -I${SPREFIX}/include *.c
+	mkdir -p ${SPREFIX}/lib ${SPREFIX}/include
+	install tolua++-1.0.92/include/tolua++.h ${SPREFIX}/include
+	install tolua++-1.0.92/src/lib/libtolua++.so ${SPREFIX}/lib
+
+#
+# squeezeplay
+#
+
+.PHONY: app fdkaac libogg flac libmad tremor squeezeplay squeezeplay_desktop squeezeplay_contrib squeezeplay_private freefont freefont-debian axtls rtmp dist-tgz
+app: fdkaac libogg flac libmad tremor ${SPPRIVATE_TARGETS} squeezeplay squeezeplay_desktop squeezeplay_contrib freefont rtmp dist-tgz
+
+# fdkaac
+fdk-aac-2.0.3/Makefile:
+	cd fdk-aac-2.0.3; ./configure $(CONFIGURE_CROSS) ${ENABLE_SHAREDLIBS} --prefix=${PREFIX}
+
+fdkaac: fdk-aac-2.0.3/Makefile
+	cd fdk-aac-2.0.3; make; make DESTDIR=${STAGING} install
+
+# libogg
+libogg-1.2.2/Makefile:
+	cd libogg-1.2.2; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+libogg: libogg-1.2.2/Makefile
+	cd libogg-1.2.2; make && make DESTDIR=${STAGING} install
+
+# flac
+flac-1.2.1/Makefile:
+	cd flac-1.2.1; ./configure $(CONFIGURE_CROSS) --disable-oggtest --disable-cpplibs --disable-xmms-plugin --with-ogg-libraries=${SPREFIX}/lib --with-ogg-includes=${SPREFIX}/include --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+flac: flac-1.2.1/Makefile
+	cd flac-1.2.1; make && make DESTDIR=${STAGING} install
+
+# libmad: -11 tarball needs no x86-only patches on aarch64 (tcz recipe).
+LIBMAD_DIR = libmad-0.15.1b-11
+
+generated/${LIBMAD_DIR}/Makefile.am:
+	mkdir -p generated
+	cd generated; tar -xzf ../${LIBMAD_DIR}.tar.gz
+
+generated/${LIBMAD_DIR}/Makefile: generated/${LIBMAD_DIR}/Makefile.am
+	cd generated/${LIBMAD_DIR}; ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+libmad: generated/${LIBMAD_DIR}/Makefile.am generated/${LIBMAD_DIR}/Makefile
+	cd generated/${LIBMAD_DIR}; make && make DESTDIR=${STAGING} install
+
+
+# Tremor (integer Vorbis)
+Tremor/Makefile:
+	cd Tremor; CFLAGS="-DSQUEEZEPLAY ${CFLAGS}" ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} ${ENABLE_SHAREDLIBS}
+
+tremor: Tremor/Makefile
+	cd Tremor; make && make DESTDIR=${STAGING} install
+
+
+# axTLS (only with SPPRIVATE=yes)
+AXTLS_DIR = generated/axTLS
+AXTLS_TAR = axTLS-1.2.0.tar.gz
+${AXTLS_DIR}/Makefile: generated
+	cd generated; tar xvf ../${AXTLS_TAR}
+	cp axTLS.config ${AXTLS_DIR}/config/.config
+
+	echo "PREFIX=\"${SPREFIX}\"" >> ${AXTLS_DIR}/config/.config
+
+axtls: ${AXTLS_DIR}/Makefile
+	cd ${AXTLS_DIR}; make oldconfig && make CC="$(CC)" && make install
+
+rtmp: squeezeplay
+	cd luartmp-squeezeplay; make
+	mkdir -p ${SPREFIX}/lib/lua/5.1
+	cp luartmp-squeezeplay/rtmp.so ${SPREFIX}/lib/lua/5.1/rtmp.so
+
+
+# squeezeplay (Jive core). The .pkg->.c tolua suffix rule would fire if
+# lua_jiveui.pkg were newer than the shipped lua_jiveui.c; we don't modify
+# bindings, so keep the pregenerated file (avoids needing a host tolua++).
+squeezeplay/Makefile:
+	cd squeezeplay; SDL_CONFIG=${SDL_CONFIG} ./configure $(CONFIGURE_CROSS) ${ENABLE_SPPRIVATE} ${ENABLE_SHAREDLIBS} --prefix=${PREFIX}
+
+# Installed .la files embed final-prefix paths (/opt/squeezeplay/lib/*.la)
+# that do not exist at build time and break libtool's dependency chase when
+# linking jive. Shared-only build: drop them, the .so files link via -L.
+squeezeplay: squeezeplay/Makefile
+	find ${SPREFIX}/lib -name '*.la' -delete
+	patch --forward -p1 -i squeezeplay-lua-cjson.patch || true
+	touch squeezeplay/src/ui/lua_jiveui.c
+	export PATH=$(SPREFIX)/bin:$(PATH); \
+	cd squeezeplay; make && make DESTDIR=${STAGING} install
+	patch --forward -R -p1 -i squeezeplay-lua-cjson.patch || true
+
+squeezeplay_desktop/Makefile:
+	cd squeezeplay_desktop; SDL_CONFIG=${SDL_CONFIG} ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX}
+
+squeezeplay_desktop: squeezeplay_desktop/Makefile
+	cd squeezeplay_desktop; make DESTDIR=${STAGING} install
+	mkdir -p ${SPREFIX}/bin
+	cp squeezeplay_desktop/squeezeplay.sh ${SPREFIX}/bin/
+	chmod +x ${SPREFIX}/bin/squeezeplay.sh
+
+squeezeplay_contrib: squeezeplay/Makefile
+	cd squeezeplay_contrib; make PREFIX=${SPREFIX}
+
+squeezeplay_private/Makefile:
+	cd squeezeplay_private; SDL_CONFIG=${SDL_CONFIG} ./configure $(CONFIGURE_CROSS) --prefix=${PREFIX} --enable-wma --enable-aac
+
+squeezeplay_private: squeezeplay_private/Makefile
+	cd squeezeplay_private; make PREFIX=${SPREFIX} install
+
+# freefont (DejaVu, as desktop baseline)
+freefont:
+	mkdir -p ${SPREFIX}/share/jive/fonts
+	cp dejavu-fonts-ttf-2.37/ttf/DejaVuSansCondensed.ttf ${SPREFIX}/share/jive/fonts/FreeSans.ttf
+	cp dejavu-fonts-ttf-2.37/ttf/DejaVuSansCondensed-Bold.ttf ${SPREFIX}/share/jive/fonts/FreeSansBold.ttf
+
+#
+# Package the staging tree (replaces upstream squeezeplay-tgz, which tars
+# $(prefix) and is wrong under DESTDIR). Leaves tarball + sha256 + .so list.
+#
+JIVE_REL = $(shell cat squeezeplay.version 2>/dev/null || echo 0.0.0)
+dist-tgz:
+	find ${SPREFIX}/lib -name '*.la' -delete
+	cd ${STAGING} && tar -zcf ${BASE_DIR}squeezeplay-aarch64-$(JIVE_REL).tgz opt
+	cd ${BASE_DIR} && sha256sum squeezeplay-aarch64-$(JIVE_REL).tgz > squeezeplay-aarch64-$(JIVE_REL).tgz.sha256
+	find ${SPREFIX}/lib -name '*.so*' | sort > ${BASE_DIR}squeezeplay-aarch64-$(JIVE_REL).so-list.txt
+	cat ${BASE_DIR}squeezeplay-aarch64-$(JIVE_REL).so-list.txt
+
+.PHONY: clean_generated
+clean_generated:
+	@echo "----------------------------------------------------------"
+	@echo "Cleaning: generated dir"
+	-rm -rf generated
+
+
+#
+# clean
+#
+
+.PHONY: clean
+clean:
+	-cd zlib-1.2.11; make distclean; rm -f Makefile
+	-cd expat-2.0.1; make distclean
+	-cd freetype-2.4.2; make distclean
+	-cd libpng-1.2.59; make distclean
+	-cd jpeg-9d; make distclean
+	-cd SDL-1.2.15; make distclean; rm -f include/SDL_config.h sdl.pc;
+	-cd SDL_image-1.2.5; make distclean
+	-cd SDL_ttf-2.0.11; make distclean
+	-cd SDL_gfx-2.0.15; make distclean
+	-cd lua-5.1.5; make clean
+	-cd luasocket-2.0.2; make clean PLATFORM=linux
+	-cd slnunicode-1.1; make clean PLATFORM=linux
+	-cd luaexpat-1.0.2; make clean PLATFORM=linux
+	-cd luafilesystem-1.2; make clean PLATFORM=linux
+	-cd lua-cjson-2.1.0; make clean
+	-cd luazipfilter; make distclean
+	-cd luaprofiler-2.0.2; make -f Makefile.linux clean
+	-cd luamd5; make MYNAME=sha1 clean
+	-cd luamd5; make MYNAME=md5 clean
+	-cd tolua++-1.0.92/src/lib; rm -f libtolua++.so *.o
+	-cd fdk-aac-2.0.3; make distclean
+	-cd libogg-1.2.2; make distclean
+	-cd Tremor; make distclean
+	-cd flac-1.2.1; make distclean; rm -f src/libFLAC++/flac++.pc; find . -type f -name Makefile -exec rm {} \; ; find . -type d -name '.deps' -exec rm -rf {} \;
+	-cd squeezeplay; make distclean; rm -f src/version.h
+	-cd squeezeplay_desktop; make distclean
+	-rm -rf $(STAGING)
+	-rm -rf generated
