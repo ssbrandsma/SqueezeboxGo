@@ -1,0 +1,7 @@
+[Unit]
+Description=Squeezebox standalone sources
+After=squeezeplay.service
+Wants=network.target sound.target
+
+[Install]
+WantedBy=multi-user.target

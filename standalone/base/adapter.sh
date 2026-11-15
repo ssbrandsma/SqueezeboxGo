@@ -28,12 +28,25 @@ pidfile="$PID_DIR/$src.pid"
 
 case "$op" in
 	start)
-		"$BASE_DIR/audio-owner-client.sh" acquire "$src" \
-			|| die "$src" "audio acquire failed"
+		# Start the backend FIRST, then bind the audio claim to the
+		# backend PID (the long-lived ALSA holder). Claiming as this
+		# short-lived adapter shell would go stale the moment start
+		# returns (audio/arbiter/DESIGN.md "Claim rule"), letting a
+		# second source double-hold the device. On acquire failure
+		# the just-started backend is stopped again, so the loser
+		# never plays. UNIMPLEMENTED backends exit 3 here, before
+		# any arbiter or Now Playing state is touched.
 		# shellcheck disable=SC2086
-		if ! "$BASE_DIR/service.sh" start "$src" "$pidfile" $BACKEND_CMD; then
-			"$BASE_DIR/audio-owner-client.sh" release "$src" || true
-			die "$src" "backend failed to start"
+		"$BASE_DIR/service.sh" start "$src" "$pidfile" $BACKEND_CMD \
+			|| die "$src" "backend failed to start"
+		be_pid="$(cat "$pidfile" 2>/dev/null)" || be_pid=""
+		case "$be_pid" in ''|*[!0-9]*)
+			"$BASE_DIR/service.sh" stop "$src" "$pidfile" || true
+			die "$src" "no backend pid in $pidfile" ;;
+		esac
+		if ! "$BASE_DIR/audio-owner-client.sh" acquire "$src" --pid "$be_pid"; then
+			"$BASE_DIR/service.sh" stop "$src" "$pidfile" || true
+			die "$src" "audio acquire failed"
 		fi
 		NP_STATE_DIR="${NP_STATE_DIR:-/run/squeezebox}" \
 			"$BASE_DIR/nowplaying-pub.sh" source_id="$src" mode="play" power="true"
