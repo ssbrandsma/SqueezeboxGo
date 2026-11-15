@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-15 (Agent 0, WP1 merged → WP2 starting).
+Last updated: 2026-11-15 (Agent 0, WP2 merged → merged-image integration).
 
 ## Completed
 
@@ -30,10 +30,38 @@ Last updated: 2026-11-15 (Agent 0, WP1 merged → WP2 starting).
   (asound, mapping, skin, shellcheck, repro-env), 1 NOT RUN (arch: no ELF in git);
   selftest 20/20, input tests 13/13.
 
+## Completed (WP2)
+
+- Workflow `Squeezebox WP2 First-Boot Integration` (completed), all 6 branches
+  merged conflict-free to main:
+  1. Platform: kernel Image 53.9 MB + RG35XX-H DTB + U-Boot DDR3/DDR4 SPL+itb
+     built (exit 0); assemble-image.sh produced DDR3+DDR4 2 GiB `.img` in /tmp
+     (fsck-clean, GPT verified); ext4 0-diff recipe proven (mke2fs≥1.47.1+SDE).
+     NOTE: pre-merge images (no squeezeplay payload yet), kept in /tmp only.
+  2. Core: audio proposals 0001-0003 reviewed + promoted (0004-0006); 6/6-patch
+     aarch64 cross build exit 0 (tarball 23.5 MB); qemu jive boot to main loop
+     (9.0.0 r541, 48 applets); rg35xxh_bsp skeleton + INSTALL-LAYOUT.
+  3. Audio: arbiter hardened; topology-probe extended; BRINGUP runbook;
+     run-all.sh 7/0; asound 6 pcms, 0 dangling.
+  4. UI: aarch64 cross (evdev2jive, drm_splash, SDL1.2-compat 1.2.78) zero-warning;
+     qemu replay/SDL-smoke ALL PASS; install.sh overlay 479/479 sha OK; BRINGUP.
+  5. Standalone: real-arbiter integration 43/43; systemd proposal (verify clean);
+     BACKEND_PLAN (librespot v0.8.0 verified, slimserver re-pin requested).
+  6. QA: check_image.py (414 lines) + fixtures; selftest 27/27; HW_TEST_PLAN H1-H18.
+- Lead verification: slimserver re-pin APPROVED (lms-community 9.0.2 peeled
+  `1470c941` confirmed via ls-remote; ralph-irving/slimserver unavailable;
+  librespot v0.8.0 `d36f9f19` confirmed). Manifest updated.
+- Lead fix: shellcheck gate scoped to git-tracked scripts (was scanning agent
+  worktree kernel sources and failing).
+- Post-merge gates (`docs/test-results/wp2-merge-gates.md`, image E2E on the
+  real assembler output): 6 PASS (asound, mapping, skin, image, shellcheck,
+  repro-env), 1 NOT RUN (arch: no ELF in git). selftest 27/27.
+
 ## Current work
 
-- WP2 first-boot integration: kernel+U-Boot builds, rootfs+squeezeplay assembly,
-  audio proposal review, SDL/KMS bring-up plan, first experimental `.img`.
+- Merged-tree integration: first true experimental `.img` (kernel+U-Boot from
+  merged scripts + core tarball + ui overlay + asound + standalone units +
+  kmsdrm SDL2), QA E2E gated, release manifest with real checksums.
 
 ## Blockers / external deps
 
@@ -44,12 +72,12 @@ Last updated: 2026-11-15 (Agent 0, WP1 merged → WP2 starting).
 
 ## Next steps (resume here)
 
-1. WP2 workflow: kernel+U-Boot cross builds in container (or native cross),
-   rootfs+squeezeplay+skin+services assembly, audio proposals review/promotion.
-2. First experimental `.img` (assemble-image.sh) + validation report; mark
-   physical-boot tests NOT RUN until hardware exists.
-3. Prepare human hardware-test procedure (flash, boot, evtest, aplay, wifi).
-4. WP3 standalone backends (librespot, slimserver plugins) per REQUIRED_SOURCES.
+1. Merged-image workflow (launched): integrator builds full `.img` from merged
+   main to /tmp or build/out (git-ignored); QA verifies E2E + manifest.
+2. Tag first experimental release (manifest + sha256, images distributed outside git).
+3. Human hardware test per HW_TEST_PLAN.md when RG35XX H is available (flash,
+   UART/SSH boot capture, H1-H18 matrix) — the only true external blocker.
+4. WP3 standalone backends (librespot build, slimserver 9.0.2 plugins, web UI).
 
 ## Key commands
 

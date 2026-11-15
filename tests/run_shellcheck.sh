@@ -8,10 +8,19 @@ json=0
 if [ "${1:-}" = "--json" ]; then json=1; shift; fi
 
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
+ARGS=("$@")
 SCAN=("$@")
 [ "${#SCAN[@]}" -eq 0 ] && SCAN=("$ROOT")
 
-mapfile -t FILES < <(find "${SCAN[@]}" -name .git -prune -o -path '*/fixtures/*' -prune -o -type f -name '*.sh' -print 2>/dev/null | sort)
+if [ "${#ARGS[@]}" -eq 0 ] && git -C "$ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  # Default scan: git-tracked scripts only. Never scan agent worktrees
+  # (.muse/), build outputs, or vendored trees that live under the root.
+  mapfile -t REL < <(git -C "$ROOT" ls-files '*.sh' ':!:*/fixtures/*' 2>/dev/null | sort)
+  FILES=()
+  for r in "${REL[@]}"; do [ -n "$r" ] && FILES+=("$ROOT/$r"); done
+else
+  mapfile -t FILES < <(find "${SCAN[@]}" -name .git -prune -o -path '*/.muse/*' -prune -o -path '*/fixtures/*' -prune -o -path '*/node_modules/*' -prune -o -type f -name '*.sh' -print 2>/dev/null | sort)
+fi
 if [ "${#FILES[@]}" -eq 0 ]; then
   if [ "$json" -eq 1 ]; then
     printf '{"check": "shellcheck", "status": "NOT RUN", "target": "", "details": ["no *.sh files found"]}\n'

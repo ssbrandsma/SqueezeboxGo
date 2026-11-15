@@ -13,5 +13,7 @@
 | u-boot | github.com/u-boot/u-boot | `v2026.10` (`55084065`) | `anbernic_rg35xx_h700_defconfig` |
 | ATF | github.com/ARM-software/arm-trusted-firmware | `v2.15.0` (`da738d5e`) | BL31 sun50i_h616 |
 | image container | debian:bookworm-slim | `sha256:734a72b3…b179bc` | image build env |
+| slimserver | github.com/lms-community/slimserver | `9.0.2` peeled `1470c941` | standalone ref (Lead re-pin: ralph-irving 404 verified) |
+| librespot | github.com/librespot-org/librespot | `v0.8.0` (`d36f9f19`) | Spotify Connect backend |
 
 Update pins only with Lead approval; record date + reason.
