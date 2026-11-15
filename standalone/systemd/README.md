@@ -35,12 +35,13 @@ edit, not an image rebuild. Suggested `mkrootfs.sh` shape: a
 `--with-standalone` step mirroring `--with-services` (install +
 no enables by default, see below).
 
-## Enable policy: ship disabled
+## Enable policy: ship disabled, spotify ready (WP3)
 
-All 8 shipped backends are UNIMPLEMENTED (`unimplemented.sh`, exit 3),
-so **no instance is enabled by default**. The target itself may be
-enabled (it is empty until instances are added). Enable per instance
-as backends land, e.g.:
+7 of 8 shipped backends are still UNIMPLEMENTED (`unimplemented.sh`,
+exit 3), so **no instance is enabled by default**. The target itself
+may be enabled (it is empty until instances are added). The `spotify`
+instance is the first enableable one (real librespot backend, config
+at `/etc/squeezebox/standalone/services/spotify/spotify.conf`):
 
 ```
 systemctl enable squeezebox-source@spotify.service
@@ -49,6 +50,8 @@ systemctl enable squeezebox-source@spotify.service
 Trial start without enabling: `systemctl start squeezebox-source@radio`
 (fails honestly today: adapter exits 1, backend exit 3, arbiter and
 Now Playing untouched — see `docs/test-results/wp2-standalone.md`).
+`systemctl start squeezebox-source@spotify` starts librespot (zeroconf
+discovery, no credentials needed) and holds the audio claim until stop.
 
 ## Ordering
 

@@ -131,9 +131,11 @@ $CLIENT release crashed2 >/dev/null 2>&1
 $ADAPTER demo stop "$DEMO_DIR" >/dev/null 2>&1; rc=$?
 [ "$rc" -eq 0 ] && ok "adapter stop after crash: exit 0" || bad "adapter stop after crash" "rc=$rc"
 
-# --- 6. all 8 shipped stubs stay honest: fail fast, exit 3, no claim ---
+# --- 6. the 7 remaining shipped stubs stay honest: fail fast, exit 3, no claim ---
+# (spotify left this list in WP3: it now wires the real librespot backend and
+# is covered by standalone/tests/test-librespot.sh instead.)
 count=0
-for svc in music proxy qobuz radio spotify squeezeplay vpn webui; do
+for svc in music proxy qobuz radio squeezeplay vpn webui; do
 	d="$SERVICES/$svc"
 	[ -f "$d/backend.conf" ] || { bad "stub $svc has backend.conf" "missing"; continue; }
 	$ADAPTER "$svc" start "$d" >/tmp/wp2-stub-err.txt 2>&1; rc=$?
@@ -154,7 +156,12 @@ for svc in music proxy qobuz radio spotify squeezeplay vpn webui; do
 	fi
 	count=$((count+1))
 done
-[ "$count" -eq 8 ] && ok "8 stubs covered" || bad "8 stubs covered" "count=$count"
+[ "$count" -eq 7 ] && ok "7 stubs covered" || bad "7 stubs covered" "count=$count"
+case "$(cat "$SERVICES/spotify/backend.conf")" in
+	*unimplemented.sh*) bad "spotify left the stub list" "still points at unimplemented.sh" ;;
+	*spotify-run.sh*) ok "spotify backend.conf wires spotify-run.sh" ;;
+	*) bad "spotify backend.conf wires spotify-run.sh" "$(cat "$SERVICES/spotify/backend.conf")" ;;
+esac
 
 # --- 7. arbiter event consumer ---
 printf '%s\n' 'audio-owner event=acquired source=radio pid=111 ts=1' | $EVNP >/dev/null 2>&1
