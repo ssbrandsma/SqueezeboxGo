@@ -1,0 +1,5 @@
+NAME="Squeezebox RG35XX H"
+ID=squeezebox-rg35xxh
+VERSION_ID=0.1.0-wp1
+PRETTY_NAME="Squeezebox RG35XX H (WP1 platform skeleton)"
+HOME_URL="https://github.com/ralph-irving/squeezeplay"

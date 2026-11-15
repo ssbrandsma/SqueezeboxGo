@@ -1,0 +1,4 @@
+# Squeezebox RG35XX H fstab. PARTUUIDs are fixed (see build/image/partitions.sfdisk).
+PARTUUID=0a1b2c3d-0001-4000-8000-000000000000  /boot  vfat    defaults,ro        0 2
+PARTUUID=0a1b2c3d-0002-4000-8000-000000000000  /      ext4    defaults,noatime   0 1
+tmpfs                                             /tmp   tmpfs   defaults,nosuid  0 0

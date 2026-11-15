@@ -1,0 +1,15 @@
+[Unit]
+Description=Squeezebox Wi-Fi (RTL8821CS)
+After=network-pre.target systemd-udev-settle.service
+Before=network.target squeezeplay.service
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/squeezebox/wifi.sh start
+ExecStop=/usr/lib/squeezebox/wifi.sh stop
+RemainAfterExit=yes
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target
