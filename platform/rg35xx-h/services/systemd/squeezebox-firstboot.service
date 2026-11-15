@@ -1,0 +1,15 @@
+[Unit]
+Description=Squeezebox first-boot finalization (dpkg configure + ssh keys)
+After=systemd-tmpfiles-setup.service local-fs.target
+Before=ssh.service wifi.service squeezeplay.service
+ConditionPathExists=!/var/lib/squeezebox/firstboot-done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/squeezebox/firstboot.sh
+RemainAfterExit=yes
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

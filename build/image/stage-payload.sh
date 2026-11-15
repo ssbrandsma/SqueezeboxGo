@@ -152,17 +152,27 @@ mkdir -p "$STAGING/lib/modules"
 cp -a "$KMOD"/lib/modules/. "$STAGING/lib/modules/"
 log "kernel modules staged"
 
-# 9. Target runtime lib closure (noble arm64 debs + ALSA + zlib; no glibc:
-# the base userland stays an open WP2 decision, see evidence doc).
+# 9. Target runtime lib closure (noble arm64 debs + ALSA + zlib; no glibc).
+# When a base userland is staged underneath (stage-userland.sh), its
+# dpkg-managed libs win: any SONAME already present is KEPT and the closure
+# copy is skipped (logged + recorded in the manifest below). Skeleton-only
+# staging (no userland) behaves exactly as before: nothing is skipped.
 LIBD="$STAGING/usr/lib/aarch64-linux-gnu"
 mkdir -p "$LIBD"
+SKIPPED_LIBS=""
 while IFS="$(printf '\t')" read -r soname hostpath _rest; do
     case "$soname" in ''|'#'*) continue ;; esac
+    if [ -e "$LIBD/$soname" ]; then
+        SKIPPED_LIBS="$SKIPPED_LIBS $soname"
+        log "target lib $soname: kept userland version (closure copy skipped)"
+        continue
+    fi
     [ -f "$hostpath" ] || die "closure host lib missing: $soname <- $hostpath"
     cp -L "$hostpath" "$LIBD/$soname"
     chmod 0644 "$LIBD/$soname"
 done < "$TLIBS"
 log "target libs staged ($(ls "$LIBD" | wc -l) files)"
+[ -n "$SKIPPED_LIBS" ] && log "userland-provided libs kept:$SKIPPED_LIBS"
 
 # 10. aarch64 smoke binary (ui/BRINGUP.md section 2 ships it on the image).
 [ -x "$UIBINS/sdl_smoke" ] && install -m 0755 "$UIBINS/sdl_smoke" "$SP/bin/sdl_smoke" \
@@ -182,6 +192,14 @@ log "target libs staged ($(ls "$LIBD" | wc -l) files)"
     echo "bsp-module: $(sha256sum "$SP/lib/lua/5.1/rg35xxh_bsp.so" | awk '{print $1}')"
     echo "asound.conf: $(sha256sum "$STAGING/etc/asound.conf" | awk '{print $1}')"
     echo "audio-owner: $(sha256sum "$STAGING/usr/sbin/audio-owner" | awk '{print $1}')"
+    if [ -n "$SKIPPED_LIBS" ]; then
+        echo "userland-libs-kept:$SKIPPED_LIBS"
+        for s in $SKIPPED_LIBS; do
+            echo "userland-lib-sha: $s $(sha256sum "$LIBD/$s" | awk '{print $1}')"
+        done
+    else
+        echo "userland-libs-kept: (none — skeleton-only staging)"
+    fi
 } > "$STAGING/payload-manifest.txt"
 chmod 0644 "$STAGING/payload-manifest.txt"
 

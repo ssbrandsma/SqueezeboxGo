@@ -1,0 +1,48 @@
+# userland-include.txt — explicit --include set for stage-userland.sh.
+#
+# debootstrap --variant=minbase installs Priority:required + apt only (no
+# init, no ssh, no wifi, no audio). These packages are added on top so the
+# image boots to working userspace. One package per line; '#' comments and
+# blank lines are ignored. Dependencies of these packages are resolved by
+# debootstrap itself (recorded in debootstrap/deburis).
+#
+# Suite note (trixie, 2026-11-15): the shipped squeezeplay payload was
+# built against noble sysroots and requires GLIBC_2.38 (__isoc23_*), which
+# bookworm's libc6 2.36 does not provide. trixie (libc6 2.41) is the
+# oldest Debian suite that runs the payload; see docs/test-results/wp2u-image.md
+# and the proposed ADR-0004 amendment. t64-transition names below (libasound2t64
+# etc.) are the trixie names; libasound2 is the bookworm name for the same lib.
+
+# init + device management (minbase ships neither; /sbin/init comes from systemd-sysv)
+systemd
+systemd-sysv
+udev
+
+# clock sync (TLS/ssh need a sane clock; the board may lack an RTC battery)
+systemd-timesyncd
+
+# audio (interface-contracts ALSA path; libasound2t64 == bookworm libasound2)
+libasound2t64
+alsa-utils
+
+# wireless: nl80211 tooling + supplicant + rfkill helper
+iw
+wpasupplicant
+rfkill
+# NOTE: wireless-tools (iwconfig) deliberately omitted — deprecated, iw replaces it.
+
+# DHCP client preferred by services/wifi.sh (udhcpc first, dhcpcd fallback)
+udhcpc
+
+# RTL8821CS wifi/bt firmware (non-free-firmware component, see stage-userland.sh)
+firmware-realtek
+
+# ssh (host keys generated natively at first boot, see services/firstboot.sh)
+openssh-server
+
+# kernel module tooling + `ip` helper (both used by services/wifi.sh)
+kmod
+iproute2
+
+# CA bundle so on-device apt can use https sources later
+ca-certificates
