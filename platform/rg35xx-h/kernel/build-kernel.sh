@@ -35,6 +35,14 @@ SRC="$(realpath -m "$SRC")" OUT="$(realpath -m "$OUT")"
 EPOCH="${SOURCE_DATE_EPOCH:-$SOURCE_DATE_EPOCH_DEFAULT}"
 export SOURCE_DATE_EPOCH="$EPOCH"
 export ARCH="$KARCH" CROSS_COMPILE="$KCROSS_COMPILE" KCFLAGS="$KCFLAGS"
+# Pin the wall clock kbuild embeds in the UTS version string (scripts/mkversion
+# uses `date` unless told otherwise, which made every Image unique). GNU date
+# syntax; the pinned container and Ubuntu hosts both provide it.
+if date -u -d "@$EPOCH" '+%a %b %d %H:%M:%S UTC %Y' >/dev/null 2>&1; then
+    export KBUILD_BUILD_TIMESTAMP="$(date -u -d "@$EPOCH" '+%a %b %d %H:%M:%S UTC %Y')"
+    export KBUILD_BUILD_USER="${KBUILD_BUILD_USER:-builder}"
+    export KBUILD_BUILD_HOST="${KBUILD_BUILD_HOST:-repro}"
+fi
 
 run() { if [ "$DRY" = 1 ]; then printf '+ %s\n' "$*"; else log "$*"; "$@"; fi; }
 [ -f "$SRC/Makefile" ] || die "no kernel tree at $SRC (run fetch.sh first)"
