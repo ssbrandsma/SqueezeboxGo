@@ -24,19 +24,21 @@ is required before any pin below becomes a build input.
   feature for cross-compiling to avoid OpenSSL build complexity.
   The CLI defines `--backend` / `--device` options (`src/main.rs`
   option constants, v0.8.0).
-- WP3 build plan (draft, no code yet):
-  1. Fetch the pinned tag tarball to `/tmp` (never wholesale into
-     git); verify the commit hash above.
-  2. `cargo build --release` for the glibc aarch64 target matching
-     the build contract (`aarch64-linux-gnu`), with a feature set
-     along the lines of `alsa-backend` + one `rustls-tls` variant —
-     exact set decided after a trial build, not guessed here.
-  3. Rust toolchain ≥ 1.85, pinned; `cargo vendor` the dependency
-     closure for offline/reproducible builds + SBOM (build contract).
-  4. Runtime wiring (`backend.conf` `BACKEND_CMD`, audio-owner claim
-     discipline, Now Playing mapping) is written **after** the source
-     is vendored, against the real CLI — no flags are recorded as
-     fact in this plan beyond the option names above.
+- WP3 build: **DONE** — `docs/test-results/wp3-librespot.md`. Outcome:
+  1. Pinned tag fetched to `/tmp`, commit verified (`d36f9f19`).
+  2. `cargo build --release --locked`, glibc aarch64
+     (`aarch64-unknown-linux-gnu`, `-C target-cpu=cortex-a53`),
+     `--no-default-features --features
+     alsa-backend,rustls-tls-webpki-roots,with-libmdns` — trial build
+     confirmed this exact set; backends list as `alsa (default),
+     pipe, subprocess`.
+  3. Rust 1.98.1 (≥ 1.85 required), locked `Cargo.lock` closure.
+     `cargo vendor` + SBOM for the offline image build stays a
+     platform-build-step TODO (recorded in the evidence file).
+  4. Runtime wiring written against the real CLI and the real
+     `--onevent` environment (`src/main.rs`,
+     `src/player_event_handler.rs`): `spotify-run.sh`,
+     `spotify.conf`, `spotify-onevent.sh`.
 
 Legacy `libspotify` stays dead: do NOT pursue (see REQUIRED_SOURCES
 item 9).
@@ -77,10 +79,22 @@ item 9).
 - `proxy`: no source or requirement identified; stays UNIMPLEMENTED.
 - `squeezeplay` backend command: owned by Agent 2; adapter ready.
 
-## 5. What stays true until WP3
+## 5. What stays true after WP3 (librespot landed)
 
-All 8 `backend.conf` files keep pointing at `unimplemented.sh`
-(exit 3 + contract text). No `BACKEND_CMD` names a backend binary
-until that backend's source is vendored and its real invocation is
-known. See `docs/test-results/wp2-standalone.md` for the WP2
-honesty checks.
+WP3 built the pinned tag (see `docs/test-results/wp3-librespot.md`):
+glibc aarch64 `librespot` binary with `--no-default-features --features
+alsa-backend,rustls-tls-webpki-roots,with-libmdns`, plus a native
+smoke build. The `spotify` service is now WIRED:
+`integration/services/spotify/backend.conf` execs
+`integration/spotify-run.sh` (config: `spotify.conf` in the same dir,
+real `LIBRESPOT_*` env names only), which pins `--backend alsa`,
+`--mixer`, `--onevent integration/spotify-onevent.sh`, and
+`--emit-sink-events`; the hook maps the real `--onevent` environment
+(`PLAYER_EVENT` + vars from `src/player_event_handler.rs`) onto the
+Now Playing schema v1. No flags or events were invented: every key is
+traceable to the v0.8.0 source.
+
+The remaining 7 `backend.conf` files (music, proxy, qobuz, radio,
+squeezeplay, vpn, webui) keep pointing at `unimplemented.sh` (exit 3
++ contract text). No other `BACKEND_CMD` names a backend binary until
+that backend's source is vendored and its real invocation is known.
