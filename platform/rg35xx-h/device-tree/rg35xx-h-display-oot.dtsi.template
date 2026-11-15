@@ -1,0 +1,46 @@
+// rg35xx-h-display-oot.dtsi.template — OOT display pipeline for RG35XX H.
+// *** TEMPLATE — NOT BUILDABLE. DO NOT RENAME TO .dtsi UNTIL WP2 ***
+// Every 0xUNSET_* address / timing below is a placeholder. Final values come
+// from the H616 User Manual + linux-sunxi WIP series + hardware probe, and the
+// finalized file must compile with dtc and boot to a stable 640x480 picture
+// before the .template suffix is dropped. build-kernel.sh never picks this up.
+//
+// Why OOT (verified at linux v7.3.4): sun50i-h616.dtsi carries ZERO display
+// nodes (no DE/mixer, TCON, DSI, DPHY, PWM), and the RG35XX DTS chain carries
+// no panel nodes. See kernel/patches/oot-patch-list.md (DISP-SOC-01,
+// DISP-PANEL-01).
+//
+// Intended include order (final):
+//   board dts -> rg35xx-h-display-oot.dtsi -> in-tree sun50i-h616.dtsi
+// SoC nodes ship status="disabled"; the board section at the bottom enables
+// exactly the pipeline RG35XX H uses: DE -> mixer -> TCON LCD -> RGB panel.
+
+/ {
+	/* PWM channel 0: panel backlight driver (docs/hardware.md). */
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		/* UNSET: pwms = <&pwm 0 UNSET_PERIOD_NS 0>; brightness levels TBD */
+		status = "disabled";
+	};
+
+	/* 640x480 RGB panel, fog_fj035fhd05_v1-class (docs/hardware.md).
+	 * UNSET: full display-timings from muOS sunxi.dts reference. */
+	panel: panel {
+		compatible = "UNSET,panel-640x480", "panel-simple";
+		backlight = <&backlight>;
+		/* UNSET: power-supply, reset-gpios, display-timings { ... } */
+		status = "disabled";
+	};
+};
+
+/* UNSET SoC pipeline nodes (register blocks per H616 User Manual):
+ * &de, &mixer0, &tcon_top, &tcon_lcd0, &dsi0, &dphy0, &pwm, display CCU
+ * consumers — port from the linux-sunxi WIP H616 DSI series, then enable:
+ *
+ * &de        { status = "okay"; };
+ * &mixer0    { status = "okay"; };
+ * &tcon_lcd0 { status = "okay"; };
+ * &pwm       { status = "okay"; };
+ * &panel     { status = "okay"; };
+ * &backlight { status = "okay"; };
+ */

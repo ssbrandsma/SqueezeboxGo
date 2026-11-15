@@ -1,0 +1,15 @@
+From: Your Name <you@example.com>
+Subject: [PATCH] short imperative description (<= 72 chars)
+Upstream-Status: Pending <link to lore.kernel.org thread or PR>
+Signed-off-by: Your Name <you@example.com>
+
+Long description: what breaks without this, what hardware it affects, and
+how it was validated (build at pinned tag / boot on RG35XX H / probe log
+in docs/test-results/). Keep patches small and reviewable; one logical
+change per file. See oot-patch-list.md for the landing rules.
+
+--- a/path/to/file
++++ b/path/to/file
+@@ -1 +1 @@
+-old line
++new line
