@@ -14,6 +14,11 @@
 #
 # Exit codes: 0 ok · 1 held-by-other · 2 environment error · 3 free (status)
 #             4 timeout (wait) · 5 not-holder (release)
+#
+# Conventions (WP2 hardening): <source> matches [A-Za-z0-9._-]+; event
+# lines (`audio-owner event=...`) always go to stdout, diagnostics to
+# stderr; claims are written atomically (tmp+rename); `status` never
+# creates state and reaps stale records it finds.
 
 set -u
 
@@ -21,12 +26,34 @@ DIR="${AUDIO_OWNER_DIR:-/run/squeezebox-audio}"
 MUTEX="$DIR/mutex"
 OWNER="$DIR/owner"
 
-die() { echo "audio-owner: $*" >&2; exit "${2:-2}"; }
+# NOTE: die takes (message, code); earlier versions echoed "$*" which
+# leaked the numeric code into the message. Keep the two separate so
+# log parsers see a clean message on stderr and the code in $?.
+die() { msg="$1"; code="${2:-2}"; echo "audio-owner: $msg" >&2; exit "$code"; }
+warn() { echo "audio-owner: ts=$(now) warning: $*" >&2; }
 need_flock() { command -v flock >/dev/null 2>&1 || die "flock(1) not found; refusing to claim" 2; }
+
+# Source names become part of the single-line owner record and of event
+# lines tailed by Now Playing publishers; restrict the charset so the
+# record stays machine-parseable (no whitespace, no '=' splitting).
+valid_source() {
+    case "$1" in
+        ''|*[!A-Za-z0-9._-]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
 
 init_dir() {
     [ -d "$DIR" ] || mkdir -p "$DIR" || die "cannot create $DIR" 2
     [ -f "$MUTEX" ] || : > "$MUTEX" || die "cannot create $MUTEX" 2
+    # Sweep leftover claim temp files from SIGKILLed writers (name embeds
+    # the writer pid; only remove when that pid is demonstrably dead).
+    for tmp in "$DIR"/owner.tmp.*; do
+        [ -f "$tmp" ] || continue
+        tpid="${tmp##*.tmp.}"
+        case "$tpid" in ''|*[!0-9]*) continue ;; esac
+        kill -0 "$tpid" 2>/dev/null || rm -f "$tmp"
+    done
 }
 
 # starttime (field 22 of /proc/PID/stat), or empty if PID is not that process.
@@ -38,7 +65,21 @@ proc_starttime() {
     awk '{ sub(/^.*\) /, ""); print $20 }' "/proc/$1/stat" 2>/dev/null
 }
 
+# Atomically (re)write the owner record: write-temp + rename so a
+# SIGKILL mid-write can never leave a torn half-line behind. Callers
+# must already hold the mutex exclusively.
+write_owner() {
+    # $1=source $2=pid $3=starttime $4=since
+    tmp="$OWNER.tmp.$$"
+    printf 'source=%s pid=%s starttime=%s since=%s\n' "$1" "$2" "$3" "$4" > "$tmp" \
+        || { rm -f "$tmp"; return 1; }
+    mv -f "$tmp" "$OWNER"
+}
+
 # owner_source owner_pid owner_stime owner_since (globals), or return 1 if free.
+# A present-but-unparseable record (torn write from a killed WP1 arbiter,
+# hand edit) is treated as STALE, not free: globals carry source=? so the
+# caller can reap it with a visible event instead of silently dropping it.
 read_owner() {
     O_SOURCE=""; O_PID=""; O_STIME=""; O_SINCE=""
     [ -f "$OWNER" ] || return 1
@@ -52,8 +93,19 @@ read_owner() {
             since=*) O_SINCE="${kv#since=}" ;;
         esac
     done
-    [ -n "$O_SOURCE" ] && [ -n "$O_PID" ] && [ -n "$O_STIME" ] || return 1
+    if [ -n "$O_SOURCE" ] && [ -n "$O_PID" ] && [ -n "$O_STIME" ]; then
+        return 0
+    fi
+    # Unparseable record: mark stale-with-identity so callers reap loudly.
+    [ -n "$O_SOURCE" ] || O_SOURCE="?"
+    [ -n "$O_PID" ] || O_PID="?"
     return 0
+}
+
+# True iff the loaded record is well-formed AND the process is alive.
+owner_valid_live() {
+    [ -n "$O_PID" ] && [ -n "$O_STIME" ] \
+        && [ "$O_PID" != "?" ] && [ "$O_STIME" != "?" ] && owner_live
 }
 
 owner_live() {
@@ -72,13 +124,14 @@ cmd_acquire() {
     # when the ALSA holder is a different process (e.g. the jive_alsa child).
     source="$1"; pid="$PPID"
     [ "${2:-}" = "--pid" ] && { pid="${3:?--pid needs a value}"; }
-    case "$pid" in ''|*[!0-9]*) die "bad pid: $pid" 2 ;; esac
+    valid_source "$source" || die "bad source name: $source (allowed: [A-Za-z0-9._-])" 2
+    case "$pid" in ''|*[!0-9]*|0) die "bad pid: $pid" 2 ;; esac
     stime="$(proc_starttime "$pid")" || die "pid $pid not running" 2
 
     (
         flock -x 9 || exit 2
         if read_owner; then
-            if owner_live; then
+            if owner_valid_live; then
                 if [ "$O_SOURCE" = "$source" ] && [ "$O_PID" = "$pid" ]; then
                     echo "audio-owner event=acquired source=$source pid=$pid ts=$(now) note=already-holder"
                     exit 0
@@ -89,7 +142,8 @@ cmd_acquire() {
                 echo "audio-owner event=reaped source=$O_SOURCE pid=$O_PID ts=$(now)"
             fi
         fi
-        printf 'source=%s pid=%s starttime=%s since=%s\n' "$source" "$pid" "$stime" "$(now)" > "$OWNER"
+        write_owner "$source" "$pid" "$stime" "$(now)" \
+            || { echo "audio-owner: cannot write $OWNER" >&2; exit 2; }
         echo "audio-owner event=acquired source=$source pid=$pid ts=$(now)"
     ) 9>"$MUTEX"
 }
@@ -97,10 +151,11 @@ cmd_acquire() {
 cmd_release() {
     need_flock; init_dir
     source="$1"
+    valid_source "$source" || die "bad source name: $source (allowed: [A-Za-z0-9._-])" 2
     (
         flock -x 9 || exit 2
         read_owner || { echo "audio-owner: already free" >&2; exit 0; }
-        if ! owner_live; then
+        if ! owner_valid_live; then
             echo "audio-owner event=reaped source=$O_SOURCE pid=$O_PID ts=$(now)"
             rm -f "$OWNER"
             exit 0
@@ -117,32 +172,69 @@ cmd_hold() {
     [ "${1:-}" = "--" ] || die "usage: audio-owner hold <source> -- <cmd> [...]" 2
     shift
     [ $# -ge 1 ] || die "usage: audio-owner hold <source> -- <cmd> [...]" 2
+    valid_source "$source" || die "bad source name: $source (allowed: [A-Za-z0-9._-])" 2
     # Claim first as ourselves (we outlive the child setup), then re-point
     # the claim at the child PID once it exists.
-    "$0" acquire "$source" --pid "$$" >/dev/null || exit 1
+    "$0" acquire "$source" --pid "$$" >/dev/null || exit $?
     # Re-point the claim at the child below; run child, release on exit.
     "$@" &
     child=$!
+    # If we are terminated, terminate the player too instead of orphaning
+    # it under a live claim; the claim then evaporates via the reap path.
+    # (If the child ignores TERM, the claim correctly stays live: the
+    # process that holds ALSA is still running.)
+    trap 'kill -TERM "$child" 2>/dev/null || true; exit 143' TERM INT
     child_stime="$(proc_starttime "$child")" || child_stime=""
     if [ -n "$child_stime" ]; then
-        ( flock -x 9
-          printf 'source=%s pid=%s starttime=%s since=%s\n' "$source" "$child" "$child_stime" "$(now)" > "$OWNER"
-        ) 9>"$MUTEX"
+        ( flock -x 9 || exit 2
+          # Re-point only while the claim is still ours (self pid, live);
+          # never clobber another source's claim.
+          if read_owner && [ "$O_SOURCE" = "$source" ] && [ "$O_PID" = "$$" ] && owner_live; then
+              write_owner "$source" "$child" "$child_stime" "$(now)" \
+                  || { echo "audio-owner: cannot re-point claim at pid $child" >&2; exit 2; }
+          else
+              echo "audio-owner: ts=$(now) warning: claim lost before re-point; not clobbering" >&2
+          fi
+        ) 9>"$MUTEX" || { kill "$child" 2>/dev/null || true; "$0" release "$source" >/dev/null 2>&1 || true; exit 2; }
     fi
     wait "$child"; rc=$?
+    trap - TERM INT
     "$0" release "$source" >/dev/null 2>&1 || true
     exit "$rc"
 }
 
 cmd_status() {
-    init_dir
+    need_flock
+    # Read-only fast path: no state dir (or no mutex) means nothing can be
+    # held — report free WITHOUT creating directories as a side effect.
+    if [ ! -d "$DIR" ] || [ ! -f "$MUTEX" ]; then
+        echo "free"
+        exit 3
+    fi
     (
         flock -s 9 || exit 2
-        if read_owner && owner_live; then
+        if read_owner && owner_valid_live; then
             printf 'held source=%s pid=%s since=%s\n' "$O_SOURCE" "$O_PID" "$O_SINCE"
             exit 0
         fi
+        stale=0
+        [ -f "$OWNER" ] && stale=1
         echo "free"
+        # Stale-lock cleanup: a dead holder's record is reaped here (under
+        # an exclusive lock) so `status` never leaves garbage behind for
+        # the next acquire to trip over; the reap event keeps the log whole.
+        if [ "$stale" -eq 1 ]; then
+            # Drop the shared lock before taking exclusive: re-locking
+            # SH→EX in place can deadlock two concurrent upgraders.
+            # Re-check under the fresh exclusive lock (a live acquire
+            # may have landed in between) and only reap if still stale.
+            flock -u 9
+            flock -x 9 || exit 3
+            if read_owner && ! owner_valid_live; then
+                echo "audio-owner event=reaped source=$O_SOURCE pid=$O_PID ts=$(now)"
+                rm -f "$OWNER"
+            fi
+        fi
         exit 3
     ) 9>"$MUTEX"
 }
@@ -173,10 +265,12 @@ cmd_force_release() {
     (
         flock -x 9 || exit 2
         if read_owner; then
-            echo "audio-owner event=released source=$O_SOURCE pid=$O_PID ts=$(now) note=force-release" >&2
+            # Event line goes to stdout like every other event (DESIGN.md:
+            # publishers tail stdout); the human confirmation to stderr.
+            echo "audio-owner event=released source=$O_SOURCE pid=$O_PID ts=$(now) note=force-release"
         fi
         rm -f "$OWNER"
-        echo "force-released"
+        echo "audio-owner: force-released $DIR/owner" >&2
     ) 9>"$MUTEX"
 }
 

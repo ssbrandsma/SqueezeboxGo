@@ -59,6 +59,67 @@ else
     else
         ok "internal card has no capture PCM (H616 link is playback_only)"
     fi
+
+    # --- sun4i-codec specifics (H616/H700 analog codec) ------------------
+    # Identity fields come from the /proc/asound/cards line via
+    # capability-detect; PCM details from pcm0p/info. Find our slot.
+    slot=""
+    i=0
+    while [ "$i" -lt "$count" ]; do
+        [ "$(val "card\\.$i\\.index")" = "$internal" ] && slot="$i"
+        i=$((i+1))
+    done
+    if [ -z "$slot" ]; then
+        nok "internal card slot lookup in capability-detect output"
+    else
+        ok "internal card slot lookup in capability-detect output"
+        cid="$(val "card\\.$slot\\.id")"
+        cdrv="$(val "card\\.$slot\\.driver")"
+        cusb="$(val "card\\.$slot\\.usb")"
+        [ "$cid" = "H616AudioCodec" ] \
+            && ok "internal card id is H616AudioCodec" \
+            || nok "internal card id is H616AudioCodec" "got '$cid'"
+        case "$cdrv" in
+            *H616*|*sun4i*|*sunxi*)
+                ok "internal card driver is sun4i-codec family ($cdrv)" ;;
+            *) nok "internal card driver is sun4i-codec family" "got '$cdrv'" ;;
+        esac
+        [ "$cusb" = "0" ] \
+            && ok "internal card is not a USB card" \
+            || nok "internal card is not a USB card" "usb='$cusb'"
+        case "$cdrv" in
+            *oopback*) nok "internal card is not snd-aloop" "got '$cdrv'" ;;
+            *) ok "internal card is not snd-aloop" ;;
+        esac
+        if [ -r "$info" ]; then
+            pid="$(sed -n 's/^id: *//p' "$info" | head -1)"
+            pname="$(sed -n 's/^name: *//p' "$info" | head -1)"
+            subcnt="$(sed -n 's/^subdevices_count: *//p' "$info" | head -1)"
+            [ "$pid" = "CDC PCM" ] \
+                && ok "internal pcm0p id is CDC PCM" \
+                || nok "internal pcm0p id is CDC PCM" "got '$pid'"
+            [ "$pname" = "CDC PCM" ] \
+                && ok "internal pcm0p name is CDC PCM" \
+                || nok "internal pcm0p name is CDC PCM" "got '$pname'"
+            [ "$subcnt" = "1" ] \
+                && ok "internal pcm0p has exactly 1 subdevice (single holder)" \
+                || nok "internal pcm0p has exactly 1 subdevice" "got '$subcnt'"
+        fi
+        # ASoC codec cards have no USB altsetting table; its presence
+        # would mean capability-detect matched the wrong card.
+        if [ -e "$PROC_ASOUND/card$internal/stream0" ]; then
+            nok "internal card has no USB-style stream0"
+        else
+            ok "internal card has no USB-style stream0"
+        fi
+        # SPDIF is a kernel module (see config cross-check below), not
+        # loaded in the base image: no second playback device expected.
+        if [ -e "$PROC_ASOUND/card$internal/pcm1p" ]; then
+            nok "internal card has no pcm1p (SPDIF module not loaded)"
+        else
+            ok "internal card has no pcm1p (SPDIF module not loaded)"
+        fi
+    fi
 fi
 
 usb="$(val 'usb\.card')"
@@ -74,6 +135,62 @@ else
     else
         ok "USB DAC card present (index $usb)"
     fi
+fi
+
+# USB DAC specifics (when a DAC is resolved, expected or not).
+if [ -n "$usb" ] && [ "$usb" != "-1" ]; then
+    usbid="$PROC_ASOUND/card$usb/usbid"
+    if [ -r "$usbid" ]; then
+        vid="$(tr -d ' \t\n' < "$usbid" 2>/dev/null)"
+        case "$vid" in
+            ????[:]????)
+                ok "USB card usbid parses as VID:PID ($vid)" ;;
+            *) nok "USB card usbid parses as VID:PID" "got '$vid'" ;;
+        esac
+    else
+        nok "USB card usbid file present" "$usbid unreadable"
+    fi
+    ustream="$PROC_ASOUND/card$usb/stream0"
+    if [ -r "$ustream" ]; then
+        grep -q 'Rates: ' "$ustream" 2>/dev/null \
+            && ok "USB card stream0 lists altsetting rates" \
+            || nok "USB card stream0 lists altsetting rates"
+    else
+        skip "USB card stream0 rates" "$ustream unreadable"
+    fi
+fi
+
+# --- platform kernel config cross-check ----------------------------------
+# Grounds the topology expectations in the pinned kernel fragment: the
+# sun4i-codec drivers are built-in (=y, internal card always present),
+# USB audio / SPDIF / loopback are modules (=m, optional or absent).
+KCONF="$HERE/../../platform/rg35xx-h/kernel/config/linux-rg35xx-h-aarch64.conf"
+if [ -r "$KCONF" ]; then
+    kopt() { grep -E "^$1=" "$KCONF" 2>/dev/null | tail -1; }
+    kline="$(kopt 'CONFIG_SND_SUN8I_CODEC')"
+    [ "$kline" = "CONFIG_SND_SUN8I_CODEC=y" ] \
+        && ok "kconf: CONFIG_SND_SUN8I_CODEC=y (internal card always present)" \
+        || nok "kconf: CONFIG_SND_SUN8I_CODEC=y" "got '$kline'"
+    kline="$(kopt 'CONFIG_SND_SUN50I_CODEC_ANALOG')"
+    [ "$kline" = "CONFIG_SND_SUN50I_CODEC_ANALOG=y" ] \
+        && ok "kconf: CONFIG_SND_SUN50I_CODEC_ANALOG=y (LINEOUT path)" \
+        || nok "kconf: CONFIG_SND_SUN50I_CODEC_ANALOG=y" "got '$kline'"
+    kline="$(kopt 'CONFIG_SND_USB_AUDIO')"
+    case "$kline" in
+        "CONFIG_SND_USB_AUDIO=m"|"CONFIG_SND_USB_AUDIO=y")
+            ok "kconf: $kline (USB DAC supported)" ;;
+        *) nok "kconf: CONFIG_SND_USB_AUDIO=m|y" "got '$kline'" ;;
+    esac
+    kline="$(kopt 'CONFIG_SND_SUN4I_SPDIF')"
+    [ "$kline" != "CONFIG_SND_SUN4I_SPDIF=y" ] \
+        && ok "kconf: SPDIF not built-in ($kline; no pcm1p expected)" \
+        || nok "kconf: SPDIF not built-in" "got '$kline'"
+    kline="$(kopt 'CONFIG_SND_ALOOP')"
+    [ "$kline" != "CONFIG_SND_ALOOP=y" ] \
+        && ok "kconf: snd-aloop not built-in ($kline; cannot shadow internal)" \
+        || nok "kconf: snd-aloop not built-in" "got '$kline'"
+else
+    skip "kernel config cross-check" "$KCONF unreadable"
 fi
 
 # Mixer controls on the internal card (live only: needs amixer).
