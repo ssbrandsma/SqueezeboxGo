@@ -1,0 +1,24 @@
+From: Ryan Walklin <ryan@testtoast.com>
+Subject: [PATCH 1/5] bus: sun50i: add DE33 compatible string to the DE2 bus driver
+Upstream-Status: Submitted <https://lore.kernel.org/linux-arm-kernel/20250216092827.15444-1-ryan@testtoast.com/>
+Signed-off-by: Ryan Walklin <ryan@testtoast.com>
+
+The Allwinner H616/H700 DE33 display-engine bus block is register-
+compatible with the A64 DE2 bus. Bind it so the display_clocks and
+mixer0 children probe.
+
+Squeezebox OOT note (WP3 panel): unchanged port of lore patch 1/8 to
+linux v7.3.4 (context still applies verbatim). Validated: kernel DTB
+build + sun50i-de2 cross-compile; hardware probe still gated. See
+docs/test-results/wp3-panel.md.
+
+--- a/drivers/bus/sun50i-de2.c
++++ b/drivers/bus/sun50i-de2.c
+@@ -31,6 +31,7 @@
+ 
+ static const struct of_device_id sun50i_de2_bus_of_match[] = {
+ 	{ .compatible = "allwinner,sun50i-a64-de2", },
++	{ .compatible = "allwinner,sun50i-h616-de33", },
+ 	{ /* sentinel */ }
+ };
+ 

@@ -1,0 +1,5 @@
+0001-bus-sun50i-de2-h616-de33.patch
+0002-drm-sun4i-tcon-r40-lcd.patch
+0003-pwm-sun4i-h616-compatible.patch
+0004-arm64-dts-h616-display-soc.patch
+0005-arm64-dts-rg35xx-h-display-oot.patch

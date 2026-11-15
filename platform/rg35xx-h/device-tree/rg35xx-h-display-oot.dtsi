@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * RG35XX-H display pipeline (out-of-tree). Master copy — mirrored verbatim
+ * into the kernel tree by platform/rg35xx-h/kernel/patches/0005 (keep in sync).
+ *
+ * Pipeline: DE33 -> mixer0 -> TCON TOP -> TCON LCD0 -> RGB panel (NV3052C).
+ * Panel wiring (SPI bitbang + reset + LCD regulator) follows Ryan Walklin's
+ * lore series "h616: add LCD timing controller and display engine support"
+ * (2025-02-16, 8 patches), Tested-by Philippe Simons on RG35XX-H, with two
+ * Squeezebox deviations, both HW-gated:
+ *  1. Backlight is pwm-backlight on PWM0/PD28 (brightness control per the HAL
+ *     contract) instead of the series' gpio-backlight interim. Period 50 us
+ *     (20 kHz) and polarity are first-boot validation items.
+ *  2. Nodes live in this -H-only include instead of the shared -2024 DTS, so
+ *     Plus/SP DTBs stay pristine until their wiring is proven on hardware.
+ *
+ * Panel: WL-355608-A8 class (NV3052C controller, SPI init + RGB data),
+ * driven by in-tree panel-newvision-nv3052c.c ("anbernic,rg35xx-plus-panel",
+ * kikuchan98's Rev6 entry). No OOT panel driver needed at linux v7.3.4.
+ *
+ * SoC nodes (&de, &mixer0, &tcon_top, &tcon_lcd0, &pwm, pinctrl) come from
+ * kernel patch 0004. Include order: -H.dts -> -plus -> -2024 -> h616.dtsi ->
+ * this file (included at the END of the -H.dts include chain so that all
+ * labels exist before use).
+ */
+
+#include <dt-bindings/gpio/gpio.h>
+
+/ {
+	backlight: backlight {
+		compatible = "pwm-backlight";
+		/* PWM0 on PD28. 50000 ns = 20 kHz. HW gate: if the panel
+		 * stays dark or inverted, try polarity <1> (inverted) and
+		 * 41700 ns; see BRINGUP_PANEL.md. GPIO fallback (proven by
+		 * Ryan/Philippe): compatible = "gpio-backlight";
+		 * gpios = <&pio 3 28 GPIO_ACTIVE_HIGH>; default-on; */
+		pwms = <&pwm 0 50000 0>;
+	};
+
+	reg_lcd: regulator-gpio-lcd-vdd {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		regulator-name = "vdd-lcd";
+		gpio = <&pio 8 15 GPIO_ACTIVE_HIGH>; /* PI15 */
+		enable-active-high;
+	};
+
+	spi_lcd: spi {
+		compatible = "spi-gpio";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		sck-gpios = <&pio 8 9 GPIO_ACTIVE_HIGH>; /* PI9 */
+		mosi-gpios = <&pio 8 10 GPIO_ACTIVE_HIGH>; /* PI10 */
+		cs-gpios = <&pio 8 8 GPIO_ACTIVE_HIGH>; /* PI8 */
+		num-chipselects = <1>;
+
+		panel: panel@0 {
+			compatible = "anbernic,rg35xx-plus-panel";
+
+			reg = <0>;
+
+			spi-max-frequency = <3125000>;
+			spi-3wire;
+
+			reset-gpios = <&pio 8 14 GPIO_ACTIVE_LOW>; /* PI14 */
+
+			backlight = <&backlight>;
+			power-supply = <&reg_lcd>;
+
+			pinctrl-0 = <&lcd0_rgb888_pins>;
+			pinctrl-names = "default";
+
+			port {
+				panel_in_rgb: endpoint {
+					remote-endpoint = <&tcon_lcd0_out_lcd>;
+				};
+			};
+		};
+	};
+};
+
+&de {
+	status = "okay";
+};
+
+&pio {
+	vcc-pd-supply = <&reg_cldo3>;
+};
+
+&pwm {
+	pinctrl-0 = <&pwm0_pin>;
+	pinctrl-names = "default";
+	status = "okay";
+};
+
+&tcon_lcd0 {
+	status = "okay";
+};
+
+&tcon_lcd0_out {
+	tcon_lcd0_out_lcd: endpoint@1 {
+		reg = <1>;
+		remote-endpoint = <&panel_in_rgb>;
+	};
+};

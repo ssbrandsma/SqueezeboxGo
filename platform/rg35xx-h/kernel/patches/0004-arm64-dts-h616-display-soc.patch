@@ -1,0 +1,309 @@
+From: Ryan Walklin <ryan@testtoast.com>
+Subject: [PATCH 4/5] arm64: dts: allwinner: h616: add display SoC nodes and PWM
+Upstream-Status: Submitted <https://lore.kernel.org/linux-arm-kernel/20250216092827.15444-1-ryan@testtoast.com/> (patches 2/8, 5/8, 6/8; adapted, see below)
+Signed-off-by: Jernej Skrabec <jernej.skrabec@gmail.com>
+Signed-off-by: Ryan Walklin <ryan@testtoast.com>
+
+Add the H616/H700 display pipeline SoC nodes: display engine, DE33
+bus + clocks + mixer0, TCON TOP / TCON LCD0 / TCON TV0, LCD/LVDS/PWM
+pinctrl, and the PWM block. All consumables stay status="disabled";
+boards enable exactly what they wire up.
+
+Squeezebox OOT adaptations of the lore series to linux v7.3.4 (WP3):
+- bus allwinner,sram points at the existing &sram_c node (v7.3.4
+  already carries sram_c with the a64-sram-c fallback; the series'
+  extra de3_sram section would collide with it).
+- tcon_lcd0 carries only the "lcd" reset (the only reset the TCON
+  driver consumes; LVDS is unused by RGB panels). Addresses Jernej's
+  review on the series' LCD1-as-LVDS reset.
+- tcon_top uses #clock-cells = <1> (onecell provider, as on H6) so
+  the tcon_tv0 CLK_TCON_TOP_TV0 consumer resolves; drops the v1
+  clock-output-names.
+- adds the pwm@300a000 node (H616 PWM == H6 IP; driver match from
+  patch 3/5) for pwm-backlight brightness control.
+
+Validated: sun50i-h700-anbernic-rg35xx-h.dtb builds clean via the
+kernel dtbs target; no other DTB in the tree regresses (see
+docs/test-results/wp3-panel.md). Display output still HW-gated.
+
+--- a/arch/arm64/boot/dts/allwinner/sun50i-h616.dtsi
++++ b/arch/arm64/boot/dts/allwinner/sun50i-h616.dtsi
+@@ -7,8 +7,11 @@
+ #include <dt-bindings/clock/sun50i-h616-ccu.h>
+ #include <dt-bindings/clock/sun50i-h6-r-ccu.h>
+ #include <dt-bindings/clock/sun6i-rtc.h>
++#include <dt-bindings/clock/sun8i-de2.h>
++#include <dt-bindings/clock/sun8i-tcon-top.h>
+ #include <dt-bindings/reset/sun50i-h616-ccu.h>
+ #include <dt-bindings/reset/sun50i-h6-r-ccu.h>
++#include <dt-bindings/reset/sun8i-de2.h>
+ #include <dt-bindings/thermal/thermal.h>
+ 
+ / {
+@@ -94,6 +97,12 @@
+ 		};
+ 	};
+ 
++	de: display-engine {
++		compatible = "allwinner,sun50i-h6-display-engine";
++		allwinner,pipelines = <&mixer0>;
++		status = "disabled";
++	};
++
+ 	reserved-memory {
+ 		#address-cells = <2>;
+ 		#size-cells = <2>;
+@@ -150,6 +159,51 @@
+ 		#size-cells = <1>;
+ 		ranges = <0x0 0x0 0x0 0x40000000>;
+ 
++		bus@1000000 {
++			compatible = "allwinner,sun50i-h616-de33",
++				     "allwinner,sun50i-a64-de2";
++			reg = <0x1000000 0x400000>;
++			allwinner,sram = <&sram_c 1>;
++			#address-cells = <1>;
++			#size-cells = <1>;
++			ranges = <0 0x1000000 0x400000>;
++
++			display_clocks: clock@8000 {
++				compatible = "allwinner,sun50i-h616-de33-clk";
++				reg = <0x8000 0x100>;
++				clocks = <&ccu CLK_DE>, <&ccu CLK_BUS_DE>;
++				clock-names = "mod", "bus";
++				resets = <&ccu RST_BUS_DE>;
++				#clock-cells = <1>;
++				#reset-cells = <1>;
++			};
++
++			mixer0: mixer@100000 {
++				compatible = "allwinner,sun50i-h616-de33-mixer-0";
++				reg = <0x100000 0x100000>,
++				      <0x8100 0x40>,
++				      <0x280000 0x20000>;
++				clocks = <&display_clocks CLK_BUS_MIXER0>,
++					 <&display_clocks CLK_MIXER0>;
++				clock-names = "bus", "mod";
++				resets = <&display_clocks RST_MIXER0>;
++				iommus = <&iommu 0>;
++
++				ports {
++					#address-cells = <1>;
++					#size-cells = <0>;
++
++					mixer0_out: port@1 {
++						reg = <1>;
++
++						mixer0_out_tcon_top_mixer0: endpoint {
++							remote-endpoint = <&tcon_top_mixer0_in_mixer0>;
++						};
++					};
++				};
++			};
++		};
++
+ 		gpu: gpu@1800000 {
+ 			compatible = "allwinner,sun50i-h616-mali",
+ 				     "arm,mali-bifrost";
+@@ -281,6 +335,17 @@
+ 			clocks = <&osc24M>;
+ 		};
+ 
++		pwm: pwm@300a000 {
++			compatible = "allwinner,sun50i-h616-pwm",
++				     "allwinner,sun50i-h6-pwm";
++			reg = <0x0300a000 0x400>;
++			clocks = <&osc24M>, <&ccu CLK_BUS_PWM>;
++			clock-names = "mod", "bus";
++			resets = <&ccu RST_BUS_PWM>;
++			#pwm-cells = <3>;
++			status = "disabled";
++		};
++
+ 		pio: pinctrl@300b000 {
+ 			compatible = "allwinner,sun50i-h616-pinctrl";
+ 			reg = <0x0300b000 0x400>;
+@@ -323,6 +388,32 @@
+ 				function = "ir_rx";
+ 			};
+ 
++			/omit-if-no-ref/
++			lcd0_rgb888_pins: lcd0-rgb888-pins {
++				pins = "PD0", "PD1", "PD2", "PD3",
++				       "PD4", "PD5", "PD6", "PD7",
++				       "PD8", "PD9", "PD10", "PD11",
++				       "PD12", "PD13", "PD14", "PD15",
++				       "PD16", "PD17", "PD18", "PD19",
++				       "PD20", "PD21", "PD22", "PD23",
++				       "PD24", "PD25", "PD26", "PD27";
++				function = "lcd0";
++			};
++
++			/omit-if-no-ref/
++			lvds0_pins: lvds0-pins {
++				pins = "PD0", "PD1", "PD2", "PD3", "PD4",
++				       "PD5", "PD6", "PD7", "PD8", "PD9";
++				function = "lvds0";
++			};
++
++			/omit-if-no-ref/
++			lvds1_pins: lvds1-pins {
++				pins = "PD10", "PD11", "PD12", "PD13", "PD14",
++				       "PD15", "PD16", "PD17", "PD18", "PD19";
++				function = "lvds1";
++			};
++
+ 			mmc0_pins: mmc0-pins {
+ 				pins = "PF0", "PF1", "PF2", "PF3",
+ 				       "PF4", "PF5";
+@@ -350,6 +441,12 @@
+ 			};
+ 
+ 			/omit-if-no-ref/
++			pwm0_pin: pwm0-pin {
++				pins = "PD28";
++				function = "pwm0";
++			};
++
++			/omit-if-no-ref/
+ 			nand_pins: nand-pins {
+ 				pins = "PC0", "PC1", "PC2", "PC5", "PC8", "PC9",
+ 				       "PC10", "PC11", "PC12", "PC13", "PC14",
+@@ -965,6 +1062,137 @@
+ 			status = "disabled";
+ 		};
+ 
++		tcon_top: tcon-top@6510000 {
++			compatible = "allwinner,sun50i-h6-tcon-top";
++			reg = <0x06510000 0x1000>;
++			clocks = <&ccu CLK_BUS_TCON_TOP>,
++				 <&ccu CLK_TCON_TV0>;
++			clock-names = "bus", "tcon-tv0";
++			resets = <&ccu RST_BUS_TCON_TOP>;
++			#clock-cells = <1>;
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				tcon_top_mixer0_in: port@0 {
++					#address-cells = <1>;
++					#size-cells = <0>;
++					reg = <0>;
++
++					tcon_top_mixer0_in_mixer0: endpoint@0 {
++						reg = <0>;
++						remote-endpoint = <&mixer0_out_tcon_top_mixer0>;
++					};
++				};
++
++				tcon_top_mixer0_out: port@1 {
++					#address-cells = <1>;
++					#size-cells = <0>;
++					reg = <1>;
++
++					tcon_top_mixer0_out_tcon_lcd0: endpoint@0 {
++						reg = <0>;
++						remote-endpoint = <&tcon_lcd0_in_tcon_top_mixer0>;
++					};
++
++					tcon_top_mixer0_out_tcon_tv0: endpoint@2 {
++						reg = <2>;
++						remote-endpoint = <&tcon_tv0_in_tcon_top_mixer0>;
++					};
++				};
++
++				tcon_top_hdmi_in: port@4 {
++					#address-cells = <1>;
++					#size-cells = <0>;
++					reg = <4>;
++
++					tcon_top_hdmi_in_tcon_tv0: endpoint@0 {
++						reg = <0>;
++						remote-endpoint = <&tcon_tv0_out_tcon_top>;
++					};
++				};
++
++				tcon_top_hdmi_out: port@5 {
++					reg = <5>;
++
++					tcon_top_hdmi_out_hdmi: endpoint {
++						/* placeholder for HDMI */
++					};
++				};
++			};
++		};
++
++		tcon_lcd0: lcd-controller@6511000 {
++			compatible = "allwinner,sun8i-r40-tcon-lcd";
++			reg = <0x06511000 0x1000>;
++			interrupts = <GIC_SPI 64 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_TCON_LCD0>, <&ccu CLK_TCON_LCD0>;
++			clock-names = "ahb", "tcon-ch0";
++			clock-output-names = "tcon-data-clock";
++			#clock-cells = <0>;
++			resets = <&ccu RST_BUS_TCON_LCD0>;
++			reset-names = "lcd";
++			status = "disabled";
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				tcon_lcd0_in: port@0 {
++					reg = <0>;
++
++					tcon_lcd0_in_tcon_top_mixer0: endpoint {
++						remote-endpoint = <&tcon_top_mixer0_out_tcon_lcd0>;
++					};
++				};
++
++				tcon_lcd0_out: port@1 {
++					#address-cells = <1>;
++					#size-cells = <0>;
++					reg = <1>;
++				};
++			};
++		};
++
++		tcon_tv0: lcd-controller@6515000 {
++			compatible = "allwinner,sun50i-h6-tcon-tv",
++				     "allwinner,sun8i-r40-tcon-tv";
++			reg = <0x06515000 0x1000>;
++			interrupts = <GIC_SPI 66 IRQ_TYPE_LEVEL_HIGH>;
++			clocks = <&ccu CLK_BUS_TCON_TV0>,
++				 <&tcon_top CLK_TCON_TOP_TV0>;
++			clock-names = "ahb", "tcon-ch1";
++			#clock-cells = <0>;
++			resets = <&ccu RST_BUS_TCON_TV0>;
++			reset-names = "lcd";
++			status = "disabled";
++
++			ports {
++				#address-cells = <1>;
++				#size-cells = <0>;
++
++				tcon_tv0_in: port@0 {
++					reg = <0>;
++
++					tcon_tv0_in_tcon_top_mixer0: endpoint {
++						remote-endpoint = <&tcon_top_mixer0_out_tcon_tv0>;
++					};
++				};
++
++				tcon_tv0_out: port@1 {
++					#address-cells = <1>;
++					#size-cells = <0>;
++					reg = <1>;
++
++					tcon_tv0_out_tcon_top: endpoint@1 {
++						reg = <1>;
++						remote-endpoint = <&tcon_top_hdmi_in_tcon_tv0>;
++					};
++				};
++			};
++		};
++
+ 		rtc: rtc@7000000 {
+ 			compatible = "allwinner,sun50i-h616-rtc";
+ 			reg = <0x07000000 0x400>;

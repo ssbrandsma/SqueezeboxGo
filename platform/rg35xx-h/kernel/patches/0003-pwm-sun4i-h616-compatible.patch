@@ -1,0 +1,28 @@
+From: Squeezebox RG35XX-H project (WP3 panel bring-up)
+Subject: [PATCH 3/5] pwm: sun4i: bind the H616 PWM block with H6 driver data
+Upstream-Status: Pending (H616 PWM DT binding not yet upstreamed; IP block
+ matches H6: 2 channels, prescaler bypass, direct mod-clock output)
+Squeezebox-OOT: yes - required for pwm-backlight brightness control
+
+The H616 PWM controller (0x0300a000) is the same IP as the H6 PWM
+block. Add the allwinner,sun50i-h616-pwm compatible reusing the H6
+driver data so the RG35XX-H panel backlight (PWM0 on PD28) can be
+driven with brightness control instead of a GPIO on/off interim.
+
+Validation: DTB build + pwm-sun4i cross-compile clean. Backlight
+polarity/period must be confirmed on hardware (see
+device-tree/BRINGUP_PANEL.md); falls back to gpio-backlight if PWM
+proves wrong.
+
+--- a/drivers/pwm/pwm-sun4i.c
++++ b/drivers/pwm/pwm-sun4i.c
+@@ -368,6 +368,9 @@
+ 		.compatible = "allwinner,sun50i-h6-pwm",
+ 		.data = &sun50i_h6_pwm_data,
+ 	}, {
++		.compatible = "allwinner,sun50i-h616-pwm",
++		.data = &sun50i_h6_pwm_data,
++	}, {
+ 		/* sentinel */
+ 	}
+ };
