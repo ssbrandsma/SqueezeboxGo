@@ -1,0 +1,32 @@
+From: WP1 Audio (Agent 3) <audio@rg35xxh.local>
+Subject: [PATCH 4/6] jive_alsa: log negotiated PCM params on open
+Upstream: squeezeplay@758bc11 src/squeezeplay/src/audio/decode/decode_alsa_backend.c
+Proposed-As: audio/alsa/proposals/0001-log-negotiated-pcm-params.patch
+Reviewed-By: Squeezebox RG35XX H Agent 2 (Core), WP2
+Rationale: today only the wire format + requested rate are logged at open; the
+ negotiated period/buffer sizes (which drive fifo autostart math and XRUN
+ behavior) are invisible unless stdout PCM dumps are enabled. Log one
+ summary line per successful open.
+Review: all referenced symbols (device, sample_rate, access params,
+ state->format/period_size/buffer_size) verified in scope at the insertion
+ point; period/buffer are snd_pcm_sframes_t, cast to unsigned long for %lu;
+ channels are hardcoded to 2 by this function so ch=2 is exact. Inserted
+ after hw_params success, so no NULL-device path can reach it.
+Apply: patch -p1 < 0004-jive-alsa-log-negotiated-pcm-params.patch (from upstream repo root)
+---
+
+diff --git a/src/squeezeplay/src/audio/decode/decode_alsa_backend.c b/src/squeezeplay/src/audio/decode/decode_alsa_backend.c
+--- a/src/squeezeplay/src/audio/decode/decode_alsa_backend.c
++++ b/src/squeezeplay/src/audio/decode/decode_alsa_backend.c
+@@ -780,6 +780,11 @@ static int _pcm_open(struct decode_alsa *state,
+ 	}
+ 	state->buffer_size = size;
+
++	LOG_INFO("Negotiated PCM %s: format=%s rate=%u ch=2 access=%s period=%lu buffer=%lu",
++		 device, snd_pcm_format_name(state->format), sample_rate,
++		 (access == SND_PCM_ACCESS_MMAP_INTERLEAVED) ? "mmap" : "rw",
++		 (unsigned long)state->period_size, (unsigned long)state->buffer_size);
++
+ 	/* iec958 control for playback device only */
+ 	if (!(state->flags & FLAG_STREAM_PLAYBACK) || mode != SND_PCM_STREAM_PLAYBACK) {
+ 		goto skip_iec958;

@@ -1,0 +1,14 @@
+#
+# SqueezeboxRG35XXH strings (skeleton: English only; translators fill in
+# the two-letter ISO 639-1 codes per the fab4 strings.txt convention).
+#
+BATTERY_LOW
+	EN	Low battery
+BATTERY_LOW_2
+	EN	Connect the charger or the player will power off
+GOODBYE
+	EN	Goodbye...
+BSP_BRIGHTNESS
+	EN	Screen brightness
+BSP_POWER
+	EN	Power
