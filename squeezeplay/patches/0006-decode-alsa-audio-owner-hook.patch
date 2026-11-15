@@ -1,0 +1,74 @@
+From: WP1 Audio (Agent 3) <audio@rg35xxh.local>
+Subject: [PATCH 6/6] decode_alsa: opt-in audio-owner acquire/release
+Upstream: squeezeplay@758bc11 src/squeezeplay/src/audio/decode/decode_alsa.c
+Proposed-As: audio/alsa/proposals/0003-audio-owner-hook.patch
+Reviewed-By: Squeezebox RG35XX H Agent 2 (Core), WP2
+Rationale: hooks the single-holder audio-owner arbiter
+ (audio/arbiter/audio-owner) into the playback fork path. Entirely opt-in:
+ when AUDIO_OWNER_BIN is unset, behavior is byte-identical to today. When
+ set, the launcher claims the device before forking jive_alsa and releases
+ at exit, so a second source (standalone adapter) can never double-open
+ the PCM.
+Review: LOG_WARN/LOG_ERROR category-first flavor matches this TU;
+ bool_t/TRUE/FALSE come via common.h->types.h; stdlib/stdio/unistd/PATH_MAX
+ all provided by common.h. Fork path uses vfork+execv with _exit() on
+ failure, so the atexit release cannot fire in the child. decode.c falls
+ through to the next backend (or "no audio device available") on init
+ returning 0, so a held device degrades to the existing silent-audio path
+ instead of double-opening. system() runs pre-fork with no audio lock held
+ (decode thread starts after init). Trust note: AUDIO_OWNER_BIN is
+ operator-set env, same trust level as USEALSA* and PATH; metacharacters
+ in it would reach /bin/sh - acceptable, documented.
+Apply: patch -p1 < 0006-decode-alsa-audio-owner-hook.patch (from upstream repo root)
+---
+
+diff --git a/src/squeezeplay/src/audio/decode/decode_alsa.c b/src/squeezeplay/src/audio/decode/decode_alsa.c
+--- a/src/squeezeplay/src/audio/decode/decode_alsa.c
++++ b/src/squeezeplay/src/audio/decode/decode_alsa.c
+@@ -38,6 +38,34 @@ pid_t effect_pid = -1;
+ pid_t playback_pid = -1;
+
+
++static void decode_alsa_audio_owner_release(void) {
++	const char *bin = getenv("AUDIO_OWNER_BIN");
++	char cmd[PATH_MAX + 64];
++
++	if (!bin)
++		return;
++	snprintf(cmd, sizeof(cmd), "%s release squeezeplay", bin);
++	if (system(cmd) != 0)
++		LOG_WARN(log_audio_output, "audio-owner release failed");
++}
++
++static bool_t decode_alsa_audio_owner_acquire(void) {
++	const char *bin = getenv("AUDIO_OWNER_BIN");
++	char cmd[PATH_MAX + 64];
++
++	if (!bin)
++		return TRUE;
++	snprintf(cmd, sizeof(cmd), "%s acquire squeezeplay --pid %d",
++		 bin, (int)getpid());
++	if (system(cmd) != 0) {
++		LOG_ERROR(log_audio_output, "audio device held by another source");
++		return FALSE;
++	}
++	if (atexit(decode_alsa_audio_owner_release) != 0)
++		LOG_WARN(log_audio_output, "atexit registration failed");
++	return TRUE;
++}
++
+ static void decode_alsa_check_pids(void) {
+ 	if (effect_pid >= 0) {
+ 		if (waitpid(effect_pid, NULL, WNOHANG) == effect_pid) {
+@@ -326,6 +354,11 @@ static int decode_alsa_init(lua_State *L) {
+ 	/* Don't start playback jive_alsa if defined */
+ 	if ( getenv("SQUEEZEPLAY_NOPLAYBACK") == NULL )
+ 	{
++		/* 0 = clean init failure: decode.c falls through to the next
++		 * backend (portaudio) or reports "no audio device available"
++		 * instead of double-opening the PCM. */
++		if (!decode_alsa_audio_owner_acquire())
++			return 0;
+ 		playback_pid = decode_alsa_fork(playback_device, capture_device, buffer_time, period_count, pcm_timeout,
+ 			sample_size, (FLAG_STREAM_PLAYBACK|flags));
+ 	}

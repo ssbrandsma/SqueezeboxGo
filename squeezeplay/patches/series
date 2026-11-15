@@ -1,3 +1,6 @@
 0001-lua-5.1.5-sharedlib-aarch64-rg35xxh.patch
 0002-squeezeplay-git-revcount-version.patch
 0003-squeezeplay-jive-link-libm.patch
+0004-jive-alsa-log-negotiated-pcm-params.patch
+0005-jive-alsa-clamp-buffer-params.patch
+0006-decode-alsa-audio-owner-hook.patch
