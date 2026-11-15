@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-15 (Agent 0, WP0 complete → WP1 starting).
+Last updated: 2026-11-15 (Agent 0, WP1 merged → WP2 starting).
 
 ## Completed
 
@@ -10,16 +10,30 @@ Last updated: 2026-11-15 (Agent 0, WP0 complete → WP1 starting).
   QA test matrix. Audio/Standalone agents confirmed greenfield (no sources yet).
 - Architecture selected autonomously; ADRs in `docs/decisions/`.
 - Repo scaffold + `AGENTS.md` + contracts + upstream manifest created; baseline committed.
+- WP1 parallel implementation via workflow `Squeezebox WP1 Parallel Implementation`
+  (completed): all 6 branches conflict-free merged to main (`f25cd41`):
+  1. Platform `02461d2`: pins (linux v7.3.4, u-boot v2026.10, ATF v2.15.0),
+     fetch/build scripts, OOT list, rootfs+services, image assembly, Dockerfile.
+  2. Core `81bd969`: `Makefile.linux-aarch64`, 3 compat patches, toolchain,
+     verified aarch64 cross build + native/qemu jive boot (9.0.0 r541).
+  3. Audio `c95446d`: ALSA path doc, asound.conf, mixer map, capability-detect,
+     audio-owner arbiter, target tests, 3 jive_alsa proposals (unpromoted).
+  4. UI `2fec230`: 640x480 2x skin (467 PNGs), evdev2jive mapper + map,
+     splash PNG + DRM painter + init script, sdl12-compat pin.
+  5. Standalone `eb8a794`: REQUIRED_SOURCES (real 9.0.2 Jive trees found on disk),
+     portable adapters, Now Playing schema, bsp-shim, 8 UNIMPLEMENTED stubs.
+  6. QA `ef2f465`: 6-gate harness, selftest 20/20, report generator, release tools.
+- Lead integration fixes: check_mapping now validates evdev2jive `.map` grammar;
+  check_skin validates Lua applet skins (467 PNGs even+valid, 4 Lua compile);
+  contract JIVE_VERSION corrected to truthful 9.0.0 r541; manifest pins filled.
+- Post-merge gates (`docs/test-results/wp1-merge-gates.md`): 5 PASS
+  (asound, mapping, skin, shellcheck, repro-env), 1 NOT RUN (arch: no ELF in git);
+  selftest 20/20, input tests 13/13.
 
 ## Current work
 
-- WP1 parallel implementation (6 agents, isolated worktrees):
-  1. Platform: kernel+U-Boot+DTB build, rootfs, image skeleton, services.
-  2. Core: vendor pinned sources, `Makefile.linux-aarch64`, native deps, first build.
-  3. Audio: ALSA topology, `jive_alsa` adaptation, ownership arbiter design, tests.
-  4. UI: sdl12-compat/SDL2-KMS, 640x480 skin bootstrap, input mapper, splash.
-  5. Standalone: integration framework + adapters (sources still missing, no invented APIs).
-  6. QA: build checks, reproducibility harness, test-result reporting.
+- WP2 first-boot integration: kernel+U-Boot builds, rootfs+squeezeplay assembly,
+  audio proposal review, SDL/KMS bring-up plan, first experimental `.img`.
 
 ## Blockers / external deps
 
@@ -30,10 +44,12 @@ Last updated: 2026-11-15 (Agent 0, WP0 complete → WP1 starting).
 
 ## Next steps (resume here)
 
-1. Check WP1 workflow result / agent branches; integrate to main.
-2. Verify: aarch64 squeezeplay build, rootfs+image build, SDL smoke, ALSA config lint.
-3. WP2 first-boot integration → first experimental `.img`.
-4. Prepare human hardware-test procedure when device is available.
+1. WP2 workflow: kernel+U-Boot cross builds in container (or native cross),
+   rootfs+squeezeplay+skin+services assembly, audio proposals review/promotion.
+2. First experimental `.img` (assemble-image.sh) + validation report; mark
+   physical-boot tests NOT RUN until hardware exists.
+3. Prepare human hardware-test procedure (flash, boot, evtest, aplay, wifi).
+4. WP3 standalone backends (librespot, slimserver plugins) per REQUIRED_SOURCES.
 
 ## Key commands
 

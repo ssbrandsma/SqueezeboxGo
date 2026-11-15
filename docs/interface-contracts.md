@@ -5,7 +5,9 @@ Lead-owned. Changes require Lead approval + notice to affected agents.
 ## Build contract (all agents)
 
 - Target: `aarch64-linux-gnu`, `-march=armv8-a+crc -mtune=cortex-a53`, glibc.
-- `PREFIX=/opt/squeezeplay`, rpath-pinned, `JIVE_VERSION=8.0.0-r<revcount>`.
+- `PREFIX=/opt/squeezeplay`, rpath-pinned, `JIVE_VERSION` follows the upstream
+  release (currently `9.0.0 r541` from the pinned tree; `SQUEEZEPLAY_RELEASE`
+  override available for release stamping).
 - Pinned container toolchain; `SOURCE_DATE_EPOCH` set; SBOM per build.
 - Upstream pins: `docs/upstream-references/upstream-manifest.md`.
 

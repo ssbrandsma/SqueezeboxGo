@@ -1,26 +1,35 @@
 #!/usr/bin/env python3
 """Skin validator: 640x480 = 2x integer scale of the QVGA Radio skin.
 
-Target: ui/skins/*/skin.json manifest (v1):
-  {"name": "...", "width": 640, "height": 480,
-   "base": {"width": 320, "height": 240},
-   "assets": ["bg.png", ...]}   # paths relative to the manifest dir
+Targets:
+  * ui/skins/*/skin.json manifest (v1):
+    {"name": "...", "width": 640, "height": 480,
+     "base": {"width": 320, "height": 240},
+     "assets": ["bg.png", ...]}   # paths relative to the manifest dir
+  * Lua skins: ui/skins/*/ dirs holding *Applet.lua (+ *Meta.lua,
+    images/...) as shipped by Agent 4 (Jive applet skins, no manifest).
 
 Rules (errors -> FAIL):
   * manifest parses; width==640, height==480; base==320x240 (scale 2x)
   * every listed asset exists, is a valid PNG (signature + IHDR via
     stdlib struct, no PIL needed), has even width/height (2x-scaleable)
     and fits inside the 640x480 canvas
-Warnings: assets dir contains PNGs not listed in the manifest.
+  * Lua skin: >=1 *Applet.lua present; every PNG under the skin dir
+    valid with even width/height (2x property; oversize assets are legal
+    and counted, not errors); Lua files byte-compile when luac installed
+Warnings: assets dir contains PNGs not listed in the manifest;
+  luac missing (Lua syntax unchecked).
 
-Exit codes: 0 PASS, 1 FAIL, 3 NOT RUN (no skin manifests yet).
+Exit codes: 0 PASS, 1 FAIL, 3 NOT RUN (no skins yet).
 """
 
 import argparse
 import glob
 import json
 import os
+import shutil
 import struct
+import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -93,25 +102,107 @@ def check_manifest(mpath):
     return errors, warnings, notes
 
 
+LUAC_CANDIDATES = ("luac", "luac5.1", "luac-5.1.5")
+
+
+def check_lua_skin(d):
+    """Validate a Jive applet skin dir (no manifest). Summarized notes."""
+    errors, warnings, notes = [], [], []
+    applets = sorted(glob.glob(os.path.join(d, "*Applet.lua")))
+    metas = sorted(glob.glob(os.path.join(d, "*Meta.lua")))
+    if not applets:
+        return ["no *Applet.lua in skin dir"], [], []
+    if not metas:
+        warnings.append("no *Meta.lua in skin dir")
+    pngs = []
+    for dirpath, _, files in os.walk(d):
+        for f in files:
+            if f.lower().endswith(".png"):
+                pngs.append(os.path.join(dirpath, f))
+    if not pngs:
+        warnings.append("no PNG assets under skin dir")
+    # NOTE: no "fits canvas" rule here. Faithful 2x Lua skins legitimately
+    # contain assets larger than the viewport (scroll strips, 9-slice box
+    # parts, clock faces, dev-only Guidelines/Reference_Screens) — the
+    # upstream QVGA originals exceed 320x240 the same way. Oversize assets
+    # are counted as info only; Jive clips/scales at render time.
+    bad, oversize = 0, 0
+    for ap in sorted(pngs):
+        rel = os.path.relpath(ap, d)
+        try:
+            aw, ah = png_size(ap)
+        except (OSError, ValueError) as e:
+            errors.append(f"{rel}: {e}")
+            bad += 1
+            continue
+        if aw % 2 or ah % 2:
+            errors.append(f"{rel}: {aw}x{ah} not even "
+                          "(breaks 2x integer scale)")
+            bad += 1
+        elif aw > WANT_W or ah > WANT_H:
+            oversize += 1
+        if bad >= 20 and len(errors) > 20:
+            errors.append("... further asset errors suppressed")
+            break
+    notes.append(f"{len(pngs)} PNG(s) checked, "
+                 f"{len(pngs) - bad} ok ({oversize} oversize-but-legal)")
+    luac = next((c for c in LUAC_CANDIDATES if shutil.which(c)), None)
+    if luac is None:
+        warnings.append("luac not installed; Lua syntax unchecked")
+    else:
+        for lf in applets + metas:
+            rel = os.path.relpath(lf, d)
+            try:
+                r = subprocess.run([luac, "-p", lf], capture_output=True,
+                                   text=True, timeout=60)
+            except (OSError, subprocess.TimeoutExpired) as e:
+                errors.append(f"{rel}: luac failed: {e}")
+                continue
+            if r.returncode != 0:
+                errors.append(f"{rel}: luac: "
+                              f"{(r.stderr or r.stdout).strip()}")
+        notes.append(f"{len(applets) + len(metas)} Lua file(s) compile ok")
+    return errors, warnings, notes
+
+
+def find_lua_skins(root):
+    out = []
+    base = os.path.join(root, "ui", "skins")
+    if not os.path.isdir(base):
+        return out
+    for entry in sorted(os.listdir(base)):
+        d = os.path.join(base, entry)
+        if (os.path.isdir(d)
+                and glob.glob(os.path.join(d, "*Applet.lua"))
+                and not os.path.isfile(os.path.join(d, "skin.json"))):
+            out.append(d)
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Validate 640x480 skins.")
     ap.add_argument("files", nargs="*", default=None,
-                    help="Manifests (default: ui/skins/*/skin.json).")
+                    help="Manifests or skin dirs (default:ui/skins/*).")
     ap.add_argument("--root", default=None)
     ap.add_argument("--json", action="store_true")
     args = ap.parse_args(argv)
     root = repo_root(args.root)
-    targets = ([os.path.join(root, f) if not os.path.isabs(f) else f
-                for f in args.files] if args.files
-               else sorted(glob.glob(os.path.join(root, "ui", "skins", "*",
-                                                  "skin.json"))))
-    targets = [t for t in targets if os.path.isfile(t)]
-    if not targets:
+    if args.files:
+        given = [os.path.join(root, f) if not os.path.isabs(f) else f
+                 for f in args.files]
+        manifests = [t for t in given if os.path.isfile(t)]
+        luaskins = [t for t in given if os.path.isdir(t)]
+    else:
+        manifests = sorted(glob.glob(os.path.join(root, "ui", "skins", "*",
+                                                  "skin.json")))
+        manifests = [t for t in manifests if os.path.isfile(t)]
+        luaskins = find_lua_skins(root)
+    if not manifests and not luaskins:
         return emit("skin", NOTRUN,
-                    ["no skin manifests under ui/skins/ yet"],
+                    ["no skins under ui/skins/ yet"],
                     json_mode=args.json)
     details, failed = [], []
-    for t in targets:
+    for t in manifests:
         rel = os.path.relpath(t, root)
         errors, warnings, notes = check_manifest(t)
         if errors:
@@ -126,7 +217,21 @@ def main(argv=None):
             details.append(f"{rel}: {x}")
         for x in warnings:
             details.append(f"{rel}: warn: {x}")
-    details.append(f"checked {len(targets)} skin(s), {len(failed)} failed")
+    for d in luaskins:
+        rel = os.path.relpath(d, root)
+        errors, warnings, notes = check_lua_skin(d)
+        if errors:
+            failed.append(rel)
+            for e in errors:
+                details.append(f"{rel}: ERROR: {e}")
+        else:
+            details.append(f"{rel}: lua skin ok")
+        for x in notes:
+            details.append(f"{rel}: {x}")
+        for x in warnings:
+            details.append(f"{rel}: warn: {x}")
+    details.append(f"checked {len(manifests) + len(luaskins)} skin(s), "
+                   f"{len(failed)} failed")
     return emit("skin", FAIL if failed else PASS, details,
                 json_mode=args.json)
 
