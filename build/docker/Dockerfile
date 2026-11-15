@@ -14,7 +14,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git curl ca-certificates file python3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Layer 2: image assembly tooling (libfaketime: WP2 byte-repro mkfs path).
+# Layer 2: image assembly tooling. NOTE (WP2): ext4 byte-repro comes from
+# mke2fs >= 1.47.1 + SOURCE_DATE_EPOCH + pinned hash_seed, NOT libfaketime
+# (measured: faketime double-shifts -d source times; see build/image/README).
+# TODO: e2fsprogs >= 1.47.1 (bookworm ships 1.46.x) for byte-identical images.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     dosfstools mtools e2fsprogs fdisk util-linux parted gdisk \
     fakeroot libfaketime shellcheck \

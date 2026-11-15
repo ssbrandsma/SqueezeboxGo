@@ -33,6 +33,8 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$USRC" ] && [ -n "$ASRC" ] && [ -n "$OUT" ] \
     || die "need --uboot DIR --atf DIR --out DIR"
+# Absolutize: make -C resolves O=/BL31= relative to the source dir otherwise.
+USRC="$(realpath -m "$USRC")" ASRC="$(realpath -m "$ASRC")" OUT="$(realpath -m "$OUT")"
 case "$VARIANT" in ddr3|ddr4|both) ;; *) die "bad --variant $VARIANT" ;; esac
 EPOCH="${SOURCE_DATE_EPOCH:-$SOURCE_DATE_EPOCH_DEFAULT}"
 export SOURCE_DATE_EPOCH="$EPOCH"
@@ -66,7 +68,20 @@ build_variant() { # name extra-conf-fragment-or-empty
     fi
     run make -C "$USRC" O="$obj" -j"$JOBS" BL31="$BL31"
     run mkdir -p "$OUT/$name"
-    run cp "$obj/u-boot-sunxi-with-spl.bin" "$obj/u-boot.itb" "$OUT/$name/"
+    run cp "$obj/u-boot-sunxi-with-spl.bin" "$OUT/$name/"
+    # FIT name varies by U-Boot version (u-boot.itb vs
+    # u-boot-sunxi-with-spl.fit.itb @ v2026.10); stage as u-boot.itb.
+    if [ "$DRY" = 1 ]; then
+        run cp "$obj/u-boot.itb" "$OUT/$name/"
+    else
+        FIT_SRC=""
+        for cand in "$obj/u-boot.itb" "$obj/u-boot-sunxi-with-spl.fit.itb"; do
+            if [ -f "$cand" ]; then FIT_SRC="$cand"; break; fi
+        done
+        [ -n "$FIT_SRC" ] || die "no FIT image in $obj (want u-boot.itb)"
+        log "FIT source: $FIT_SRC"
+        cp "$FIT_SRC" "$OUT/$name/u-boot.itb"
+    fi
     run cp "$BL31" "$OUT/$name/bl31.bin"
     log "variant $name staged in $OUT/$name"
 }
@@ -80,5 +95,5 @@ case "$VARIANT" in
           [ -f "$DDR3_FRAG" ] || die "missing $DDR3_FRAG"
           build_variant ddr3 "$DDR3_FRAG" ;;
 esac
-run bash -c "cd '$OUT' && find ddr3 ddr4 -type f | sort | xargs sha256sum > SHA256SUMS.uboot"
+run bash -c "cd '$OUT' && find ddr3 ddr4 -type f 2>/dev/null | sort | xargs sha256sum > SHA256SUMS.uboot"
 log "u-boot staging ready in $OUT (epoch $EPOCH)"
