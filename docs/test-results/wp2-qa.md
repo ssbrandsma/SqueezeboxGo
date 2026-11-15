@@ -119,7 +119,7 @@ images in `$TMPDIR` only (never committed, never flashed):
 - Tree mode: `tests/fixtures/image-good` → PASS (boot.scr, Image,
   `sun50i-h700-anbernic-rg35xx-h.dtb`, `etc/os-release`, secrets clean);
   `tests/fixtures/image-bad` → FAIL (missing DTB + fixture PEM marker
-  in `leaked.pem` detected).
+  in `leaked-key.txt` detected).
 - Raw `.img` mode: 512 MiB skeleton from `mksunxi_gpt.py` + fake SPL at
   sector 16 + hand-staged FAT32 root (BOOT.SCR, IMAGE, DTB.IMG) →
   full PASS incl. protective MBR, GPT header/array CRCs, p1/p2
