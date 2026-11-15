@@ -1,0 +1,7 @@
+{
+  "name": "fixture-640x480",
+  "width": 640,
+  "height": 480,
+  "base": {"width": 320, "height": 240},
+  "assets": ["bg.png"]
+}

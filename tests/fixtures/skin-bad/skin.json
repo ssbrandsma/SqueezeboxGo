@@ -1,0 +1,7 @@
+{
+  "name": "fixture-wrong-size",
+  "width": 800,
+  "height": 480,
+  "base": {"width": 320, "height": 240},
+  "assets": ["bg.png", "missing.png"]
+}

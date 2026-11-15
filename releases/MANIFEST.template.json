@@ -1,0 +1,18 @@
+{
+  "$comment": "Release manifest template. Copy to MANIFEST.json in the release dir and fill every null.",
+  "name": "squeezebox-rg35xx-h",
+  "version": null,
+  "variant": null,
+  "date_utc": null,
+  "source_date_epoch": null,
+  "git_commit": null,
+  "toolchain": null,
+  "sbom": null,
+  "artifacts": [
+    {
+      "file": null,
+      "size_bytes": null,
+      "sha256": null
+    }
+  ]
+}

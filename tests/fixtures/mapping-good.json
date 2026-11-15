@@ -1,0 +1,24 @@
+{
+  "device": "rg35xx-h",
+  "note": "Fixture: full canonical binding incl. optional stick scroll.",
+  "bindings": {
+    "Up": "Up",
+    "Down": "Down",
+    "Left": "Left",
+    "Right": "Right",
+    "ButtonA": "Select",
+    "ButtonB": "Back",
+    "ButtonX": "NowPlaying",
+    "ButtonY": "Favorites",
+    "Start": "PlayPause",
+    "Select": "Home",
+    "L1": "Prev",
+    "R1": "Next",
+    "L2": "VolDown",
+    "R2": "VolUp",
+    "StickUp": "ScrollUp",
+    "StickDown": "ScrollDown",
+    "StickLeft": "ScrollLeft",
+    "StickRight": "ScrollRight"
+  }
+}
