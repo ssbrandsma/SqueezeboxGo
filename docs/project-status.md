@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-15 (Agent 0, merged image 0.1.0-exp1 done → userland integration).
+Last updated: 2026-11-15 (Agent 0, 0.2.0-exp2 bootable-to-userspace done).
 
 ## Completed
 
@@ -76,10 +76,32 @@ Last updated: 2026-11-15 (Agent 0, merged image 0.1.0-exp1 done → userland int
   and no OOT panel driver → not yet hardware-bootable. Next workflow closes
   userland; panel + physical boot stay HW-gated.
 
+## Completed (0.2.0-exp2, bootable-to-userspace)
+
+- Workflow `Squeezebox Userland Integration` (completed), both branches merged:
+  - `wp2u/image`: stage-userland.sh (real debootstrap --foreign trixie minbase
+    under fakeroot, Release-sig verified, 141 pkgs + rootless 2nd stage + dpkg
+    manifest + container hook), firstboot/dpkg-configure/ssh-keygen wiring,
+    getty+serial+ssh+timesyncd, 11834-file staging, both 2 GiB `.img` rebuilt
+    in /tmp/sqz-userland (ddr3 `7a1fc07c…`, ddr4 `c388cbf1…`); qemu-user jive
+    boot against staged trixie libs; systemd-analyze verify exit 0.
+  - `wp2u/qa`: E2E re-verify — userland assertions via debugfs (init, systemd,
+    libasound, jive ELFs; 141-pkg manifest), variant diff characterized,
+    `.img.xz` both (~164 MB each, round-trip verified), MANIFEST.json 0.2.0-exp2,
+    SHA256SUMS green. 25 checks: 17 PASS + FP disposition, 3 NOT RUN.
+- Lead decisions: (1) ADR-0004 amended bookworm→trixie (GLIBC_2.38 measured
+  requirement; bookworm loader failure reproduced). (2) check_image secrets
+  heuristic fixed — PEM hits now require key material (bare OpenSSH .rodata
+  markers no longer FP); image-bad fixture strengthened; real images PASS.
+- Post-merge gates (`docs/test-results/wp2u-merge-gates.md`): 6 PASS + arch
+  NOT RUN. selftest 27/27.
+
 ## Current work
 
-- Userland integration workflow: debootstrap staging in mkrootfs, rebuild both
-  variants, QA E2E re-verify, `.img.xz` compression, updated manifest.
+- Next: OOT panel driver + DT overlay prep (display dark on HW without it),
+  WP3 standalone backends (librespot build, slimserver plugins), then WP4/WP5.
+- Sole external blocker unchanged: physical RG35XX H (H1-H18, first-boot
+  dpkg-configure, panel light, DDR-ID/TPR, ALSA live validation).
 
 ## Blockers / external deps
 
@@ -90,12 +112,13 @@ Last updated: 2026-11-15 (Agent 0, merged image 0.1.0-exp1 done → userland int
 
 ## Next steps (resume here)
 
-1. Userland workflow (launch next): debootstrap bookworm arm64 into mkrootfs,
-   systemd wiring, rebuild ddr3+ddr4, QA E2E, `.img.xz` + SHA256SUMS + manifest.
-2. Tag experimental release 0.2.0-exp2 (bootable-to-userspace candidate).
+1. Panel workflow: source ROCKNIX-class OOT panel DTS+driver (kikuchan98 generic
+   MIPI / rev6-panel), backlight PWM, kernel patch packaging, DTB rebuild.
+2. WP3 backends: librespot v0.8.0 cross-build + adapter wiring, slimserver 9.0.2
+   plugin evaluation, web UI + Now Playing E2E.
 3. Human hardware test per HW_TEST_PLAN.md when RG35XX H is available —
-   the only true external blocker (panel driver + H1-H18 need the device).
-4. WP3 standalone backends (librespot build, slimserver 9.0.2 plugins, web UI).
+   the only true external blocker.
+4. WP4 appliance polish + WP5 release docs (install/upgrade/recovery).
 
 ## Key commands
 

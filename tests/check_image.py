@@ -48,8 +48,12 @@ ROOT_PARTUUID = "0a1b2c3d-0002-4000-8000-000000000000"
 BOOT_FILES = ["BOOT.SCR", "IMAGE", "DTB.IMG"]  # 8.3 names in FAT root
 
 SECRET_PATTERNS = [
-    (re.compile(rb"-----BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----"),
-     "PEM private key header"),
+    # PEM header alone is NOT enough: stock OpenSSH binaries embed bare
+    # "-----BEGIN ... PRIVATE KEY-----" marker strings in .rodata. Require
+    # base64 key material (32+ chars) on the following line(s).
+    (re.compile(rb"-----BEGIN (?:RSA |OPENSSH |EC |DSA )?PRIVATE KEY-----"
+                rb"[\r\n]+[A-Za-z0-9+/]{32,}"),
+     "PEM private key with key material"),
     (re.compile(rb"AKIA[0-9A-Z]{16}"), "AWS access-key id"),
     (re.compile(rb"ghp_[A-Za-z0-9]{20,}"), "GitHub token"),
     (re.compile(rb"xox[baprs]-[A-Za-z0-9-]{10,}"), "Slack token"),
