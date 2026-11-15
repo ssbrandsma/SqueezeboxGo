@@ -1,0 +1,35 @@
+From: WP1 Audio (Agent 3) <audio@rg35xxh.local>
+Subject: [PROPOSAL 2/3] jive_alsa: clamp absurd buffer/period params
+Date: 2026-11-15
+Status: proposal (not applied; audio/alsa/proposals only)
+Base: ralph-irving/squeezeplay@758bc11
+File: src/squeezeplay/src/audio/decode/decode_alsa_backend.c
+
+USEALSABUFFERTIME/USEALSAPERIODCOUNT currently accept any positive value:
+buffer_time=1 (1 us) yields an XRUN storm, buffer_time=10000000 pins 10 s
+of latency, period_count=1 starves the autostart gate. Clamp to sane
+bounds with a visible warning instead of silently misbehaving.
+
+--- a/src/squeezeplay/src/audio/decode/decode_alsa_backend.c
++++ b/src/squeezeplay/src/audio/decode/decode_alsa_backend.c
+@@ -1398,6 +1398,20 @@ int main(int argv, char **argc)
+ 		exit(-1);
+ 	}
+
++	/* Fail-soft bounds: 5..500 ms buffer, 2..16 periods. */
++	if (state.buffer_time < 5000 || state.buffer_time > 500000) {
++		LOG_WARN("buffer_time %u us out of range, clamping to 30000",
++			 state.buffer_time);
++		state.buffer_time = 30000;
++	}
++	if (state.period_count < 2 || state.period_count > 16) {
++		/* NB: period_count > 100 enables cpu randomisation above and
++		 * is already folded back into range before we get here. */
++		LOG_WARN("period_count %u out of range, clamping to 3",
++			 state.period_count);
++		state.period_count = 3;
++	}
++
+ 	if(!state.pcm_wait_timeout) {
+ 		state.pcm_wait_timeout = PCM_WAIT_TIMEOUT;
+ 	}
