@@ -11,9 +11,11 @@ CONF="${SYSTEM_CONF:-/etc/squeezebox/system.conf}"
 log() { printf 'splash.sh: %s\n' "$*" >&2; }
 [ "${SPLASH_ENABLED:-1}" = "1" ] || { log "disabled in $CONF"; exit 0; }
 
-# 1. Agent-4 provider script wins when present.
-if [ -x "$SPLASH_DIR/splash-show" ]; then
-    "$SPLASH_DIR/splash-show" "$@" || log "WARN: splash-show failed"
+# 1. Agent-4 provider wins when present (ui/splash/SERVICE_HOOKS.md):
+# init-splash.sh paints via drm_splash and holds DRM master (pidfile).
+SQUEEZE_BIN="${SQUEEZE_BIN:-/opt/squeezeplay/bin}"
+if [ -x "$SQUEEZE_BIN/init-splash.sh" ]; then
+    "$SQUEEZE_BIN/init-splash.sh" show || log "WARN: init-splash.sh show failed"
     exit 0
 fi
 # 2. Static image via fbi when available.
