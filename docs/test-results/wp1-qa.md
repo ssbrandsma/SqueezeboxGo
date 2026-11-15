@@ -1,6 +1,6 @@
 # WP1 QA results
 
-Date: 2026-11-15 20:04 UTC. Branch: `wp1/qa`. Commit: `7b2464e`.
+Date: 2026-11-15 20:04 UTC. Branch: `wp1/qa`. Commit: `a759228` (gates re-run clean on this tree; baseline `7b2464e`).
 Host: `DESKTOP-OVMHVD2` (Linux x86_64).
 
 ## Summary
