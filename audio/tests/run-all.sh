@@ -86,6 +86,52 @@ sh "$OWN" status >/dev/null 2>&1; [ $? -eq 3 ] \
 # 6d. wait: free now → returns 0 immediately.
 sh "$OWN" wait --timeout 2 >/dev/null 2>&1 \
     && echo "# arbiter: wait-on-free returns 0" || { echo "# FAIL: arbiter wait"; fail=$((fail+1)); }
+# 6e. WP2: status reaps stale records (stale-lock cleanup) and removes them.
+printf 'source=stale1 pid=999999 starttime=1 since=1\n' > "$ODIR/owner"
+reapout="$(sh "$OWN" status 2>&1)"; rc=$?
+[ "$rc" -eq 3 ] && [ ! -f "$ODIR/owner" ] && printf '%s' "$reapout" | grep -q 'event=reaped source=stale1' \
+    && echo "# arbiter: status reaps stale record" \
+    || { echo "# FAIL: arbiter status reap (rc=$rc): $reapout"; fail=$((fail+1)); }
+# 6f. WP2: torn/unparseable record is reaped loudly, never silently dropped.
+printf 'TORN{{{\n' > "$ODIR/owner"
+reapout="$(sh "$OWN" acquire newcomer2 2>&1)"; rc=$?
+printf '%s' "$reapout" | grep -q 'event=reaped source=?' && [ "$rc" -eq 0 ] \
+    && echo "# arbiter: torn record reaped loudly on acquire" \
+    || { echo "# FAIL: arbiter torn reap (rc=$rc): $reapout"; fail=$((fail+1)); }
+sh "$OWN" release newcomer2 >/dev/null
+# 6g. WP2: source-name charset enforced; force-release event goes to stdout.
+sh "$OWN" acquire 'bad name' >/dev/null 2>&1; [ $? -eq 2 ] \
+    && echo "# arbiter: bad source name rejected (rc=2)" \
+    || { echo "# FAIL: arbiter bad-name not rejected"; fail=$((fail+1)); }
+sh "$OWN" acquire forceme >/dev/null
+fout="$(sh "$OWN" force-release 2>/dev/null)"
+printf '%s' "$fout" | grep -q 'event=released source=forceme .*note=force-release' \
+    && echo "# arbiter: force-release event on stdout" \
+    || { echo "# FAIL: arbiter force-release event: $fout"; fail=$((fail+1)); }
+# 6h. WP2: status creates no state; hold forwards TERM to the child.
+ODIR2="$(mktemp -d)/nostate"; AUDIO_OWNER_DIR="$ODIR2" sh "$OWN" status >/dev/null 2>&1
+[ $? -eq 3 ] && [ ! -e "$ODIR2" ] \
+    && echo "# arbiter: status creates no state" \
+    || { echo "# FAIL: arbiter status side effect"; fail=$((fail+1)); }
+rmdir "$(dirname "$ODIR2")" 2>/dev/null || true
+if command -v timeout >/dev/null 2>&1; then
+    timeout -s TERM 3 sh "$OWN" hold sigtest -- sleep 30 >/dev/null 2>&1
+    sleep 1
+    sh "$OWN" status >/dev/null 2>&1; [ $? -eq 3 ] \
+        && echo "# arbiter: hold+TERM leaves device free" \
+        || { echo "# FAIL: arbiter hold TERM leak"; fail=$((fail+1)); }
+else
+    echo "# arbiter: hold+TERM test skipped (no timeout)"
+fi
+# 6i. Codified WP1 edge cases: release-by-non-holder rc=5, wait-on-held rc=4.
+sh "$OWN" acquire holder9 >/dev/null
+sh "$OWN" release intruder >/dev/null 2>&1; [ $? -eq 5 ] \
+    && echo "# arbiter: release-by-non-holder refused (rc=5)" \
+    || { echo "# FAIL: arbiter non-holder release"; fail=$((fail+1)); }
+sh "$OWN" wait --timeout 1 >/dev/null 2>&1; [ $? -eq 4 ] \
+    && echo "# arbiter: wait-on-held times out (rc=4)" \
+    || { echo "# FAIL: arbiter wait timeout"; fail=$((fail+1)); }
+sh "$OWN" release holder9 >/dev/null
 rm -rf "$ODIR"
 
 if [ "$LIVE" -eq 1 ]; then

@@ -5,7 +5,7 @@ halves also run on the host (no ALSA hardware needed).
 
 | Test | Target (live) | Host |
 |---|---|---|
-| `topology-probe.sh` | card/PCM/jack topology + amixer controls | `--proc-asound fixtures/...` |
+| `topology-probe.sh` | card/PCM/jack topology + amixer controls + sun4i-codec specifics + kernel-config cross-check | `--proc-asound fixtures/...` |
 | `pcm-format-matrix.sh` | `aplay --dump-hw-params` + `--play` opens | fixture matrix parse |
 | `usb-hotplug-fallback.sh` | `--monitor` udev watch | resolver fallback logic + asound.conf alias checks |
 | `underrun-recovery-test.sh` | `--live` tiny-buffer XRUN stimulus | `--backend-src` static recovery coverage + hw_params fixture |
