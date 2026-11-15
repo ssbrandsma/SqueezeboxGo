@@ -80,3 +80,8 @@ at 1:1). LCD is 640x480, so this is a 1:1 mode — no scaler blur.
 - `ui/input/` — `evdev2jive` daemon + `rg35xxh.map` (contract input map).
 - `ui/splash/` — boot splash PNG, generator, DRM viewer, init script.
 - `ui/vendor/` — sdl12-compat pin + fetch script (no vendored trees in git).
+- `ui/install.sh` — DESTDIR-style staging of skins, fonts, mapper, splash
+  into a rootfs overlay dir (writes a sha256 manifest, self-checks).
+- `ui/tests/sdl_smoke.c` — minimal SDL 1.2 init/mode/flip smoke test.
+- `ui/BRINGUP.md` — target bring-up runbook (splash order, KMS first
+  frame, skin render, evtest, uinput E2E) + cross-build appendix.
