@@ -26,7 +26,7 @@ Or via quilt/stgit with the `series` file.
 | 0004 | `0004-jive-alsa-log-negotiated-pcm-params.patch` | `src/squeezeplay/.../decode_alsa_backend.c` | (audio proposal 0001) `LOG_INFO` one line per successful `_pcm_open`: device, format, rate, access, period/buffer frames |
 | 0005 | `0005-jive-alsa-clamp-buffer-params.patch` | `src/squeezeplay/.../decode_alsa_backend.c` | (audio proposal 0002) fail-soft clamp `buffer_time` 5…500 ms → 30000, `period_count` 2…16 → 3, with `LOG_WARN` |
 | 0006 | `0006-decode-alsa-audio-owner-hook.patch` | `src/squeezeplay/.../decode_alsa.c` | (audio proposal 0003) opt-in `audio-owner acquire/release` around playback fork when `AUDIO_OWNER_BIN` set; init returns 0 (clean fallback) when held |
-| 0007 | `0007-jive-framework-public-event-queue-length.patch` | `src/squeezeplay/.../ui/jive_framework.c` | (integrator, needs Agent 2 review) perfwarn queue check via public `SDL_PeepEvents` count instead of internal `SDL_EventQueueLength` (unexported by sdl12-compat; broke jive startup under BIND_NOW) |
+| 0007 | `0007-jive-framework-public-event-queue-length.patch` | `src/squeezeplay/.../ui/jive_framework.c` | (Lead reviewed+approved 2026-11-15) perfwarn queue check via public `SDL_PeepEvents` count instead of internal `SDL_EventQueueLength` (unexported by sdl12-compat; broke jive startup under BIND_NOW) |
 
 Notes:
 - Patch 0001 intentionally leaves `luac` statically linked (no runtime

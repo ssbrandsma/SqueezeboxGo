@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-15 (Agent 0, WP2 merged → merged-image integration).
+Last updated: 2026-11-15 (Agent 0, merged image 0.1.0-exp1 done → userland integration).
 
 ## Completed
 
@@ -57,11 +57,29 @@ Last updated: 2026-11-15 (Agent 0, WP2 merged → merged-image integration).
   real assembler output): 6 PASS (asound, mapping, skin, image, shellcheck,
   repro-env), 1 NOT RUN (arch: no ELF in git). selftest 27/27.
 
+## Completed (merged image 0.1.0-exp1)
+
+- Workflow `Squeezebox Merged Image Build` (completed), both branches merged:
+  - `wp2int/image`: full pipeline green — U-Boot SHAs identical to WP2, kernel
+    + DTB, 7/7-patch squeezeplay cross build, real kmsdrm SDL2 2.32.10,
+    qemu jive boot with RG35XXHBaseSkin selected (51 applets, no crash),
+    4685-file staging (1732 aarch64 ELFs, NEEDED/symbol sweeps clean),
+    both 2 GiB `.img` in /tmp/sqz-merged (ddr3 `82b3de0a…`, ddr4 `380be577…`).
+  - `wp2int/qa`: independent E2E — check_image PASS both, 6-gate suite PASS
+    both variants, no-secrets grep clean, MANIFEST.json 0.1.0-exp1 filled,
+    checksum.sh create+verify green. 15 PASS / 3 NOT RUN.
+- Lead review: cross-tree 0007 jive patch + BSP Lua fixes APPROVED (correct,
+  minimal, verified by qemu boot); README sign-off recorded.
+- Lead decision ADR-0004: base userland = debootstrap bookworm arm64 minbase
+  (simplest reliable; package manifest into SBOM; snapshot pinning later).
+- KNOWN GAP (honest): 0.1.0-exp1 images have NO base userland (no glibc/init)
+  and no OOT panel driver → not yet hardware-bootable. Next workflow closes
+  userland; panel + physical boot stay HW-gated.
+
 ## Current work
 
-- Merged-tree integration: first true experimental `.img` (kernel+U-Boot from
-  merged scripts + core tarball + ui overlay + asound + standalone units +
-  kmsdrm SDL2), QA E2E gated, release manifest with real checksums.
+- Userland integration workflow: debootstrap staging in mkrootfs, rebuild both
+  variants, QA E2E re-verify, `.img.xz` compression, updated manifest.
 
 ## Blockers / external deps
 
@@ -72,11 +90,11 @@ Last updated: 2026-11-15 (Agent 0, WP2 merged → merged-image integration).
 
 ## Next steps (resume here)
 
-1. Merged-image workflow (launched): integrator builds full `.img` from merged
-   main to /tmp or build/out (git-ignored); QA verifies E2E + manifest.
-2. Tag first experimental release (manifest + sha256, images distributed outside git).
-3. Human hardware test per HW_TEST_PLAN.md when RG35XX H is available (flash,
-   UART/SSH boot capture, H1-H18 matrix) — the only true external blocker.
+1. Userland workflow (launch next): debootstrap bookworm arm64 into mkrootfs,
+   systemd wiring, rebuild ddr3+ddr4, QA E2E, `.img.xz` + SHA256SUMS + manifest.
+2. Tag experimental release 0.2.0-exp2 (bootable-to-userspace candidate).
+3. Human hardware test per HW_TEST_PLAN.md when RG35XX H is available —
+   the only true external blocker (panel driver + H1-H18 need the device).
 4. WP3 standalone backends (librespot build, slimserver 9.0.2 plugins, web UI).
 
 ## Key commands
