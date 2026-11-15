@@ -1,0 +1,15 @@
+[Unit]
+Description=Squeezebox boot splash
+DefaultDependencies=no
+After=systemd-udev-settle.service
+Before=squeezeplay.service
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/lib/squeezebox/splash.sh
+RemainAfterExit=yes
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

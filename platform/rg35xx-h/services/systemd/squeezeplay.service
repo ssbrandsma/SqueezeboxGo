@@ -1,0 +1,22 @@
+[Unit]
+Description=Squeezebox Jive UI + playback (SqueezePlay)
+After=splash.service wifi.service sound.target network.target
+Wants=splash.service wifi.service
+StartLimitIntervalSec=120
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=/usr/lib/squeezebox/squeezeplay.sh
+Restart=on-failure
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+# Jive needs input + DRM + ALSA devices.
+DeviceAllow=/dev/input/* rw
+DeviceAllow=/dev/dri/* rw
+DeviceAllow=/dev/snd/* rw
+DeviceAllow=/dev/tty1 rw
+
+[Install]
+WantedBy=multi-user.target

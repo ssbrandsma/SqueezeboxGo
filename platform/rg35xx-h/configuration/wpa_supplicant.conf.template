@@ -1,0 +1,13 @@
+# TEMPLATE — copy to /etc/wpa_supplicant/wpa_supplicant.conf (mode 0600) and
+# fill in. NEVER commit the filled-in file (it holds a PSK). Provisioning
+# paths (WP2): web mgmt, USB stick import, or serial console.
+ctrl_interface=DIR=/run/wpa_supplicant GROUP=netdev
+update_config=1
+country=NL
+
+network={
+    ssid="YOUR_SSID"
+    # Use `wpa_passphrase YOUR_SSID 'your passphrase'` and paste the psk= line:
+    #psk=0123456789abcdef...
+    key_mgmt=WPA-PSK
+}

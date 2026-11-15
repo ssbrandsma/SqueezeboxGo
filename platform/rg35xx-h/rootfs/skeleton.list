@@ -1,0 +1,34 @@
+# rootfs skeleton: "<type> <path> <mode>" — parsed by mkrootfs.sh.
+# /dev is intentionally empty: the kernel mounts devtmpfs there.
+d /bin 0755
+d /boot 0755
+d /dev 0755
+d /etc 0755
+d /etc/squeezebox 0755
+d /etc/ssh/sshd_config.d 0755
+d /etc/systemd/system 0755
+d /etc/wpa_supplicant 0750
+d /home 0755
+d /lib 0755
+d /media 0755
+d /mnt 0755
+d /opt 0755
+d /opt/squeezeplay 0755
+d /proc 0555
+d /root 0700
+d /run 0755
+d /sbin 0755
+d /srv 0755
+d /sys 0555
+d /tmp 1777
+d /usr 0755
+d /usr/bin 0755
+d /usr/lib 0755
+d /usr/lib/squeezebox 0755
+d /usr/lib/systemd/system 0755
+d /usr/sbin 0755
+d /usr/share/squeezebox 0755
+d /var 0755
+d /var/lib 0755
+d /var/lib/squeezebox 0755
+d /var/log 0755
