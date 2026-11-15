@@ -4,3 +4,4 @@
 0004-jive-alsa-log-negotiated-pcm-params.patch
 0005-jive-alsa-clamp-buffer-params.patch
 0006-decode-alsa-audio-owner-hook.patch
+0007-jive-framework-public-event-queue-length.patch

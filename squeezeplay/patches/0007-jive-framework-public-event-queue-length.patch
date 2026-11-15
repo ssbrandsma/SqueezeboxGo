@@ -1,0 +1,37 @@
+From: WP2 Merged-Image Integrator <integrator@rg35xxh.local>
+Subject: [PATCH 7/7] jive_framework: public-API event queue length
+Upstream: squeezeplay@758bc11 src/squeezeplay/src/ui/jive_framework.c
+Rationale: the perfwarn queue diagnostic called SDL_EventQueueLength(), an
+ SDL-1.2 internal symbol that sdl12-compat (the runtime libSDL on target,
+ same SONAME) intentionally does not export. With Ubuntu's default
+ BIND_NOW, jive aborted at startup with "symbol lookup error" even though
+ the call sits behind `if (perfwarn.queue)` (default 0, never taken in
+ normal operation). SDL_PeepEvents(NULL, 0, SDL_PEEKEVENT, SDL_ALLEVENTS)
+ is the documented public-API queue count and behaves identically on
+ SDL 1.2.15 and sdl12-compat (same TU already uses SDL_PeepEvents).
+Review: integrator-owned fix, needs Agent 2 (Core) review at merge;
+ symbol-level sweep of the staged image shows this was the only
+ non-libc/non-jive undefined symbol (see docs/test-results/wp2int-image.md).
+ Behavior with perfwarn.queue enabled is unchanged (same count source).
+
+diff --git a/src/squeezeplay/src/ui/jive_framework.c b/src/squeezeplay/src/ui/jive_framework.c
+index 568c7db4..96f7d72c 100644
+--- a/src/squeezeplay/src/ui/jive_framework.c
++++ b/src/squeezeplay/src/ui/jive_framework.c
+@@ -457,10 +457,13 @@ static int jiveL_process_events(lua_State *L) {
+ 		jive_sdlevent_pump(L);
+ 	}
+
+-	/* check queue size */
++	/* check queue size (public-API queue length: SDL_PeepEvents with
++	 * NULL/0 peeks the count; SDL_EventQueueLength() is an SDL-internal
++	 * symbol that sdl12-compat does not export) */
+ 	if (perfwarn.queue) {
+-		if (SDL_EventQueueLength() > perfwarn.queue) {
+-			printf("SDL_event_queue > %2d : %3d\n", perfwarn.queue, SDL_EventQueueLength());
++		int queue_len = SDL_PeepEvents(NULL, 0, SDL_PEEKEVENT, SDL_ALLEVENTS);
++		if (queue_len > perfwarn.queue) {
++			printf("SDL_event_queue > %2d : %3d\n", perfwarn.queue, queue_len);
+ 		}
+ 	}
+
