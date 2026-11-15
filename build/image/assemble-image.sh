@@ -72,6 +72,9 @@ BOOT_SECTORS=524288        # 256 MiB
 ROOT_START=557056
 SECTOR=512
 export SOURCE_DATE_EPOCH="$EPOCH"
+# FAT records local wall time; UTC keeps mtools/mkfs-derived stamps identical
+# on every build host timezone.
+export TZ=UTC0
 
 plan() { printf 'plan: %s\n' "$*"; }
 if [ "$DRY" = 1 ]; then
@@ -79,7 +82,7 @@ if [ "$DRY" = 1 ]; then
     plan "1. mksunxi_gpt.py --image OUT --size-mb $SIZE_MB"
     plan "2. dd SPL ($SPL) at sector 16"
     plan "3. boot.scr = mkimage -C none -A arm64 -T script $DEV_DIR/boot/boot.cmd"
-    plan "4. mkfs.vfat 256M (label SQUEEZEBOOT, volid from epoch) + mcopy boot.scr Image dtb.img"
+    plan "4. mkfs.vfat 256M (label SQUEEZEBOOT, volid from epoch) + clamp-fat.py + mcopy boot.scr Image dtb.img"
     plan "5. dd boot fs at sector $BOOT_START"
     plan "6. mkfs.ext4 -d ROOTFS -U fixed-uuid (label squeezebox-root) sized to root span"
     plan "7. dd root fs at sector $ROOT_START"
@@ -110,6 +113,9 @@ BOOT_BYTES=$((BOOT_SECTORS * SECTOR))
 VOLID=$(printf '%08X' $((EPOCH & 0xFFFFFFFF)))
 truncate -s "$BOOT_BYTES" "$TMP/boot.vfat"
 mkfs.vfat -F 32 -n SQUEEZEBOOT -i "$VOLID" "$TMP/boot.vfat" >/dev/null
+# mkfs.vfat has no SOURCE_DATE_EPOCH support: pin the label stamps to epoch
+# (mcopy honors SOURCE_DATE_EPOCH itself). See clamp-fat.py.
+python3 "$HERE/clamp-fat.py" --image "$TMP/boot.vfat" --epoch "$EPOCH"
 mcopy -i "$TMP/boot.vfat" "$TMP/boot.scr" ::boot.scr
 mcopy -i "$TMP/boot.vfat" "$IMAGE_BIN" ::Image
 mcopy -i "$TMP/boot.vfat" "$DTB" ::dtb.img
@@ -119,13 +125,21 @@ dd if="$TMP/boot.vfat" of="$OUT" bs=$SECTOR seek=$BOOT_START conv=notrunc status
 # 5. ext4 rootfs in a temp file (unprivileged: fixed UUID, root-owned, no dev nodes).
 ROOT_BYTES=$((ROOT_SECTORS * SECTOR))
 ROOT_UUID="0a1b2c3d-0002-4000-8000-000000000001"
+HASH_SEED="0a1b2c3d-0002-4000-8000-000000000002"
 truncate -s "$ROOT_BYTES" "$TMP/root.ext4"
 # fakeroot: -d copies source ownership (builder uid) without it; the target
 # rootfs must be root-owned. fakeroot also fakes device nodes if any appear.
-# NOTE: mke2fs <=1.47.0 still stamps wall-clock + random journal UUID; see
-# README "Known gap" (WP2: newer e2fsprogs or libfaketime in the container).
+# Byte-repro (WP2 proven, see README): -E hash_seed pins the random
+# Directory Hash Seed on every mke2fs; SOURCE_DATE_EPOCH timestamp clamping
+# (fs stamps + all -d inode times) needs mke2fs >= 1.47.1. libfaketime was
+# measured and REJECTED: it double-shifts the already-clamped -d source
+# times and makes images worse, not better.
+MKE2FS_VER="$(mkfs.ext4 -V 2>&1 | sed -n 's/^mke2fs \([0-9.]*\).*/\1/p')"
+if [ "$(printf '%s\n%s\n' "1.47.1" "$MKE2FS_VER" | sort -V | head -1)" != "1.47.1" ]; then
+    log "WARNING: mke2fs $MKE2FS_VER < 1.47.1: rootfs bytes vary run to run (see README)"
+fi
 fakeroot mkfs.ext4 -q -L squeezebox-root -U "$ROOT_UUID" -d "$ROOTFS" \
-    -E lazy_itable_init=0,root_owner=0:0 "$TMP/root.ext4" >/dev/null
+    -E hash_seed="$HASH_SEED",lazy_itable_init=0,root_owner=0:0 "$TMP/root.ext4" >/dev/null
 dd if="$TMP/root.ext4" of="$OUT" bs=$SECTOR seek=$ROOT_START conv=notrunc status=none
 log "root fs: ${ROOT_SECTORS} sectors (uuid $ROOT_UUID)"
 

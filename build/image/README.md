@@ -36,14 +36,18 @@ Fixed disk GUID + PARTUUIDs + fs UUIDs + FAT volid-from-epoch, `mkfs.ext4`
 under `fakeroot` with `lazy_itable_init=0`, all staging mtimes = epoch,
 per-image `.sha256`.
 
-Known gap (WP1, measured): stock `mke2fs 1.47.0` embeds wall-clock
-`s_mkfs_time`/`s_wtime`/`s_lastcheck` (ignores `SOURCE_DATE_EPOCH`) and a
-random journal UUID — double builds differ in 349 superblock/journal bytes
-(verified 2026-11-15). Staging content is byte-identical; only the fs wrapper
-varies. Fix path (WP2, with Agent 6's rebuild-twice gate): newer e2fsprogs
-(>=1.47.1 honors `SOURCE_DATE_EPOCH`) or `libfaketime` in the container +
-pinned journal UUID. FAT side: `mtools` timestamps follow file mtimes
-(already clamped); verify with diffoscope.
+Byte-repro status (WP2, measured 2026-11-15, see
+`docs/test-results/wp2-platform.md`): with `mke2fs >= 1.47.1` +
+`SOURCE_DATE_EPOCH` (1.47.1 clamps fs stamps and all `-d` inode times) +
+`-E hash_seed=` (pinned in `assemble-image.sh`, works on every mke2fs),
+double builds are byte-identical (0 differing bytes, journal UUID is stable).
+With stock `mke2fs 1.47.0` the fs wrapper still varies (~340 bytes:
+`s_mkfs_time`/`s_wtime`/`s_lastcheck`, inode atime/ctime, checksums) and the
+script warns; staging content is byte-identical either way. `libfaketime`
+was measured and rejected: it double-shifts the already-clamped `-d` source
+times (392 diff bytes, worse than baseline). Container TODO: e2fsprogs
+>= 1.47.1 in `build/docker` (bookworm ships 1.46.x). FAT side: `mtools`
+timestamps follow file mtimes (already clamped); verify with diffoscope.
 
 ## Flashing (human step, never automated here)
 

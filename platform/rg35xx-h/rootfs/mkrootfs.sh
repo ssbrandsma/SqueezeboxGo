@@ -96,4 +96,9 @@ fi
 # the image at /manifest.* for on-device verification.
 (cd "$STAGING" && find . -mindepth 1 ! -name 'manifest.*' -printf '%M %p\n' | sort > manifest.modes)
 (cd "$STAGING" && find . -type f ! -name 'manifest.*' | sort | xargs sha256sum > manifest.sha256)
+# Manifests are written after the clamp above; pin their own mtimes too so
+# every staging inode is epoch-stable (content already excludes manifest.*).
+if [ "$EPOCH" != "0" ]; then
+    touch -h -d "@$EPOCH" "$STAGING/manifest.modes" "$STAGING/manifest.sha256"
+fi
 log "staging ready: $STAGING ($(wc -l < "$STAGING/manifest.sha256") files)"

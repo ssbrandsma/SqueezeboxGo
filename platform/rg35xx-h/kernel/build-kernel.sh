@@ -30,6 +30,8 @@ while [ $# -gt 0 ]; do
     esac
 done
 [ -n "$SRC" ] && [ -n "$OUT" ] || die "need --src DIR and --out DIR"
+# Absolutize: INSTALL_MOD_PATH is resolved relative to the make -C dir otherwise.
+SRC="$(realpath -m "$SRC")" OUT="$(realpath -m "$OUT")"
 EPOCH="${SOURCE_DATE_EPOCH:-$SOURCE_DATE_EPOCH_DEFAULT}"
 export SOURCE_DATE_EPOCH="$EPOCH"
 export ARCH="$KARCH" CROSS_COMPILE="$KCROSS_COMPILE" KCFLAGS="$KCFLAGS"
