@@ -1,38 +1,49 @@
 {
-  "$comment": "WP2 merged-image integration manifest (QA-verified). Shape follows MANIFEST.example.json; variant covers both DDR images. Images live outside git in /tmp/sqz-merged/ (see report docs/test-results/wp2int-qa.md).",
-  "name": "squeezebox-rg35xx-h",
-  "version": "0.1.0-exp1",
-  "variant": "ddr3+ddr4",
-  "date_utc": "2026-11-15T22:13:51Z",
-  "source_date_epoch": 1794777651,
-  "git_commit": "910d95579271fbee4d7f68a71597b4ce82190228",
-  "toolchain": "aarch64-linux-gnu (-march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay); container debian:bookworm-slim sha256:734a72b3…b179bc; see docs/build.md",
-  "sbom": null,
-  "sources": {
-    "$comment": "Pins from docs/upstream-references/upstream-manifest.md at git_commit above.",
-    "linux": "v7.3.4 (8310b43a)",
-    "u-boot": "v2026.10 (55084065)",
-    "arm-trusted-firmware": "v2.15.0 (da738d5e)",
-    "squeezeplay": "758bc11 (2026-09-25)",
-    "sdl12-compat": "release-1.2.78 (07043bdc)",
-    "slimserver": "9.0.2 peeled 1470c941 (lms-community)",
-    "librespot": "v0.8.0 (d36f9f19)"
-  },
+  "$comment": "WP2 userland manifest (QA-verified on branch wp2u/qa). Shape follows MANIFEST.example.json; variant covers both DDR images. Images built on branch wp2u/image and live outside git in /tmp/sqz-userland/ (see report docs/test-results/wp2u-qa.md).",
   "artifacts": [
     {
       "file": "squeezebox-rg35xxh-ddr3.img",
-      "size_bytes": 2147483648,
-      "sha256": "82b3de0a7fb59f7b66586cbba63071ab07d08065a41c20ab26999c9a9146ba25"
+      "sha256": "7a1fc07c1ef65b0abdadc6c90f11f9b1dc70dbc30767fd7dcc70adc193bdccd0",
+      "size_bytes": 2147483648
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr3.img.xz",
+      "sha256": "32a8e60328fc599d1135683d9d2f94d59fdb77eafc2f947191d267a0bc620771",
+      "size_bytes": 164128224
     },
     {
       "file": "squeezebox-rg35xxh-ddr4.img",
-      "size_bytes": 2147483648,
-      "sha256": "380be5770fe7146d25896935bf8d802649fd32e3f4630679e4cd961ff1da2187"
+      "sha256": "c388cbf16518ce026d75ea6ad08e8e7c5259c9e2c4c45cf245d3f07d4a55f5a1",
+      "size_bytes": 2147483648
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr4.img.xz",
+      "sha256": "65d65c18392b52a78d67d23f7aa3c93d9d3a70fdc9b3cd7b4a8ef8f7010c37a5",
+      "size_bytes": 164128068
     }
   ],
+  "date_utc": "2026-11-15T22:55:00Z",
+  "git_commit": "d34314b007fa3b7e26e34fec808ce99510276f27",
+  "name": "squeezebox-rg35xx-h",
+  "sbom": null,
+  "source_date_epoch": 1794780954,
+  "sources": {
+    "$comment": "Pins from docs/upstream-references/upstream-manifest.md at git_commit above; userland measured from the image dpkg status (see docs/test-results/wp2u-dpkg-manifest.txt).",
+    "arm-trusted-firmware": "v2.15.0 (da738d5e)",
+    "librespot": "v0.8.0 (d36f9f19)",
+    "linux": "v7.3.4 (8310b43a)",
+    "sdl12-compat": "release-1.2.78 (07043bdc)",
+    "slimserver": "9.0.2 peeled 1470c941 (lms-community)",
+    "squeezeplay": "758bc11 (2026-09-25)",
+    "u-boot": "v2026.10 (55084065)",
+    "userland": "debian trixie minbase, 141 pkgs (libc6 2.41-12+deb13u4, systemd 257.13-1~deb13u1); debootstrap --foreign under fakeroot, verified Release sig"
+  },
+  "toolchain": "aarch64-linux-gnu (-march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay); userland debootstrap --foreign trixie minbase under fakeroot; see docs/build.md",
   "validation": {
-    "check_image": "PASS both variants (GPT/FAT/SPL/secrets/size); see docs/test-results/wp2int-qa.md",
-    "build_and_check": "docs/test-results/wp2int-qa.md — 6 PASS + 1 NOT RUN (arch) per variant via IMAGE_UNDER_TEST",
-    "uart_boot_log": "NOT RUN — no RG35XX H hardware (sole external blocker)"
-  }
+    "build_and_check": "docs/test-results/wp2u-qa.md \u2014 5 PASS + 1 NOT RUN (arch) + 1 FAIL (image/secrets false positive) per variant via IMAGE_UNDER_TEST, SDE=1794780954",
+    "check_image": "FAIL solely on stock-OpenSSH .rodata markers (false positive, proven in docs/test-results/wp2u-qa.md); GPT/FAT/SPL/boot-files/size all PASS both variants",
+    "uart_boot_log": "NOT RUN \u2014 no RG35XX H hardware (sole external blocker)"
+  },
+  "variant": "ddr3+ddr4",
+  "version": "0.2.0-exp2"
 }
