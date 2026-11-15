@@ -1,0 +1,62 @@
+From: WP1 Audio (Agent 3) <audio@rg35xxh.local>
+Subject: [PROPOSAL 3/3] decode_alsa: opt-in audio-owner acquire/release
+Date: 2026-11-15
+Status: proposal (not applied; audio/alsa/proposals only)
+Base: ralph-irving/squeezeplay@758bc11
+File: src/squeezeplay/src/audio/decode/decode_alsa.c
+
+Hooks the single-holder audio-owner arbiter (audio/arbiter/audio-owner)
+into the playback fork path. Entirely opt-in: when AUDIO_OWNER_BIN is
+unset, behavior is byte-identical to today. When set, the launcher
+claims the device before forking jive_alsa and releases at exit, so a
+second source (standalone adapter) can never double-open the PCM.
+
+--- a/src/squeezeplay/src/audio/decode/decode_alsa.c
++++ b/src/squeezeplay/src/audio/decode/decode_alsa.c
+@@ -38,6 +38,34 @@ pid_t effect_pid = -1;
+ pid_t playback_pid = -1;
+
+
++static void decode_alsa_audio_owner_release(void) {
++	const char *bin = getenv("AUDIO_OWNER_BIN");
++	char cmd[PATH_MAX + 64];
++
++	if (!bin)
++		return;
++	snprintf(cmd, sizeof(cmd), "%s release squeezeplay", bin);
++	if (system(cmd) != 0)
++		LOG_WARN(log_audio_output, "audio-owner release failed");
++}
++
++static bool_t decode_alsa_audio_owner_acquire(void) {
++	const char *bin = getenv("AUDIO_OWNER_BIN");
++	char cmd[PATH_MAX + 64];
++
++	if (!bin)
++		return TRUE;
++	snprintf(cmd, sizeof(cmd), "%s acquire squeezeplay --pid %d",
++		 bin, (int)getpid());
++	if (system(cmd) != 0) {
++		LOG_ERROR(log_audio_output, "audio device held by another source");
++		return FALSE;
++	}
++	if (atexit(decode_alsa_audio_owner_release) != 0)
++		LOG_WARN(log_audio_output, "atexit registration failed");
++	return TRUE;
++}
++
+ static void decode_alsa_check_pids(void) {
+ 	if (effect_pid >= 0) {
+ 		if (waitpid(effect_pid, NULL, WNOHANG) == effect_pid) {
+@@ -326,6 +354,11 @@ static int decode_alsa_init(lua_State *L) {
+ 	/* Don't start playback jive_alsa if defined */
+ 	if ( getenv("SQUEEZEPLAY_NOPLAYBACK") == NULL )
+ 	{
++		/* 0 = clean init failure: decode.c falls through to the next
++		 * backend (portaudio) or reports "no audio device available"
++		 * instead of double-opening the PCM. */
++		if (!decode_alsa_audio_owner_acquire())
++			return 0;
+ 		playback_pid = decode_alsa_fork(playback_device, capture_device, buffer_time, period_count, pcm_timeout,
+ 			sample_size, (FLAG_STREAM_PLAYBACK|flags));
+ 	}

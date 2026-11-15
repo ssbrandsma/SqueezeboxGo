@@ -1,0 +1,195 @@
+#!/bin/sh
+# audio-owner — single-holder ALSA arbiter, reference implementation (WP1)
+#
+# Usage:
+#   audio-owner acquire <source> [--pid PID]
+#   audio-owner release <source>
+#   audio-owner hold <source> -- <cmd> [args...]
+#   audio-owner status
+#   audio-owner wait [--timeout SECS]
+#   audio-owner force-release
+#
+# State: $AUDIO_OWNER_DIR (default /run/squeezebox-audio)/{mutex,owner}.
+# See DESIGN.md for the claim rule and failure analysis.
+#
+# Exit codes: 0 ok · 1 held-by-other · 2 environment error · 3 free (status)
+#             4 timeout (wait) · 5 not-holder (release)
+
+set -u
+
+DIR="${AUDIO_OWNER_DIR:-/run/squeezebox-audio}"
+MUTEX="$DIR/mutex"
+OWNER="$DIR/owner"
+
+die() { echo "audio-owner: $*" >&2; exit "${2:-2}"; }
+need_flock() { command -v flock >/dev/null 2>&1 || die "flock(1) not found; refusing to claim" 2; }
+
+init_dir() {
+    [ -d "$DIR" ] || mkdir -p "$DIR" || die "cannot create $DIR" 2
+    [ -f "$MUTEX" ] || : > "$MUTEX" || die "cannot create $MUTEX" 2
+}
+
+# starttime (field 22 of /proc/PID/stat), or empty if PID is not that process.
+proc_starttime() {
+    # $1 = pid. Field 22; comm (field 2) may contain spaces/parens, so cut
+    # everything up to the last ')' first, then take field 20 of the rest
+    # (which is overall field 22).
+    [ -r "/proc/$1/stat" ] || return 1
+    awk '{ sub(/^.*\) /, ""); print $20 }' "/proc/$1/stat" 2>/dev/null
+}
+
+# owner_source owner_pid owner_stime owner_since (globals), or return 1 if free.
+read_owner() {
+    O_SOURCE=""; O_PID=""; O_STIME=""; O_SINCE=""
+    [ -f "$OWNER" ] || return 1
+    line="$(cat "$OWNER" 2>/dev/null)" || return 1
+    # shellcheck disable=SC2162
+    for kv in $line; do
+        case "$kv" in
+            source=*) O_SOURCE="${kv#source=}" ;;
+            pid=*) O_PID="${kv#pid=}" ;;
+            starttime=*) O_STIME="${kv#starttime=}" ;;
+            since=*) O_SINCE="${kv#since=}" ;;
+        esac
+    done
+    [ -n "$O_SOURCE" ] && [ -n "$O_PID" ] && [ -n "$O_STIME" ] || return 1
+    return 0
+}
+
+owner_live() {
+    # True iff the recorded PID is still the same process.
+    cur="$(proc_starttime "$O_PID" 2>/dev/null)" || return 1
+    [ -n "$cur" ] && [ "$cur" = "$O_STIME" ]
+}
+
+now() { date +%s; }
+
+cmd_acquire() {
+    need_flock; init_dir
+    # Default claim PID is our *parent* (the invoking launcher/player shell):
+    # $$ would be this short-lived audio-owner process itself, whose instant
+    # exit would make every claim immediately stale. Pass --pid explicitly
+    # when the ALSA holder is a different process (e.g. the jive_alsa child).
+    source="$1"; pid="$PPID"
+    [ "${2:-}" = "--pid" ] && { pid="${3:?--pid needs a value}"; }
+    case "$pid" in ''|*[!0-9]*) die "bad pid: $pid" 2 ;; esac
+    stime="$(proc_starttime "$pid")" || die "pid $pid not running" 2
+
+    (
+        flock -x 9 || exit 2
+        if read_owner; then
+            if owner_live; then
+                if [ "$O_SOURCE" = "$source" ] && [ "$O_PID" = "$pid" ]; then
+                    echo "audio-owner event=acquired source=$source pid=$pid ts=$(now) note=already-holder"
+                    exit 0
+                fi
+                echo "audio-owner: held by $O_SOURCE (pid $O_PID)" >&2
+                exit 1
+            else
+                echo "audio-owner event=reaped source=$O_SOURCE pid=$O_PID ts=$(now)"
+            fi
+        fi
+        printf 'source=%s pid=%s starttime=%s since=%s\n' "$source" "$pid" "$stime" "$(now)" > "$OWNER"
+        echo "audio-owner event=acquired source=$source pid=$pid ts=$(now)"
+    ) 9>"$MUTEX"
+}
+
+cmd_release() {
+    need_flock; init_dir
+    source="$1"
+    (
+        flock -x 9 || exit 2
+        read_owner || { echo "audio-owner: already free" >&2; exit 0; }
+        if ! owner_live; then
+            echo "audio-owner event=reaped source=$O_SOURCE pid=$O_PID ts=$(now)"
+            rm -f "$OWNER"
+            exit 0
+        fi
+        [ "$O_SOURCE" = "$source" ] || { echo "audio-owner: held by $O_SOURCE, not $source" >&2; exit 5; }
+        rm -f "$OWNER"
+        echo "audio-owner event=released source=$source pid=$O_PID ts=$(now)"
+    ) 9>"$MUTEX"
+}
+
+cmd_hold() {
+    need_flock; init_dir
+    source="$1"; shift
+    [ "${1:-}" = "--" ] || die "usage: audio-owner hold <source> -- <cmd> [...]" 2
+    shift
+    [ $# -ge 1 ] || die "usage: audio-owner hold <source> -- <cmd> [...]" 2
+    # Claim first as ourselves (we outlive the child setup), then re-point
+    # the claim at the child PID once it exists.
+    "$0" acquire "$source" --pid "$$" >/dev/null || exit 1
+    # Re-point the claim at the child below; run child, release on exit.
+    "$@" &
+    child=$!
+    child_stime="$(proc_starttime "$child")" || child_stime=""
+    if [ -n "$child_stime" ]; then
+        ( flock -x 9
+          printf 'source=%s pid=%s starttime=%s since=%s\n' "$source" "$child" "$child_stime" "$(now)" > "$OWNER"
+        ) 9>"$MUTEX"
+    fi
+    wait "$child"; rc=$?
+    "$0" release "$source" >/dev/null 2>&1 || true
+    exit "$rc"
+}
+
+cmd_status() {
+    init_dir
+    (
+        flock -s 9 || exit 2
+        if read_owner && owner_live; then
+            printf 'held source=%s pid=%s since=%s\n' "$O_SOURCE" "$O_PID" "$O_SINCE"
+            exit 0
+        fi
+        echo "free"
+        exit 3
+    ) 9>"$MUTEX"
+}
+
+cmd_wait() {
+    need_flock; init_dir
+    # $1 = "wait"; optional form: wait --timeout SECS
+    timeout=30
+    if [ "${2:-}" = "--timeout" ]; then timeout="${3:?wait --timeout needs a value}"; fi
+    case "$timeout" in ''|*[!0-9]*) die "bad timeout: $timeout" 2 ;; esac
+    deadline=$(( $(now) + timeout ))
+    while [ "$(now)" -lt "$deadline" ]; do
+        "$0" status >/dev/null 2>&1
+        rc=$?
+        [ "$rc" -eq 3 ] && exit 0   # 3 == free
+        sleep 0.2 2>/dev/null || sleep 1
+    done
+    # Final check (avoid racing the deadline).
+    "$0" status >/dev/null 2>&1
+    rc=$?
+    [ "$rc" -eq 3 ] && exit 0
+    echo "audio-owner event=timeout source=? pid=? ts=$(now)"
+    exit 4
+}
+
+cmd_force_release() {
+    need_flock; init_dir
+    (
+        flock -x 9 || exit 2
+        if read_owner; then
+            echo "audio-owner event=released source=$O_SOURCE pid=$O_PID ts=$(now) note=force-release" >&2
+        fi
+        rm -f "$OWNER"
+        echo "force-released"
+    ) 9>"$MUTEX"
+}
+
+case "${1:-}" in
+    acquire) [ $# -ge 2 ] || die "usage: audio-owner acquire <source> [--pid PID]" 2
+             cmd_acquire "$2" "${3:-}" "${4:-}" ;;
+    release) [ $# -eq 2 ] || die "usage: audio-owner release <source>" 2
+             cmd_release "$2" ;;
+    hold)    [ $# -ge 4 ] || die "usage: audio-owner hold <source> -- <cmd> [...]" 2
+             src="$2"; shift 2; cmd_hold "$src" "$@" ;;
+    status)  cmd_status ;;
+    wait)    cmd_wait "$@" ;;
+    force-release) cmd_force_release ;;
+    -h|--help|help) sed -n '2,14p' "$0"; exit 0 ;;
+    *) die "usage: audio-owner {acquire|release|hold|status|wait|force-release}" 2 ;;
+esac
