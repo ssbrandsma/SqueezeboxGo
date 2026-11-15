@@ -1,0 +1,16 @@
+# sdl12-compat vendor pin (WP1, Agent 4 UI)
+#
+# SDL 1.2 API on SDL2: lets unmodified SqueezePlay (SDL 1.2 API) run on the
+# SDL2/KMSDRM stack, X-less, with Panfrost GLES. Decision record: ui/README.md.
+#
+# Update only with Lead approval (see docs/upstream-references/upstream-manifest.md);
+# record date + reason below.
+
+REPO=https://github.com/libsdl-org/sdl12-compat.git
+TAG=release-1.2.78
+COMMIT=07043bdcfd0d16ea8f14fe2a375089d00566a5e9
+TARBALL_URL=https://github.com/libsdl-org/sdl12-compat/archive/refs/tags/release-1.2.78.tar.gz
+TARBALL_SHA256=40ec5f0bab13a217ffae7aab0c450f1f798761e91fb185051b5211925c9da11a
+
+# History:
+# 2026-11-15: pinned release-1.2.78 (latest release tag; verified tarball sha256).

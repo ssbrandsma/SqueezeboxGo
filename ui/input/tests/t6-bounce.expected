@@ -1,0 +1,4 @@
+MAP keys=19 axes=4 tap=80 debounce=12 rep=500/100
+0 OUT KEY KEY_ENTER 1
+212 OUT KEY KEY_ENTER 0
+END

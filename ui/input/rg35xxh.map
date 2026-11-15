@@ -1,0 +1,64 @@
+# rg35xxh.map — default evdev2jive mapping for the Anbernic RG35XX H.
+#
+# Input codes come from mainline DTS (gpio-keys + adc-joystick):
+#   sun50i-h700-anbernic-rg35xx-2024.dts (+rg35xx-h.dts thumbl/r, axes)
+# Output codes are chosen so stock Jive (SDL2 + sdl12-compat, NO framework
+# patch) produces the contract action. Two paths through Jive:
+#   (K) C keymap  -> JIVE_KEY_* press/hold  (arrows repeat, hold timers)
+#   (C) CHAR path -> Lua charActionMappings  (single chars, see
+#       squeezeplay share/jive/InputToActionMap.lua)
+#
+# Map format: key IN OUT tap|hold [long MS LONGKEY]
+#             axis ABS center C press P release R neg KEY pos KEY [flip]
+# tap  = inject a short tap per physical press (toggle actions fire once)
+# hold = press on down, release on up (arrows/volume repeat via the chain)
+# long = if still held after MS, release primary + tap alternate once
+
+device gpio-keys
+device adc-joystick
+
+grab 1
+tap_ms 80
+debounce_ms 12
+rep_delay_ms 500
+rep_period_ms 100
+
+# --- D-pad: arrows, repeatable nav (K). LEFT/RIGHT double as back/go
+# --- via keyActionMappings (contract: Left=Back, Right=Enter).
+key BTN_DPAD_UP    KEY_UP    hold
+key BTN_DPAD_DOWN  KEY_DOWN  hold
+key BTN_DPAD_LEFT  KEY_LEFT  hold
+key BTN_DPAD_RIGHT KEY_RIGHT hold
+
+# --- Face buttons ---
+key BTN_EAST  KEY_ENTER     hold long 800 KEY_D   # A=Select/go; hold=add_end(d)
+key BTN_SOUTH KEY_END       hold long 800 KEY_H   # B=Back; hold=go_home(h)
+key BTN_NORTH KEY_LEFTBRACE tap                    # X -> '[' -> go_now_playing
+key BTN_WEST  KEY_F         tap                    # Y -> 'f' -> go_favorites
+
+# --- Start/Select/Menu ---
+key BTN_START  KEY_SPACE tap long 800 KEY_G  # Start -> ' ' -> pause(toggle); hold=stop(g)
+key BTN_SELECT KEY_HOME  hold long 800 KEY_Q  # Select -> HOME; hold=power(q)
+key BTN_MODE   KEY_MENU  hold                 # Menu -> ADD
+
+# --- Shoulders: prev/next track (C: jump_rew/jump_fwd), volume (C) ---
+key BTN_TL  KEY_Z     tap    # L1 -> 'z' -> jump_rew (prev track)
+key BTN_TR  KEY_B     tap    # R1 -> 'b' -> jump_fwd (next track)
+key BTN_TL2 KEY_MINUS hold   # L2 -> '-' -> volume_down (hold repeats)
+key BTN_TR2 KEY_EQUAL hold   # R2 -> '=' -> volume_up   (hold repeats)
+
+# --- Dedicated volume keys double as the same volume chars ---
+key KEY_VOLUMEDOWN KEY_MINUS hold
+key KEY_VOLUMEUP   KEY_EQUAL hold
+
+# --- Stick clicks: discrete pause / stop ---
+key BTN_THUMBL KEY_C tap   # 'c' -> pause
+key BTN_THUMBR KEY_G tap   # 'g' -> stop
+
+# --- Sticks: evdev 0..4096, center ~2048 (driver-normalized; the DTS
+# --- inverted ranges on ABS_X/ABS_RY are compensated in adc-joystick.c).
+# --- Physical direction (neg=left/up) is a WP2 evtest check item.
+axis ABS_X  center 2048 press 1200 release 800 neg KEY_LEFT  pos KEY_RIGHT
+axis ABS_Y  center 2048 press 1200 release 800 neg KEY_UP    pos KEY_DOWN
+axis ABS_RX center 2048 press 1200 release 800 neg KEY_Z     pos KEY_B
+axis ABS_RY center 2048 press 1200 release 800 neg KEY_PAGEUP pos KEY_PAGEDOWN
