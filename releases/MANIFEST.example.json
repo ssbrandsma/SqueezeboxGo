@@ -1,0 +1,33 @@
+{
+  "$comment": "EXAMPLE manifest for the first WP2 experimental image. Shape follows MANIFEST.template.json. sha256/size_bytes are placeholders (TBD-<...>) until a real image is assembled; record real checksums in docs/test-results/ at release time.",
+  "name": "squeezebox-rg35xx-h",
+  "version": "0.1.0-exp1",
+  "variant": "ddr4",
+  "date_utc": "TBD-YYYY-MM-DDTHH:MM:SSZ",
+  "source_date_epoch": "TBD-<git log -1 --format=%ct>",
+  "git_commit": "TBD-<full SHA>",
+  "toolchain": "aarch64-linux-gnu (pinned container; see docs/build.md)",
+  "sbom": "sbom-ddr4-exp1.spdx.json",
+  "artifacts": [
+    {
+      "file": "squeezebox-rg35xx-h-ddr4.img",
+      "size_bytes": "TBD-<stat -c%s>",
+      "sha256": "TBD-<sha256sum>"
+    },
+    {
+      "file": "squeezebox-rg35xx-h-ddr4.img.xz",
+      "size_bytes": "TBD-<stat -c%s>",
+      "sha256": "TBD-<sha256sum>"
+    },
+    {
+      "file": "sbom-ddr4-exp1.spdx.json",
+      "size_bytes": "TBD-<stat -c%s>",
+      "sha256": "TBD-<sha256sum>"
+    }
+  ],
+  "validation": {
+    "check_image": "TBD-paste 'python3 tests/check_image.py <img>' PASS output",
+    "build_and_check": "TBD-<report path, e.g. docs/test-results/wp2-qa.md>",
+    "uart_boot_log": "TBD-<boot-ddr4-<date>.txt: SPL -> U-Boot -> kernel -> UI>"
+  }
+}

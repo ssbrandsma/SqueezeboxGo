@@ -25,6 +25,7 @@ CI gates treat FAIL/ERROR as red, PASS as green, and report the rest.
 | repro env | `python3 tests/check_repro.py env` | `$SOURCE_DATE_EPOCH` |
 | repro manifest | `python3 tests/check_repro.py manifest DIR -o OUT` | any dir |
 | repro compare | `python3 tests/check_repro.py compare A B` | two manifests |
+| image (GPT + boot files + secrets + size) | `python3 tests/check_image.py [--skip-bootfs] [IMG-or-DIR...]` | `build/out/*.img`, `$IMAGE_UNDER_TEST`, or explicit paths |
 
 All Python checks accept `--root DIR` and `--json` (single JSON object
 `{"check","status","target","details"}` for the report generator).
