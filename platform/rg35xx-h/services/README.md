@@ -13,9 +13,11 @@ even when `audio-owner` is not installed yet (warns, WP1 behavior).
 
 - `squeezeplay.sh` — Jive launcher; exports the interface-contracts env knobs
   (`USEALSA_*`, `SQUEEZEPLAY_NOPLAYBACK`, `UTMAC`), best-effort
-  `audio-owner acquire jive`, execs `/opt/squeezeplay/bin/squeezeplay`.
-- `splash.sh` — splash hook; tries Agent-4 `/usr/share/squeezebox/splash-show`,
-  then `fbi` + static image, then console banner. Always exits 0.
+  `audio-owner acquire jive`, execs `/opt/squeezeplay/bin/jive` (the real
+  Agent-2 binary; the desktop `bin/squeezeplay.sh` is not used on target).
+- `splash.sh` — splash hook; tries Agent-4
+  `/opt/squeezeplay/bin/init-splash.sh show` (drm_splash + pidfile), then
+  `fbi` + static image, then console banner. Always exits 0.
 - `wifi.sh start|stop|status` — wpa_supplicant + udhcpc/dhcpcd for `wlan0`.
 - `systemd/*.service` — units, enabled by `mkrootfs.sh --with-services`.
 

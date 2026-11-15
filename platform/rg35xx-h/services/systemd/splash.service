@@ -4,10 +4,14 @@ DefaultDependencies=no
 After=systemd-udev-settle.service
 Before=squeezeplay.service
 Wants=systemd-udev-settle.service
+# No DRM device yet -> skip quietly; Jive paints when it starts (ui/BRINGUP.md).
+ConditionPathExists=/dev/dri/card0
 
 [Service]
 Type=oneshot
 ExecStart=/usr/lib/squeezebox/splash.sh
+# init-splash.sh holds DRM master via pidfile; stop the painter on unit stop.
+ExecStop=-/opt/squeezeplay/bin/init-splash.sh stop
 RemainAfterExit=yes
 StandardOutput=journal
 

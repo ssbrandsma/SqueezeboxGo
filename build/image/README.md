@@ -22,6 +22,12 @@ platform/rg35xx-h/kernel/build-kernel.sh --src build/cache/upstream/linux-7.3.4 
     --out build/cache/kernel
 platform/rg35xx-h/rootfs/mkrootfs.sh --staging build/cache/rootfs \
     --with-services --with-config --epoch "$SOURCE_DATE_EPOCH"
+build/image/stage-payload.sh --staging build/cache/rootfs \
+    --core-tgz <squeezeplay-aarch64-*.tgz> --uibins <aarch64 bins> \
+    --sdl2 <sdl2-kmsdrm prefix> --compat <sdl12-compat prefix> \
+    --bsp-so <rg35xxh_bsp.so> --squeezeplay-src <sp>/src \
+    --kernel-modules build/cache/kernel/modules \
+    --target-libs <closure list> --epoch "$SOURCE_DATE_EPOCH"
 build/image/assemble-image.sh --variant ddr4 --uboot build/cache/uboot \
     --kernel build/cache/kernel --rootfs build/cache/rootfs \
     --out releases/squeezebox-rg35xxh-ddr4.img

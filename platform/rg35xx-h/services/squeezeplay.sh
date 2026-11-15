@@ -2,12 +2,13 @@
 # squeezeplay.sh — Jive autostart launcher (installed to /usr/lib/squeezebox/).
 # Reads /etc/squeezebox/system.conf, exports the interface-contracts audio env
 # knobs, acquires the ALSA device via audio-owner when present, then execs the
-# Agent-2 binary at $PREFIX/bin/squeezeplay. Never touches audio/ sources.
+# Agent-2 binary at $PREFIX/bin/jive (RUNPATH-pinned; no LD_LIBRARY_PATH or
+# desktop launcher needed). Never touches audio/ sources.
 set -eu
 
 CONF="${SYSTEM_CONF:-/etc/squeezebox/system.conf}"
 PREFIX="${PREFIX:-/opt/squeezeplay}"
-BIN="$PREFIX/bin/squeezeplay"
+BIN="$PREFIX/bin/jive"
 SRC_ID="jive"
 
 log() { printf 'squeezeplay.sh: %s\n' "$*" >&2; }
@@ -15,6 +16,9 @@ log() { printf 'squeezeplay.sh: %s\n' "$*" >&2; }
 [ -f "$CONF" ] && . "$CONF"
 
 # Contract env knobs (docs/interface-contracts.md), overridable via system.conf.
+# LD_LIBRARY_PATH lets sdl12-compat dlopen() the $PREFIX-local SDL2/KMSDRM
+# build (RUNPATH covers jive's own DT_NEEDED, not the dlopen lookup).
+export LD_LIBRARY_PATH="$PREFIX/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-kmsdrm}"
 export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-alsa}"
 export USEALSA_DEVICE="${USEALSA_DEVICE:-default}"

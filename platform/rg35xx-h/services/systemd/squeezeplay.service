@@ -7,6 +7,9 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
+# DRM handoff: stop the splash painter so Jive becomes DRM master
+# (ui/splash/SERVICE_HOOKS.md; '-' tolerates "already gone").
+ExecStartPre=-/opt/squeezeplay/bin/init-splash.sh stop
 ExecStart=/usr/lib/squeezebox/squeezeplay.sh
 Restart=on-failure
 RestartSec=3
