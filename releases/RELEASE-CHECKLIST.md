@@ -14,17 +14,39 @@ results docs, and this checklist are committed.
 - [ ] `build/image/assemble-image.sh --check-deps` green inside the container.
 - [ ] Both variants assembled out of tree (`build/out/`):
       `squeezebox-rg35xx-h-ddr3.img`, `squeezebox-rg35xx-h-ddr4.img`.
-- [ ] SBOM recorded per build contract (path + hash in MANIFEST.json).
+- [ ] SBOM recorded per build contract (path + hash in MANIFEST.json):
+      `releases/SBOM.json` regenerated for this release and green:
+      - userland `package_count` equals the measured dpkg manifest lines
+        (`docs/test-results/wp2u-dpkg-manifest.txt` — 141 for 0.2.0-exp2);
+      - >= 7 source pins, each matching
+        `docs/upstream-references/upstream-manifest.md` (+ `pins.env`);
+      - toolchain section states specified containers vs the actual
+        build env honestly (container digests floating? host-built?);
+      - `validation.hardware` is NOT RUN until H1–H18 run on a real unit.
 
 ## Validate (host gates)
 
-- [ ] `bash tests/selftest.sh` — 26/26 (harness healthy).
+- [ ] `bash tests/selftest.sh` — 27/27 (harness healthy).
 - [ ] `scripts/build-and-check.sh` — no FAIL (image gate PASS per variant
       via `IMAGE_UNDER_TEST=...`, or explicit `check_image.py` runs pasted
       into the milestone report).
 - [ ] `python3 tests/check_image.py <each .img>` — PASS (GPT, SPL, boot
       files, DTB, no-secrets, size). Paste output into the report.
 - [ ] `releases/checksum.sh create` + `verify` on the staged release dir.
+
+## Docs (release gates)
+
+- [ ] `docs/INSTALL.md`, `docs/UPGRADE.md`, `docs/RECOVERY.md`,
+      `docs/KNOWN_ISSUES.md` present and stamped with this version.
+- [ ] INSTALL covers: flash tool choice (Etcher/Rufus/dd), DDR3-vs-DDR4
+      selection, first boot, UART access, SSH access, Wi-Fi setup.
+- [ ] KNOWN_ISSUES lists: panel-driver status, HW-gated H1–H18,
+      first-boot `dpkg-configure` proven/unproven — no silent gaps.
+- [ ] Every repo-relative path quoted in the four docs exists in the
+      tree (checked by script, output pasted into the milestone report).
+- [ ] All four docs render (markdown lint clean where available; at
+      minimum: balanced fences, resolving relative links, valid JSON
+      refs).
 
 ## Stage
 

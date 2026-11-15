@@ -1,0 +1,905 @@
+{
+  "$comment": "SBOM DRAFT (squeezebox-sbom-draft/1) for 0.2.0-exp2. Covers the exact images recorded in releases/MANIFEST.json. dpkg packages are measured from the image (debugfs); source pins are the repo pins those images were built from; toolchain section marks specified-vs-actual honestly (0.2.0-exp2 was built on HOST tooling, not the pinned containers). Not SPDX/CycloneDX yet (see limitations).",
+  "sbomFormat": "squeezebox-sbom-draft/1",
+  "name": "squeezebox-rg35xx-h",
+  "version": "0.2.0-exp2",
+  "image_git_commit": "d34314b007fa3b7e26e34fec808ce99510276f27",
+  "sbom_generated_from_commit": "cd587659b3510b730cc458037645487d6db864ff",
+  "sbom_generated_from_branch": "wp3/release",
+  "date_utc": "2026-11-15T23:00:30Z",
+  "artifacts": [
+    {
+      "file": "squeezebox-rg35xxh-ddr3.img",
+      "sha256": "7a1fc07c1ef65b0abdadc6c90f11f9b1dc70dbc30767fd7dcc70adc193bdccd0",
+      "size_bytes": 2147483648
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr3.img.xz",
+      "sha256": "32a8e60328fc599d1135683d9d2f94d59fdb77eafc2f947191d267a0bc620771",
+      "size_bytes": 164128224
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr4.img",
+      "sha256": "c388cbf16518ce026d75ea6ad08e8e7c5259c9e2c4c45cf245d3f07d4a55f5a1",
+      "size_bytes": 2147483648
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr4.img.xz",
+      "sha256": "65d65c18392b52a78d67d23f7aa3c93d9d3a70fdc9b3cd7b4a8ef8f7010c37a5",
+      "size_bytes": 164128068
+    }
+  ],
+  "sources": [
+    {
+      "name": "linux (stable)",
+      "repo": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git",
+      "pin": "v7.3.4 (8310b43a724c54668eeaa6860234078a7886915a)",
+      "role": "kernel Image + RG35XX-H DTB + 1676 modules",
+      "shipped_in_image": true,
+      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/wp2-platform.md"
+    },
+    {
+      "name": "u-boot",
+      "repo": "https://github.com/u-boot/u-boot.git",
+      "pin": "v2026.10 (5508406582f6f7120dce0c4b3059819a41788db2)",
+      "role": "anbernic_rg35xx_h700_defconfig; SPL+fit per DDR variant",
+      "shipped_in_image": true,
+      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/wp2-platform.md"
+    },
+    {
+      "name": "arm-trusted-firmware",
+      "repo": "https://github.com/ARM-software/arm-trusted-firmware.git",
+      "pin": "v2.15.0 (da738d5eae93af342fdc4995dd3c05acb4c9d757)",
+      "role": "BL31 sun50i_h616 inside SPL blob",
+      "shipped_in_image": true,
+      "evidence": "platform/rg35xx-h/kernel/pins.env"
+    },
+    {
+      "name": "squeezeplay",
+      "repo": "https://github.com/ralph-irving/squeezeplay",
+      "pin": "758bc11 (2026-09-25); Jive 9.0.0 r541 + patches 0001-0007",
+      "role": "Jive UI + playback in /opt/squeezeplay (aarch64 cross)",
+      "shipped_in_image": true,
+      "evidence": "docs/upstream-references/upstream-manifest.md, docs/test-results/wp2int-image.md"
+    },
+    {
+      "name": "sdl12-compat",
+      "repo": "https://github.com/libsdl-org/sdl12-compat",
+      "pin": "release-1.2.78 (07043bdc)",
+      "role": "SDL1.2-on-SDL2 shim (libSDL-1.2.so.1.2.78)",
+      "shipped_in_image": true,
+      "evidence": "docs/upstream-references/upstream-manifest.md, ui/vendor/fetch-sdl12-compat.sh"
+    },
+    {
+      "name": "SDL2 (kmsdrm)",
+      "repo": "libsdl-org/SDL release tarball (see wp2int-image.md)",
+      "pin": "2.32.10 (tarball sha short 5f5993c5...a5165 as recorded in report)",
+      "role": "kmsdrm+gles2+udev build (libSDL2-2.0.so.0.3200.10)",
+      "shipped_in_image": true,
+      "evidence": "docs/test-results/wp2int-image.md (sdl:kmsdrm)"
+    },
+    {
+      "name": "debian trixie minbase",
+      "repo": "deb.debian.org (debootstrap --foreign --arch=arm64 --variant=minbase)",
+      "pin": "suite trixie; libc6 2.41-12+deb13u4; 141 pkgs (see userland.packages); Release sig verified",
+      "role": "base userland: glibc + systemd + apt + ALSA/wifi/ssh",
+      "shipped_in_image": true,
+      "evidence": "docs/decisions/0004-base-userland.md, docs/test-results/wp2u-image.md, docs/test-results/wp2u-dpkg-manifest.txt"
+    },
+    {
+      "name": "repo-authored payload",
+      "repo": "(this repo, image_git_commit above)",
+      "pin": "evdev2jive + drm_splash + rg35xxh_bsp + skin + services + asound.conf",
+      "role": "input/splash/BSP/UI/services/ALSA config layered by stage-payload.sh + mkrootfs.sh",
+      "shipped_in_image": true,
+      "evidence": "build/image/stage-payload.sh, platform/rg35xx-h/rootfs/mkrootfs.sh"
+    },
+    {
+      "name": "librespot",
+      "repo": "https://github.com/librespot-org/librespot",
+      "pin": "v0.8.0 (d36f9f19)",
+      "role": "Spotify Connect backend (standalone framework only)",
+      "shipped_in_image": false,
+      "evidence": "docs/upstream-references/upstream-manifest.md; units ship-disabled (docs/test-results/wp2u-image.md)"
+    },
+    {
+      "name": "slimserver",
+      "repo": "https://github.com/lms-community/slimserver",
+      "pin": "9.0.2 peeled 1470c941",
+      "role": "standalone reference only (Lead re-pin; ralph-irving 404)",
+      "shipped_in_image": false,
+      "evidence": "docs/upstream-references/upstream-manifest.md"
+    },
+    {
+      "name": "squeezelite",
+      "repo": "https://github.com/ralph-irving/squeezelite",
+      "pin": "cc7ee7c (2026-10-28)",
+      "role": "audio/SlimProto recipe reference only",
+      "shipped_in_image": false,
+      "evidence": "docs/upstream-references/upstream-manifest.md"
+    },
+    {
+      "name": "jivelite",
+      "repo": "https://github.com/ralph-irving/jivelite",
+      "pin": "d43a20b",
+      "role": "aarch64 recipe reference only",
+      "shipped_in_image": false,
+      "evidence": "docs/upstream-references/upstream-manifest.md"
+    },
+    {
+      "name": "tcz-jivelite",
+      "repo": "https://github.com/ralph-irving/tcz-jivelite",
+      "pin": "4bdf677",
+      "role": "aarch64 patch reference only",
+      "shipped_in_image": false,
+      "evidence": "docs/upstream-references/upstream-manifest.md"
+    }
+  ],
+  "userland": {
+    "suite": "debian trixie (arm64 minbase + 15-pkg include set)",
+    "include_set": "platform/rg35xx-h/rootfs/userland-include.txt",
+    "staging_script": "platform/rg35xx-h/rootfs/stage-userland.sh",
+    "package_count": 141,
+    "dpkg_status": "all 'install ok unpacked' (rootless 2nd stage; first-boot dpkg --configure -a runs on device)",
+    "manifest_source": "docs/test-results/wp2u-dpkg-manifest.txt (debugfs rdump of /var/lib/dpkg/status from the ddr3 image)",
+    "release_verification": "Release signature VERIFIED with trixie keyring at stage time (see docs/test-results/wp2u-image.md); suite NOT snapshot-pinned (future work, ADR-0004)",
+    "packages": [
+      {
+        "name": "adduser",
+        "version": "3.152",
+        "arch": "all"
+      },
+      {
+        "name": "alsa-utils",
+        "version": "1.2.14-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "apt",
+        "version": "3.0.3",
+        "arch": "arm64"
+      },
+      {
+        "name": "base-files",
+        "version": "13.8+deb13u7",
+        "arch": "arm64"
+      },
+      {
+        "name": "base-passwd",
+        "version": "3.6.7",
+        "arch": "arm64"
+      },
+      {
+        "name": "bash",
+        "version": "5.2.37-2+b10",
+        "arch": "arm64"
+      },
+      {
+        "name": "bsdutils",
+        "version": "1:2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "busybox",
+        "version": "1:1.37.0-6+b9",
+        "arch": "arm64"
+      },
+      {
+        "name": "ca-certificates",
+        "version": "20250419",
+        "arch": "all"
+      },
+      {
+        "name": "coreutils",
+        "version": "9.7-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "dash",
+        "version": "0.5.12-12",
+        "arch": "arm64"
+      },
+      {
+        "name": "debconf",
+        "version": "1.5.91",
+        "arch": "all"
+      },
+      {
+        "name": "debian-archive-keyring",
+        "version": "2025.1",
+        "arch": "all"
+      },
+      {
+        "name": "debianutils",
+        "version": "5.23.2",
+        "arch": "arm64"
+      },
+      {
+        "name": "diffutils",
+        "version": "1:3.10-4",
+        "arch": "arm64"
+      },
+      {
+        "name": "dpkg",
+        "version": "1.22.22",
+        "arch": "arm64"
+      },
+      {
+        "name": "findutils",
+        "version": "4.10.0-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "firmware-realtek",
+        "version": "20250410-2",
+        "arch": "all"
+      },
+      {
+        "name": "gcc-14-base",
+        "version": "14.2.0-19",
+        "arch": "arm64"
+      },
+      {
+        "name": "grep",
+        "version": "3.11-4+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "gzip",
+        "version": "1.13-1+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "hostname",
+        "version": "3.25",
+        "arch": "arm64"
+      },
+      {
+        "name": "init-system-helpers",
+        "version": "1.69~deb13u1",
+        "arch": "all"
+      },
+      {
+        "name": "iproute2",
+        "version": "6.15.0-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "iw",
+        "version": "6.9-1+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "kmod",
+        "version": "34.2-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libacl1",
+        "version": "2.3.2-2+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libapparmor1",
+        "version": "4.1.0-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libapt-pkg7.0",
+        "version": "3.0.3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libasound2-data",
+        "version": "1.2.14-1+deb13u1",
+        "arch": "all"
+      },
+      {
+        "name": "libasound2t64",
+        "version": "1.2.14-1+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libatopology2t64",
+        "version": "1.2.14-1+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libattr1",
+        "version": "1:2.5.2-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libaudit-common",
+        "version": "1:4.0.2-2+deb13u1",
+        "arch": "all"
+      },
+      {
+        "name": "libaudit1",
+        "version": "1:4.0.2-2+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libblkid1",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libbpf1",
+        "version": "1:1.5.0-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libbsd0",
+        "version": "0.12.2-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libbz2-1.0",
+        "version": "1.0.8-6",
+        "arch": "arm64"
+      },
+      {
+        "name": "libc-bin",
+        "version": "2.41-12+deb13u4",
+        "arch": "arm64"
+      },
+      {
+        "name": "libc6",
+        "version": "2.41-12+deb13u4",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcap-ng0",
+        "version": "0.8.5-4+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcap2",
+        "version": "1:2.75-10+deb13u1+b3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcap2-bin",
+        "version": "1:2.75-10+deb13u1+b3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcbor0.10",
+        "version": "0.10.2-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcom-err2",
+        "version": "1.47.2-3+b12",
+        "arch": "arm64"
+      },
+      {
+        "name": "libcrypt1",
+        "version": "1:4.4.38-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libdb5.3t64",
+        "version": "5.3.28+dfsg2-9",
+        "arch": "arm64"
+      },
+      {
+        "name": "libdbus-1-3",
+        "version": "1.16.2-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libdebconfclient0",
+        "version": "0.280",
+        "arch": "arm64"
+      },
+      {
+        "name": "libedit2",
+        "version": "3.1-20250104-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libelf1t64",
+        "version": "0.192-4",
+        "arch": "arm64"
+      },
+      {
+        "name": "libfftw3-single3",
+        "version": "3.3.10-2+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libfido2-1",
+        "version": "1.15.0-1+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libgcc-s1",
+        "version": "14.2.0-19",
+        "arch": "arm64"
+      },
+      {
+        "name": "libgmp10",
+        "version": "2:6.3.0+dfsg-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libgomp1",
+        "version": "14.2.0-19",
+        "arch": "arm64"
+      },
+      {
+        "name": "libgssapi-krb5-2",
+        "version": "1.21.3-5+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libhogweed6t64",
+        "version": "3.10.1-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libk5crypto3",
+        "version": "1.21.3-5+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libkeyutils1",
+        "version": "1.6.3-6",
+        "arch": "arm64"
+      },
+      {
+        "name": "libkmod2",
+        "version": "34.2-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libkrb5-3",
+        "version": "1.21.3-5+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libkrb5support0",
+        "version": "1.21.3-5+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "liblastlog2-2",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "liblz4-1",
+        "version": "1.10.0-4",
+        "arch": "arm64"
+      },
+      {
+        "name": "liblzma5",
+        "version": "5.8.1-1+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libmd0",
+        "version": "1.1.0-2+b1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libmnl0",
+        "version": "1.0.5-3",
+        "arch": "arm64"
+      },
+      {
+        "name": "libmount1",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libncursesw6",
+        "version": "6.5+20250216-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libnettle8t64",
+        "version": "3.10.1-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libnl-3-200",
+        "version": "3.7.0-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libnl-genl-3-200",
+        "version": "3.7.0-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libnl-route-3-200",
+        "version": "3.7.0-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libpam-modules",
+        "version": "1.7.0-5",
+        "arch": "arm64"
+      },
+      {
+        "name": "libpam-modules-bin",
+        "version": "1.7.0-5",
+        "arch": "arm64"
+      },
+      {
+        "name": "libpam-runtime",
+        "version": "1.7.0-5",
+        "arch": "all"
+      },
+      {
+        "name": "libpam0g",
+        "version": "1.7.0-5",
+        "arch": "arm64"
+      },
+      {
+        "name": "libpcre2-8-0",
+        "version": "10.46-1~deb13u2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libpcsclite1",
+        "version": "2.3.3-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libproc2-0",
+        "version": "2:4.0.4-9",
+        "arch": "arm64"
+      },
+      {
+        "name": "libreadline8t64",
+        "version": "8.2-6",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsamplerate0",
+        "version": "0.2.2-4+b2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libseccomp2",
+        "version": "2.6.0-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libselinux1",
+        "version": "3.8.1-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsemanage-common",
+        "version": "3.8.1-1",
+        "arch": "all"
+      },
+      {
+        "name": "libsemanage2",
+        "version": "3.8.1-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsepol2",
+        "version": "3.8.1-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsmartcols1",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsqlite3-0",
+        "version": "3.46.1-7+deb13u2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libssl3t64",
+        "version": "3.5.7-1~deb13u2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libstdc++6",
+        "version": "14.2.0-19",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsystemd-shared",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libsystemd0",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libtext-charwidth-perl",
+        "version": "0.04-11+b4",
+        "arch": "arm64"
+      },
+      {
+        "name": "libtext-wrapi18n-perl",
+        "version": "0.06-10",
+        "arch": "all"
+      },
+      {
+        "name": "libtinfo6",
+        "version": "6.5+20250216-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libtirpc-common",
+        "version": "1.3.6+ds-1",
+        "arch": "all"
+      },
+      {
+        "name": "libtirpc3t64",
+        "version": "1.3.6+ds-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libudev1",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libuuid1",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libwrap0",
+        "version": "7.6.q-36",
+        "arch": "arm64"
+      },
+      {
+        "name": "libwtmpdb0",
+        "version": "0.73.0-3+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "libxtables12",
+        "version": "1.8.11-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libxxhash0",
+        "version": "0.8.3-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "libzstd1",
+        "version": "1.5.7+dfsg-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "login",
+        "version": "1:4.16.0-2+really2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "login.defs",
+        "version": "1:4.17.4-2",
+        "arch": "all"
+      },
+      {
+        "name": "lsb-base",
+        "version": "11.6",
+        "arch": "all"
+      },
+      {
+        "name": "mawk",
+        "version": "1.3.4.20250131-1",
+        "arch": "arm64"
+      },
+      {
+        "name": "mount",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "ncurses-base",
+        "version": "6.5+20250216-2",
+        "arch": "all"
+      },
+      {
+        "name": "ncurses-bin",
+        "version": "6.5+20250216-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "openssh-client",
+        "version": "1:10.0p1-7+deb13u4",
+        "arch": "arm64"
+      },
+      {
+        "name": "openssh-server",
+        "version": "1:10.0p1-7+deb13u4",
+        "arch": "arm64"
+      },
+      {
+        "name": "openssh-sftp-server",
+        "version": "1:10.0p1-7+deb13u4",
+        "arch": "arm64"
+      },
+      {
+        "name": "openssl",
+        "version": "3.5.7-1~deb13u2",
+        "arch": "arm64"
+      },
+      {
+        "name": "openssl-provider-legacy",
+        "version": "3.5.7-1~deb13u2",
+        "arch": "arm64"
+      },
+      {
+        "name": "passwd",
+        "version": "1:4.17.4-2",
+        "arch": "arm64"
+      },
+      {
+        "name": "perl-base",
+        "version": "5.40.1-6+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "procps",
+        "version": "2:4.0.4-9",
+        "arch": "arm64"
+      },
+      {
+        "name": "readline-common",
+        "version": "8.2-6",
+        "arch": "all"
+      },
+      {
+        "name": "rfkill",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "runit-helper",
+        "version": "2.16.4",
+        "arch": "all"
+      },
+      {
+        "name": "sed",
+        "version": "4.9-2+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "sensible-utils",
+        "version": "0.0.25",
+        "arch": "all"
+      },
+      {
+        "name": "sqv",
+        "version": "1.3.0-3+b2",
+        "arch": "arm64"
+      },
+      {
+        "name": "systemd",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "systemd-sysv",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "systemd-timesyncd",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "sysvinit-utils",
+        "version": "3.14-4",
+        "arch": "arm64"
+      },
+      {
+        "name": "tar",
+        "version": "1.35+dfsg-3.1",
+        "arch": "arm64"
+      },
+      {
+        "name": "tzdata",
+        "version": "2026c-0+deb13u1",
+        "arch": "all"
+      },
+      {
+        "name": "ucf",
+        "version": "3.0052",
+        "arch": "all"
+      },
+      {
+        "name": "udev",
+        "version": "257.13-1~deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "udhcpc",
+        "version": "1:1.37.0-6",
+        "arch": "all"
+      },
+      {
+        "name": "usr-is-merged",
+        "version": "39+nmu2",
+        "arch": "all"
+      },
+      {
+        "name": "util-linux",
+        "version": "2.41.5-0+deb13u1",
+        "arch": "arm64"
+      },
+      {
+        "name": "wpasupplicant",
+        "version": "2:2.10-24",
+        "arch": "arm64"
+      },
+      {
+        "name": "zlib1g",
+        "version": "1:1.3.dfsg+really1.3.1-1+b1",
+        "arch": "arm64"
+      }
+    ]
+  },
+  "toolchain": {
+    "provenance_note": "0.2.0-exp2 was built with HOST tooling (no docker daemon on the build host). The pinned containers below are the SPECIFIED contract, not what produced these images. Reproducibility impact is recorded honestly under actual.repro_limits.",
+    "specified": {
+      "payload_container": {
+        "dockerfile": "build/toolchain/Dockerfile",
+        "base": "ubuntu:24.04 (FLOATING digest \u2014 pin it before release builds)",
+        "packages": {
+          "gcc-aarch64-linux-gnu": "4:13.2.0-7ubuntu1",
+          "g++-aarch64-linux-gnu": "4:13.2.0-7ubuntu1",
+          "binutils-aarch64-linux-gnu": "2.42-4ubuntu2.10",
+          "libc6-dev-arm64-cross": "2.39-0ubuntu8cross1",
+          "libasound2-dev:arm64": "1.2.11-1ubuntu0.3"
+        },
+        "used_for_0_2_0_exp2": false
+      },
+      "image_container": {
+        "dockerfile": "build/docker/Dockerfile",
+        "base": "debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc (pinned)",
+        "apt_versions": "FLOATING within bookworm (no version pins in Dockerfile)",
+        "used_for_0_2_0_exp2": false
+      }
+    },
+    "actual": {
+      "host": "DESKTOP-OVMHVD2, Ubuntu 24.04 x86_64 (WSL2), no root, no docker",
+      "cross_toolchain": "gcc-aarch64-linux-gnu 13.3.0, binutils 2.42, bison 3.8.2",
+      "image_tools": "mtools 4.0.43, dosfstools 4.2, mke2fs 1.47.0, fakeroot",
+      "userland_tools": "host debootstrap + qemu-user-static extracted to /tmp (see docs/test-results/wp2u-image.md)",
+      "sysroot": "rootless /tmp/wp2sys (Ubuntu noble .debs extracted)",
+      "source_date_epoch_build": 1794334272,
+      "source_date_epoch_release": 1794780954,
+      "repro_limits": [
+        "mke2fs 1.47.0 < 1.47.1: ext4 wrapper varies run-to-run (assembler warns); payload bytes proven identical (11834/11834 SHA match)",
+        "container e2fsprogs >= 1.47.1 TODO stands (build/docker/Dockerfile)",
+        "13 noble closure libs still staged (trixie migration future)"
+      ],
+      "evidence": "docs/test-results/wp2-platform.md, docs/test-results/wp2int-image.md, docs/test-results/wp2u-image.md"
+    },
+    "target": "aarch64-linux-gnu, -march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay"
+  },
+  "validation": {
+    "check_image": "PASS both variants after Lead secrets-heuristic fix (PEM hits require key material); see docs/test-results/wp2u-merge-gates.md",
+    "gates": "6 PASS + arch NOT RUN (docs/test-results/wp2u-merge-gates.md); selftest 27/27",
+    "hardware": "NOT RUN \u2014 no RG35XX H (sole external blocker); H1-H18 + first-boot dpkg-configure unproven"
+  },
+  "limitations": [
+    "DRAFT format (squeezebox-sbom-draft/1), not SPDX/CycloneDX \u2014 machine-readable conversion is future work.",
+    "Debian suite not snapshot-pinned: dpkg versions are the honest record, not a rebuild lock (ADR-0004 future work).",
+    "SDL2 tarball SHA recorded short (5f5993c5...a5165) as in wp2int-image.md \u2014 full hash lives in the build log only.",
+    "Host-built images: byte-reproducible rebuild requires the container TODOs above.",
+    "releases/MANIFEST.json keeps sbom:null as the historical 0.2.0-exp2 record; this SBOM.json is the draft that a future manifest points at."
+  ]
+}
