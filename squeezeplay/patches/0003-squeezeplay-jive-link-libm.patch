@@ -1,0 +1,46 @@
+From: Squeezebox RG35XX H Agent 2 (Core)
+Subject: [PATCH 3/3] squeezeplay: link jive and jive_alsa with -lm (modern binutils compat)
+Upstream: squeezeplay@758bc11 src/squeezeplay/{Makefile.am,Makefile.in}
+Rationale: libdecode/libaudio use sqrt()/sin(); modern ld (--as-needed, no indirect
+ DSO fallback) fails with "DSO missing from command line" without an explicit
+ -lm after the convenience libs. Affects native and cross builds alike.
+Apply: patch -p1 < 0003-squeezeplay-jive-link-libm.patch (from upstream repo root)
+---
+
+diff --git a/src/squeezeplay/Makefile.am b/src/squeezeplay/Makefile.am
+index 6812ff1d..4353421b 100644
+--- a/src/squeezeplay/Makefile.am
++++ b/src/squeezeplay/Makefile.am
+@@ -247,12 +247,12 @@ jive_SOURCES = \
+ 	src/jive_debug.c \
+ 	src/log.c
+ 
+-jive_LDADD = libui.la libdecode.la libnet.la -lfdk-aac -llua ${JIVE_LDFLAGS} ${SPPRIVATE_LIB}
++jive_LDADD = libui.la libdecode.la libnet.la -lfdk-aac -llua -lm ${JIVE_LDFLAGS} ${SPPRIVATE_LIB}
+ 
+ jive_alsa_SOURCES = \
+ 	src/audio/decode/decode_alsa_backend.c
+ 
+-jive_alsa_LDADD = libaudio.la -lasound
++jive_alsa_LDADD = libaudio.la -lasound -lm
+ 
+ 
+ # Test program: jiveblit
+diff --git a/src/squeezeplay/Makefile.in b/src/squeezeplay/Makefile.in
+index 31e9a48c..c7bd8b65 100644
+--- a/src/squeezeplay/Makefile.in
++++ b/src/squeezeplay/Makefile.in
+@@ -356,11 +356,11 @@ jive_SOURCES = \
+ 	src/jive_debug.c \
+ 	src/log.c
+ 
+-jive_LDADD = libui.la libdecode.la libnet.la -lfdk-aac -llua ${JIVE_LDFLAGS} ${SPPRIVATE_LIB}
++jive_LDADD = libui.la libdecode.la libnet.la -lfdk-aac -llua -lm ${JIVE_LDFLAGS} ${SPPRIVATE_LIB}
+ jive_alsa_SOURCES = \
+ 	src/audio/decode/decode_alsa_backend.c
+ 
+-jive_alsa_LDADD = libaudio.la -lasound
++jive_alsa_LDADD = libaudio.la -lasound -lm
+ 
+ # Test program: jiveblit
+ jiveblit_SOURCES = \
