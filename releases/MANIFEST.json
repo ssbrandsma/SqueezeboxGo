@@ -1,0 +1,38 @@
+{
+  "$comment": "WP2 merged-image integration manifest (QA-verified). Shape follows MANIFEST.example.json; variant covers both DDR images. Images live outside git in /tmp/sqz-merged/ (see report docs/test-results/wp2int-qa.md).",
+  "name": "squeezebox-rg35xx-h",
+  "version": "0.1.0-exp1",
+  "variant": "ddr3+ddr4",
+  "date_utc": "2026-11-15T22:13:51Z",
+  "source_date_epoch": 1794777651,
+  "git_commit": "910d95579271fbee4d7f68a71597b4ce82190228",
+  "toolchain": "aarch64-linux-gnu (-march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay); container debian:bookworm-slim sha256:734a72b3…b179bc; see docs/build.md",
+  "sbom": null,
+  "sources": {
+    "$comment": "Pins from docs/upstream-references/upstream-manifest.md at git_commit above.",
+    "linux": "v7.3.4 (8310b43a)",
+    "u-boot": "v2026.10 (55084065)",
+    "arm-trusted-firmware": "v2.15.0 (da738d5e)",
+    "squeezeplay": "758bc11 (2026-09-25)",
+    "sdl12-compat": "release-1.2.78 (07043bdc)",
+    "slimserver": "9.0.2 peeled 1470c941 (lms-community)",
+    "librespot": "v0.8.0 (d36f9f19)"
+  },
+  "artifacts": [
+    {
+      "file": "squeezebox-rg35xxh-ddr3.img",
+      "size_bytes": 2147483648,
+      "sha256": "82b3de0a7fb59f7b66586cbba63071ab07d08065a41c20ab26999c9a9146ba25"
+    },
+    {
+      "file": "squeezebox-rg35xxh-ddr4.img",
+      "size_bytes": 2147483648,
+      "sha256": "380be5770fe7146d25896935bf8d802649fd32e3f4630679e4cd961ff1da2187"
+    }
+  ],
+  "validation": {
+    "check_image": "PASS both variants (GPT/FAT/SPL/secrets/size); see docs/test-results/wp2int-qa.md",
+    "build_and_check": "docs/test-results/wp2int-qa.md — 6 PASS + 1 NOT RUN (arch) per variant via IMAGE_UNDER_TEST",
+    "uart_boot_log": "NOT RUN — no RG35XX H hardware (sole external blocker)"
+  }
+}
