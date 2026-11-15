@@ -23,6 +23,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     fakeroot libfaketime shellcheck \
     && rm -rf /var/lib/apt/lists/*
 
+# Layer 3: base-userland staging (stage-userland.sh). The default unprivileged
+# path (debootstrap --foreign + rootless second stage + first-boot configure)
+# runs anywhere fakeroot runs. The --userland container hook's privileged
+# path (native second stage) additionally needs binfmt qemu-arm64 on the
+# docker HOST (qemu-user-static here only covers in-container chroots).
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    debootstrap qemu-user-static debian-archive-keyring wget xz-utils zstd \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN useradd -m -u 1000 builder && mkdir -p /work/repo && chown builder:builder /work/repo
 USER builder
 WORKDIR /work/repo

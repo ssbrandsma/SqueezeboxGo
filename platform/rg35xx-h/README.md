@@ -54,10 +54,12 @@ parses it and a 1.5 MB blob at sector 16 leaves it intact. Map:
 
 ## Rootfs + services
 
-- `rootfs/`: `skeleton.list` + `overlay/etc` (fstab/hostname/os-release) +
-  `mkrootfs.sh` (unprivileged staging, mtime clamping, sha256 manifest).
-  Base userland (glibc/systemd/…) is a WP2 choice (debootstrap/buildroot);
-  this tree layers on top idempotently. `/dev` is empty (devtmpfs).
+- `rootfs/`: `stage-userland.sh` (debootstrap trixie arm64 minbase +
+  `userland-include.txt`, unprivileged via `--foreign` + rootless second
+  stage; postinst runs natively at first boot) + `skeleton.list` +
+  `overlay/etc` (fstab/hostname/os-release) + `mkrootfs.sh` (unprivileged
+  staging, mtime clamping, sha256 manifest). mkrootfs layers the Squeezebox
+  tree on top of the userland idempotently. `/dev` is empty (devtmpfs).
 - `services/`: systemd primary (`splash` -> `wifi` -> `squeezeplay`), logic in
   POSIX sh (busybox-init fallback documented in `services/README.md`).
   Jive launcher exports the interface-contracts env knobs and best-effort

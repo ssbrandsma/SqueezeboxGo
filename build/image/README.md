@@ -20,6 +20,9 @@ platform/rg35xx-h/kernel/build-uboot.sh --uboot build/cache/upstream/u-boot-2026
     --atf build/cache/upstream/atf-2.15.0 --out build/cache/uboot
 platform/rg35xx-h/kernel/build-kernel.sh --src build/cache/upstream/linux-7.3.4 \
     --out build/cache/kernel
+# Base userland FIRST (unprivileged; postinst runs natively at first boot):
+platform/rg35xx-h/rootfs/stage-userland.sh --staging build/cache/rootfs \
+    --cache build/cache/userland-debs --epoch "$SOURCE_DATE_EPOCH"
 platform/rg35xx-h/rootfs/mkrootfs.sh --staging build/cache/rootfs \
     --with-services --with-config --epoch "$SOURCE_DATE_EPOCH"
 build/image/stage-payload.sh --staging build/cache/rootfs \
@@ -35,6 +38,19 @@ build/image/assemble-image.sh --variant ddr4 --uboot build/cache/uboot \
 ```
 
 Preflight without building: `assemble-image.sh --check-deps`, `--dry-run ...`.
+
+## Base userland (stage-userland.sh)
+
+Suite: trixie arm64 minbase + the `--include` set in
+`platform/rg35xx-h/rootfs/userland-include.txt` (systemd/udev, ALSA,
+wifi, ssh, kmod, firmware). trixie, not bookworm: the shipped payload
+needs GLIBC_2.38, which bookworm's libc6 2.36 lacks (measured; see
+`docs/test-results/wp2u-image.md`). The script runs unprivileged
+(debootstrap `--foreign` under fakeroot + a rootless second stage that
+unpacks every deb and synthesizes dpkg's `status` as "unpacked");
+`dpkg --configure -a` + `ssh-keygen -A` run natively at first boot via
+`squeezebox-firstboot.service`. Docker hosts can print/run the privileged
+equivalent instead: `stage-userland.sh --userland container`.
 
 ## Reproducibility
 
