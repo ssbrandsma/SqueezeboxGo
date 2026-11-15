@@ -9,6 +9,7 @@
 #   track_changed  -> source_id=spotify track=NAME artist=ARTISTS(joined)
 #                     album=ALBUM [station=SHOW_NAME for episodes, else
 #                     station cleared] duration_s=DURATION_MS/1000 position_s=0
+#                     artwork_url=first COVERS line (empty clears stale)
 #   playing        -> mode=play  position_s=POSITION_MS/1000
 #   paused         -> mode=pause position_s=POSITION_MS/1000
 #   stopped | end_of_track | unavailable -> mode=stop (anti-clobber:
@@ -27,9 +28,6 @@
 #   empty/unset PLAYER_EVENT -> usage error, exit 1
 #
 # Known gaps (honest, need contract work — NOT papered over):
-# - COVERS (artwork URLs) has no NP schema field (artwork.icon_id is an LMS
-#   icon id, not a URL), so artwork stays null for Spotify. A URL-capable
-#   artwork field needs a Lead contract change.
 # - Multi-artist tracks join ARTISTS lines with ", " into the single NP
 #   `artist` string (schema has one artist field).
 # - Millisecond positions truncate to whole seconds (schema is seconds).
@@ -79,15 +77,19 @@ case "$event" in
 	track_changed)
 		artists="$(printf '%s' "${ARTISTS:-}" | awk '{if(NR>1)printf ", ";printf "%s",$0}END{if(NR)print ""}')"
 		dur="$(ms_to_s "${DURATION_MS:-}")"
+		cover="$(printf '%s' "${COVERS:-}" | head -n 1)"
 		if [ "${ITEM_TYPE:-Track}" = "Episode" ]; then
 			# Episodes: SHOW_NAME rides the remote-stream `station` path.
+			# shellcheck disable=SC2086
 			publish_hold track="${NAME:-}" artist="$artists" album="" \
-				station="${SHOW_NAME:-}" ${dur:+duration_s="$dur"} position_s="0"
+				station="${SHOW_NAME:-}" ${dur:+duration_s="$dur"} position_s="0" \
+				artwork_url="$cover"
 		else
 			# station="" clears a stale episode/podcast label (single state).
 			# shellcheck disable=SC2086
 			publish_hold track="${NAME:-}" artist="$artists" album="${ALBUM:-}" \
-				station="" ${dur:+duration_s="$dur"} position_s="0"
+				station="" ${dur:+duration_s="$dur"} position_s="0" \
+				artwork_url="$cover"
 		fi
 		;;
 	playing)

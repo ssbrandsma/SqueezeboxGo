@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-15 (Agent 0, 0.2.0-exp2 bootable-to-userspace done).
+Last updated: 2026-11-16 (Agent 0, WP3 merged; host-complete, HW-gated).
 
 ## Completed
 
@@ -96,12 +96,33 @@ Last updated: 2026-11-15 (Agent 0, 0.2.0-exp2 bootable-to-userspace done).
 - Post-merge gates (`docs/test-results/wp2u-merge-gates.md`): 6 PASS + arch
   NOT RUN. selftest 27/27.
 
+## Completed (WP3)
+
+- Workflow `Squeezebox WP3 Panel and Backends` (completed), all 3 merged:
+  - `wp3/panel`: OOT display series 0001-0005 (DE2/Tcon/PWM/nv3052c/H DT),
+    applies clean on linux-7.3.4, 15/15 DTBs 0 warnings, 7 display objects
+    cross-built, full Image+modules+dtbs exit 0, BRINGUP_PANEL runbook.
+  - `wp3/librespot`: real librespot v0.8.0 aarch64 cross-build (20.9 MB,
+    libasound+libc only, qemu smoke); spotify.conf/run/onevent wiring with
+    real event APIs; 97/97 tests with binary; nowplaying-pub key-wrap bugfix.
+  - `wp3/release`: SBOM.json (141 pkgs 0-diff, 13 pins, honest toolchain),
+    INSTALL/UPGRADE/RECOVERY/KNOWN_ISSUES(12), checklist SBOM+docs gates,
+    93/93 doc validation.
+- Lead integration: display delta merged into kernel fragment config;
+  NP schema extended with optional `artwork.artwork_url` (renderer precedence:
+  URL over LMS icon fetch); COVERS wiring closed in spotify-onevent.sh.
+- Verified here: librespot 74 pass/0 fail/2 skip (binary absent on host),
+  arbiter 42/42, audio 7/0, selftest 27/27, gates 6 PASS + arch NOT RUN
+  (`docs/test-results/wp3-merge-gates.md`).
+
 ## Current work
 
-- Next: OOT panel driver + DT overlay prep (display dark on HW without it),
-  WP3 standalone backends (librespot build, slimserver plugins), then WP4/WP5.
-- Sole external blocker unchanged: physical RG35XX H (H1-H18, first-boot
-  dpkg-configure, panel light, DDR-ID/TPR, ALSA live validation).
+- HOST-COMPLETE: everything verifiable without the device is implemented,
+  merged, and green. Remaining work is hardware-gated (first flash, panel
+  light, H1-H18, ALSA/evtest/wifi probes) or follows from hardware results
+  (TPR tuning, DDR-ID, suspend, WP4 polish).
+- Next human actions: flash 0.2.0-exp2 (see `docs/INSTALL.md`), capture UART
+  boot per `docs/test-results/HW_TEST_PLAN.md`, report H1-H18 results.
 
 ## Blockers / external deps
 
@@ -112,13 +133,14 @@ Last updated: 2026-11-15 (Agent 0, 0.2.0-exp2 bootable-to-userspace done).
 
 ## Next steps (resume here)
 
-1. Panel workflow: source ROCKNIX-class OOT panel DTS+driver (kikuchan98 generic
-   MIPI / rev6-panel), backlight PWM, kernel patch packaging, DTB rebuild.
-2. WP3 backends: librespot v0.8.0 cross-build + adapter wiring, slimserver 9.0.2
-   plugin evaluation, web UI + Now Playing E2E.
-3. Human hardware test per HW_TEST_PLAN.md when RG35XX H is available —
-   the only true external blocker.
-4. WP4 appliance polish + WP5 release docs (install/upgrade/recovery).
+1. HUMAN: flash /tmp/sqz-userland images (or rebuild via scripts), boot RG35XX H,
+   run HW_TEST_PLAN H1-H18, report results (UART log + matrix).
+2. On hardware results: fix whatever fails (panel params, TPR, ALSA, wifi),
+   rebuild 0.3.0, re-verify, iterate.
+3. Then: WP4 appliance polish (wifi-setup UI, battery/standby flows), Qobuz +
+   Radio/Music backends, web mgmt UI, WP5 final release.
+4. If no hardware yet: Qobuz backend + web UI are the largest remaining
+   host-doable items; slimserver-plugin evaluation per BACKEND_PLAN.
 
 ## Key commands
 

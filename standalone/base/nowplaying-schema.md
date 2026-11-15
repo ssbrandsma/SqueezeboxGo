@@ -14,6 +14,7 @@ interfaces. No per-source duplicates.
 | `track`, `artist`, `album` | `_updateTrack(trackinfo,pos,length)`: `trackTable[1..3]`; remote streams send text, local music sends `track_id` + `item_loop` |
 | `station` | `notify_playerTitleStatus(player, text, duration)` — remote-stream text path |
 | `artwork.icon_id`, `artwork.size` | `_getIcon`: `item["icon-id"]`/`item["icon"]` via `server:fetchArtwork(iconId, icon, ARTWORK_SIZE)`; placeholder via `params.track_id` |
+| `artwork.artwork_url` | Contract addition (Lead 2026-11-15): direct artwork URL for non-LMS sources (Spotify COVERS, Qobuz/radio URLs). LMS sources leave it `null`; URL sources leave `icon_id` `null`. Renderers use `artwork_url` when non-null, else LMS `icon_id` fetch. |
 | `mode` | `notify_playerModeChange`; tokens `off/play/pause/stop` (`modeTokens` table); `player:getPlayMode()` |
 | `power` | `notify_playerPower`; `player:isPowerOn()` |
 | `position_s`, `duration_s` | `player:getTrackElapsed()`; seek via `player:gototime()`; `player:isTrackSeekable()` |
@@ -46,7 +47,7 @@ Published by `standalone/base/nowplaying-pub.sh` to
   "artist": "Artist",
   "album": "Album",
   "station": null,
-  "artwork": { "icon_id": "1234", "size": "100x100" },
+  "artwork": { "icon_id": "1234", "size": "100x100", "artwork_url": null },
   "position_s": 42,
   "duration_s": 300,
   "seekable": true,

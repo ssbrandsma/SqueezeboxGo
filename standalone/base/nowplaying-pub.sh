@@ -12,7 +12,7 @@ STATE_FILE="$STATE_DIR/nowplaying.json"
 # Single-line on purpose: the `case " $STR_KEYS "` membership tests below
 # match on literal spaces, so a wrapped line would make the boundary keys
 # (shuffle/format, rate_hz/depth_bits) unmatchable (fixed WP3).
-STR_KEYS="source_id player_id mode track artist album station repeat shuffle format output_device artwork_icon artwork_size"
+STR_KEYS="source_id player_id mode track artist album station repeat shuffle format output_device artwork_icon artwork_size artwork_url"
 RAW_KEYS="is_local power seekable volume position_s duration_s rate_hz depth_bits pl_index pl_size"
 
 json_escape() {
@@ -98,8 +98,8 @@ tmp="$STATE_FILE.$$"
 		case "$k" in
 			station)
 				printf '  "%s": %s,\n' "$k" "$(emit "$k")"
-				printf '  "artwork": { "icon_id": %s, "size": %s },\n' \
-					"$(emit artwork_icon)" "$(emit artwork_size)" ;;
+				printf '  "artwork": { "icon_id": %s, "size": %s, "artwork_url": %s },\n' \
+					"$(emit artwork_icon)" "$(emit artwork_size)" "$(emit artwork_url)" ;;
 			shuffle)
 				printf '  "%s": %s,\n' "$k" "$(emit "$k")"
 				printf '  "playlist": { "index": %s, "size": %s },\n' \
