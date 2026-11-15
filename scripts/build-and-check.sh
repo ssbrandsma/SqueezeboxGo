@@ -3,17 +3,22 @@
 # Runs every host-runnable QA gate in order, collects JSON results, and
 # renders a Markdown report via scripts/gen-test-report.py.
 #
-# Usage: scripts/build-and-check.sh [--report PATH] [--results NAME]
+# Usage: scripts/build-and-check.sh [--report PATH] [--title TEXT] [--no-report]
 #   --report PATH   write Markdown report (default: docs/test-results/wp1-qa.md)
+#   --title TEXT    report title (default: "WP1 QA results")
 #   --no-report     print summary only, write no file
+# Env: IMAGE_UNDER_TEST  optional .img path for the image gate
+#      (default: build/out/*.img; gate reports NOT RUN when absent).
 set -u
 ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo "$PWD")"
 cd "$ROOT"
 
 REPORT="docs/test-results/wp1-qa.md"
+TITLE="WP1 QA results"
 while [ $# -gt 0 ]; do
   case "$1" in
     --report) REPORT="$2"; shift 2;;
+    --title) TITLE="$2"; shift 2;;
     --no-report) REPORT=""; shift;;
     *) echo "unknown arg: $1" >&2; exit 2;;
   esac
@@ -44,6 +49,7 @@ run_gate arch       python3 tests/check_arch.py
 run_gate asound     python3 tests/check_asound.py
 run_gate mapping    python3 tests/check_mapping.py
 run_gate skin       python3 tests/check_skin.py
+run_gate image      python3 tests/check_image.py
 run_gate shellcheck bash tests/run_shellcheck.sh
 run_gate repro-env  python3 tests/check_repro.py env
 
@@ -61,7 +67,7 @@ EOF
 if [ -n "$REPORT" ]; then
   mkdir -p "$(dirname "$REPORT")"
   python3 scripts/gen-test-report.py --results "$RES" --out "$REPORT" \
-    --title "WP1 QA results" --commit "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
+    --title "$TITLE" --commit "$(git rev-parse --short HEAD 2>/dev/null || echo unknown)" \
     --branch "$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   echo "report written: $REPORT"
 fi

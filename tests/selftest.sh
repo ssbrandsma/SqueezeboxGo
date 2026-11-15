@@ -81,6 +81,26 @@ expect 0 "host binary arch ok"     python3 tests/check_arch.py --expect x86-64 -
 expect 1 "host binary not aarch64" python3 tests/check_arch.py --expect aarch64 --interp '' /bin/true
 expect 3 "empty dir -> NOT RUN"    python3 tests/check_arch.py "$TMP/repro"
 
+echo "== image =="
+expect 0 "good tree passes"        python3 tests/check_image.py "$FX/image-good"
+expect 1 "bad tree fails"          python3 tests/check_image.py "$FX/image-bad"
+mkdir -p "$TMP/emptyroot"
+expect 3 "no images -> NOT RUN"    python3 tests/check_image.py --root "$TMP/emptyroot"
+expect 4 "missing target BLOCKED"  python3 tests/check_image.py "$TMP/does-not-exist.img"
+# Synthetic GPT skeleton via the real writer (sparse 512 MiB, $TMPDIR only).
+python3 build/image/mksunxi_gpt.py --image "$TMP/skel.img" --size-mb 512 >/dev/null
+printf 'SPL-FAKE-BLOB' | dd of="$TMP/skel.img" bs=512 seek=16 conv=notrunc status=none
+expect 0 "skeleton GPT passes"     python3 tests/check_image.py --skip-bootfs --min-mb 256 "$TMP/skel.img"
+expect 0 "IMAGE_UNDER_TEST honored"  env IMAGE_UNDER_TEST="$TMP/skel.img" python3 tests/check_image.py --skip-bootfs --min-mb 256
+cp "$TMP/skel.img" "$TMP/skel-bad.img"
+python3 - "$TMP/skel-bad.img" <<'EOF'
+import sys
+with open(sys.argv[1], 'r+b') as f:
+    f.seek(0); f.write(b'\x00' * 512)   # kill protective MBR
+    f.seek(16 * 512); f.write(b'\x00' * 4096)  # kill SPL blob
+EOF
+expect 1 "corrupt GPT fails"       python3 tests/check_image.py --skip-bootfs --min-mb 256 "$TMP/skel-bad.img"
+
 echo "== json mode =="
 expect 0 "asound --json"           python3 tests/check_asound.py --json "$FX/asound-good.conf"
 python3 tests/check_asound.py --json "$FX/asound-good.conf" | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d["status"]=="PASS", d; print("SELFTEST PASS: json schema ok")' || fail=$((fail+1))
