@@ -271,6 +271,12 @@ Last updated: 2026-11-16 (Agent 0, VT-hang root-caused; vt-reset fix in).
   Next: deploy + rerun Jive (expect boot + Video lines), collect evtest
   tail, then 640x480x32 end-to-end + skin/bpp fix from log facts.
 - Link flaky on hotspot (intermittent 255s); device alive, dmenu back.
+- BLACK-SCREEN incident (owner-reported): unattended carousel cycled fb
+  modes UNDERNEATH live dmenu (preflight guard did not exist yet) →
+  dmenu's SDL mapping went stale, fb left all-zeros, dmenu idle.
+  Recovered by clean frontend restart (verified painting via fb hash).
+  Lesson encoded: trial refuses while dmenu runs; always restart
+  frontend after fb mode experiments. No data lost, install intact.
 
 ## Prior state (human-gated proofs)
 
