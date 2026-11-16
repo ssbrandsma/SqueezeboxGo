@@ -131,7 +131,8 @@ cp -r "$SKIN_SRC" "$PAY/jive/share/jive/applets/RG35XXHBaseSkin"
 find "$PAY/jive/share/jive/applets/SqueezeboxRG35XXH" "$PAY/jive/share/jive/applets/RG35XXHBaseSkin" \
 	\( -name '*~' -o -name '.DS_Store' \) -delete 2>/dev/null || true
 
-cp "$HERE/runtime/launch.sh" "$HERE/runtime/restore.sh" "$PAY/"
+cp "$HERE/runtime/launch.sh" "$HERE/runtime/restore.sh" \
+	"$HERE/runtime/vt-reset.py" "$PAY/"
 printf '%s\n' "$VERSION" >"$PAY/VERSION"
 mkdir -p "$PAY/config"
 {
@@ -147,12 +148,12 @@ mkdir -p "$PAY/config"
 # ext4 extract + rebuild-twice comparison need them stable).
 find "$PAY" -type d -exec chmod 755 {} +
 find "$PAY" -type f -exec chmod 644 {} +
-chmod 755 "$PAY/launch.sh" "$PAY/restore.sh"
+chmod 755 "$PAY/launch.sh" "$PAY/restore.sh" "$PAY/vt-reset.py"
 [ -f "$PAY/jive/bin/jive" ] && chmod 755 "$PAY/jive/bin/jive"
 
 # --- payload.tar.gz (ordered top level, sorted, fixed meta, gzip -n) ------
 (cd "$PAY" && tar --sort=name --mtime="@$EPOCH" --owner=0 --group=0 \
-	--numeric-owner -cf - MANIFEST VERSION config jive launch.sh lib-fbcon restore.sh \
+	--numeric-owner -cf - MANIFEST VERSION config jive launch.sh lib-fbcon restore.sh vt-reset.py \
 	| gzip -n >"$ZIPROOT/APPS/SqueezeboxGo/payload.tar.gz")
 
 # --- FAT part --------------------------------------------------------------

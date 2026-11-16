@@ -268,6 +268,14 @@ log "env: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 
 JIVE_LOG="$STATE/logs/jive.log"
 : >"$JIVE_LOG"
+# Normalize console state first: a previous SDL app killed without
+# cleanup leaves KD_GRAPHICS + VT_LOCKSWITCH behind, which wedges the
+# next SDL_SetVideoMode in VT_WAITACTIVE (proven by kernel stack).
+# Best-effort: a failure here must never block the launch attempt.
+if [ -x "$ROOT/vt-reset.py" ]; then
+	vt_out="$("$ROOT/vt-reset.py" 2>&1)" || log "vt-reset rc=$? (continuing anyway)"
+	[ -n "$vt_out" ] && log "vt-reset output: $vt_out"
+fi
 log "starting jive (log: $JIVE_LOG)"
 # Unbuffered stdio: jive's block-buffered C logger lines (incl. the
 # "Video mode:" line) are otherwise lost when it dies on SIGTERM, and

@@ -40,6 +40,7 @@ need() { command -v "$1" >/dev/null 2>&1; }
 # ------------------------------------------------- 1. files present
 for f in pack.sh VERSION README.md INSTALL.md UNINSTALL.md \
 		apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh \
+		runtime/vt-reset.py \
 		icon/make-icon.py tests/test-package.sh tests/test-jive-action.lua; do
 	if [ -f "$GO_ROOT/$f" ]; then ok "file present: $f"; else fail "file missing: $f"; fi
 done
@@ -219,7 +220,7 @@ APPS/SqueezeboxGo/payload.tar.gz'
 			fail 'SHA256SUMS mismatch'
 		fi
 		mkdir -p "$TMP/pay" && tar -xzf "$TMP/unz/APPS/SqueezeboxGo/payload.tar.gz" -C "$TMP/pay"
-		for f in MANIFEST VERSION launch.sh restore.sh jive/bin/jive \
+		for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py jive/bin/jive \
 				lib-fbcon/libSDL-1.2.so.0 \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \
