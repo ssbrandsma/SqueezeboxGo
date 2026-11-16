@@ -269,8 +269,18 @@ log "env: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 JIVE_LOG="$STATE/logs/jive.log"
 : >"$JIVE_LOG"
 log "starting jive (log: $JIVE_LOG)"
-# shellcheck disable=SC2086
-"$JIVE_BIN" ${SQUEEZEBOX_GO_JIVE_ARGS:-} ${1+"$@"} >>"$JIVE_LOG" 2>&1 &
+# Unbuffered stdio: jive's block-buffered C logger lines (incl. the
+# "Video mode:" line) are otherwise lost when it dies on SIGTERM, and
+# the SYSVIPC-less stock kernel spams unbuffered sem errors that drown
+# the file. stdbuf execs its target, so JIVE_PID/signal behavior is
+# unchanged. Degrades gracefully where stdbuf is absent.
+if command -v stdbuf >/dev/null 2>&1; then
+	# shellcheck disable=SC2086
+	stdbuf -o0 -e0 "$JIVE_BIN" ${SQUEEZEBOX_GO_JIVE_ARGS:-} ${1+"$@"} >>"$JIVE_LOG" 2>&1 &
+else
+	# shellcheck disable=SC2086
+	"$JIVE_BIN" ${SQUEEZEBOX_GO_JIVE_ARGS:-} ${1+"$@"} >>"$JIVE_LOG" 2>&1 &
+fi
 JIVE_PID="$!"
 wait "$JIVE_PID"
 JIVE_RC="$?"
