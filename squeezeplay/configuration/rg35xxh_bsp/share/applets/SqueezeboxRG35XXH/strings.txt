@@ -12,3 +12,5 @@ BSP_BRIGHTNESS
 	EN	Screen brightness
 BSP_POWER
 	EN	Power
+GO_RETURN_TO_ANBERNIC
+	EN	Return to Anbernic

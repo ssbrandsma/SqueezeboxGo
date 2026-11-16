@@ -1,0 +1,335 @@
+#!/usr/bin/env bash
+# test-package.sh — SqueezeboxGo package-content tests (host-only).
+#
+# Asserts, from the repo tree alone (+ a fixture ZIP build):
+#   files present, icon 160x120 RGBA + deterministic, no secrets/keys,
+#   no symlinks in the FAT part, FAT-safe names, scripts bash -n +
+#   shellcheck gate, Jive action luac-clean, Lua harness (gating +
+#   cleanup sequence + exit 42), fixture ZIP content + reproducibility,
+#   SHA256SUMS verification, entry install/upgrade/idempotence drills.
+# A device-ZIP build runs only when the real artifacts exist (else SKIP).
+#
+# Usage: bash squeezebox-go/tests/test-package.sh [--json]
+# Exit: 0 PASS, 1 FAIL, 3 NOT RUN, 4 BLOCKED (repo QA contract).
+#
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -uo pipefail
+
+GO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if REPO="$(git -C "$GO_ROOT" rev-parse --show-toplevel 2>/dev/null)"; then
+	: # repo root known
+else
+	REPO="$(cd "$GO_ROOT/../.." && pwd)"
+fi
+APPLET_DIR="$REPO/squeezeplay/configuration/rg35xxh_bsp/share/applets/SqueezeboxRG35XXH"
+
+JSON=0
+[ "${1:-}" = '--json' ] && JSON=1
+
+PASS=0; FAIL=0; SKIP=0
+DETAILS=()
+TMP="$(mktemp -d /tmp/sbgo-test-XXXXXX)"
+trap 'rm -rf "$TMP"' EXIT
+
+ok()   { PASS=$((PASS+1)); DETAILS+=("PASS: $1"); }
+fail() { FAIL=$((FAIL+1)); DETAILS+=("FAIL: $1"); }
+skip() { SKIP=$((SKIP+1)); DETAILS+=("SKIP: $1"); }
+
+need() { command -v "$1" >/dev/null 2>&1; }
+
+# ------------------------------------------------- 1. files present
+for f in pack.sh VERSION README.md INSTALL.md UNINSTALL.md \
+		apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh \
+		icon/make-icon.py tests/test-package.sh tests/test-jive-action.lua; do
+	if [ -f "$GO_ROOT/$f" ]; then ok "file present: $f"; else fail "file missing: $f"; fi
+done
+for f in SqueezeboxRG35XXHApplet.lua SqueezeboxRG35XXHMeta.lua strings.txt loadPriority.lua; do
+	if [ -f "$APPLET_DIR/$f" ]; then ok "applet present: $f"; else fail "applet missing: $f"; fi
+done
+grep -q 'GO_RETURN_TO_ANBERNIC' "$APPLET_DIR/strings.txt" 2>/dev/null \
+	&& ok 'strings.txt has GO_RETURN_TO_ANBERNIC' \
+	|| fail 'strings.txt lacks GO_RETURN_TO_ANBERNIC'
+grep -q 'SQUEEZEBOX_GO' "$APPLET_DIR/SqueezeboxRG35XXHMeta.lua" 2>/dev/null \
+	&& ok 'Meta gates on SQUEEZEBOX_GO' \
+	|| fail 'Meta lacks SQUEEZEBOX_GO gate'
+grep -q 'EXIT_RETURN_TO_FRONTEND = 42' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null \
+	&& ok 'Applet exit code is 42' \
+	|| fail 'Applet lacks EXIT_RETURN_TO_FRONTEND = 42'
+grep -q 'EXIT_FRONTEND=42' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+	&& ok 'launch.sh exit code matches (42)' \
+	|| fail 'launch.sh/Applet exit code mismatch'
+
+# ------------------------------------------------- 2. icon
+if need python3; then
+	if python3 "$GO_ROOT/icon/make-icon.py" -o "$TMP/icon-a.png" >"$TMP/icon.out" 2>&1 \
+		&& python3 "$GO_ROOT/icon/make-icon.py" -o "$TMP/icon-b.png" >>"$TMP/icon.out" 2>&1; then
+		if need file; then
+			file "$TMP/icon-a.png" | grep -q '160 x 120' \
+				&& ok 'icon file(1): 160x120' \
+				|| fail "icon file(1): $(file -b "$TMP/icon-a.png")"
+			file "$TMP/icon-a.png" | grep -q 'RGBA' \
+				&& ok 'icon file(1): RGBA' \
+				|| fail "icon file(1): $(file -b "$TMP/icon-a.png")"
+		else
+			skip 'file(1) missing for icon check'
+		fi
+		python3 - "$TMP/icon-a.png" >"$TMP/ihdr.out" 2>&1 <<'EOF'
+import struct, sys
+d = open(sys.argv[1], 'rb').read()
+assert d[:8] == b'\x89PNG\r\n\x1a\n', 'bad PNG signature'
+ln, typ = struct.unpack('>I4s', d[8:16])
+assert typ == b'IHDR', 'first chunk not IHDR'
+w, h, bd, ct, comp, filt, inter = struct.unpack('>IIBBBBB', d[16:29])
+print('%d %d %d %d' % (w, h, bd, ct))
+EOF
+		if [ "$(cat "$TMP/ihdr.out" 2>/dev/null)" = '160 120 8 6' ]; then
+			ok 'icon IHDR: 160x120 8-bit RGBA (color type 6)'
+		else
+			fail "icon IHDR: $(cat "$TMP/ihdr.out" 2>/dev/null || echo unreadable)"
+		fi
+		if cmp -s "$TMP/icon-a.png" "$TMP/icon-b.png"; then
+			ok 'icon generation deterministic (rebuild-twice identical)'
+		else
+			fail 'icon generation NOT deterministic'
+		fi
+	else
+		fail "make-icon.py failed: $(cat "$TMP/icon.out")"
+	fi
+else
+	skip 'python3 missing for icon checks'
+fi
+
+# ------------------------------------------------- 3. no secrets/keys
+# Shipped trees must carry no key material or credentials.
+SECRET_HITS=''
+SECRET_HITS="$(grep -rInE 'BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY|PRIVATE KEY BLOCK|api[_-]?key\s*[:=]|password\s*[:=]\s*[^ ]|passwd\s*[:=]' \
+	"$GO_ROOT" "$APPLET_DIR" 2>/dev/null \
+	| grep -v 'test-package.sh' || true)"
+if [ -z "$SECRET_HITS" ]; then
+	ok 'no secrets/keys in shipped trees'
+else
+	fail "secret-like hits: $SECRET_HITS"
+fi
+
+# ------------------------------------------------- 4. shell syntax + lint
+for f in pack.sh apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh tests/test-package.sh; do
+	if bash -n "$GO_ROOT/$f" 2>"$TMP/syn.err"; then
+		ok "bash -n $f"
+	else
+		fail "bash -n $f: $(cat "$TMP/syn.err")"
+	fi
+done
+if sh -n "$GO_ROOT/apps/SqueezeboxGo.sh" 2>"$TMP/syn.err"; then
+	ok 'entry is POSIX sh-clean (sh -n)'
+else
+	fail "entry sh -n: $(cat "$TMP/syn.err")"
+fi
+if [ -x "$REPO/tests/run_shellcheck.sh" ]; then
+	# The gate prunes '*/.muse/*' paths (agent worktrees); run it on
+	# identical copies outside the worktree so the verdict is real.
+	mkdir -p "$TMP/lint" && cp "$GO_ROOT/pack.sh" "$GO_ROOT/apps/SqueezeboxGo.sh" \
+		"$GO_ROOT/runtime/launch.sh" "$GO_ROOT/runtime/restore.sh" \
+		"$GO_ROOT/tests/test-package.sh" "$TMP/lint/"
+	if bash "$REPO/tests/run_shellcheck.sh" "$TMP/lint" >"$TMP/sc.out" 2>&1; then
+		if grep -q 'shellcheck not installed' "$TMP/sc.out"; then
+			ok 'lint gate: bash -n fallback PASS (shellcheck absent on host)'
+		else
+			ok 'lint gate: shellcheck PASS'
+		fi
+	else
+		fail "lint gate: $(grep -v '^\[shellcheck\] .*clean' "$TMP/sc.out" | head -5 | tr '\n' ';')"
+	fi
+else
+	skip 'tests/run_shellcheck.sh missing'
+fi
+
+# ------------------------------------------------- 5. Lua syntax + harness
+LUAC=''
+for c in luac5.1 luac; do need "$c" && LUAC="$c" && break; done
+if [ -n "$LUAC" ]; then
+	for f in SqueezeboxRG35XXHApplet.lua SqueezeboxRG35XXHMeta.lua loadPriority.lua tests/test-jive-action.lua; do
+		p="$APPLET_DIR/$f"; [ "$f" = 'tests/test-jive-action.lua' ] && p="$GO_ROOT/$f"
+		if "$LUAC" -p "$p" 2>"$TMP/luac.err"; then
+			ok "luac $f"
+		else
+			fail "luac $f: $(cat "$TMP/luac.err")"
+		fi
+	done
+else
+	skip 'no luac (5.1) for Lua syntax checks'
+fi
+if need lua5.1; then
+	run_harness() { # $1=desc, rest=env assignments
+		desc="$1"; shift
+		if env -u SQUEEZEBOX_GO "$@" lua5.1 "$GO_ROOT/tests/test-jive-action.lua" "$APPLET_DIR" >"$TMP/harness.out" 2>&1; then
+			ok "harness $desc"
+		else
+			fail "harness $desc: $(grep FAIL "$TMP/harness.out" | head -3 | tr '\n' ';')"
+		fi
+	}
+	run_harness 'B/C (gate off, no bsp .so)'
+	run_harness 'A (gate on)' 'SQUEEZEBOX_GO=1' 'SQUEEZEBOX_GO_RESTORE=/opt/sbgo/restore.sh'
+	run_harness 'A2 (root fallback)' 'SQUEEZEBOX_GO=1' 'SQUEEZEBOX_GO_ROOT=/opt/sbgo'
+	run_harness 'D (decode failed)' 'SQUEEZEBOX_GO=1' 'SQUEEZEBOX_GO_RESTORE=/opt/sbgo/restore.sh' 'SQUEEZEBOX_GO_TEST_DECODE_FAIL=1'
+else
+	skip 'no lua5.1 for action harness'
+fi
+
+# ------------------------------------------------- 6. fixture ZIP build
+ZIP1="$TMP/zip1"; ZIP2="$TMP/zip2"
+if need python3 && need tar && need gzip && need sha256sum && need unzip; then
+	if bash "$GO_ROOT/pack.sh" --fixture --output "$ZIP1" --epoch 1767225600 >"$TMP/pack1.out" 2>&1; then
+		ok 'fixture pack.sh build exit 0'
+	else
+		fail "fixture pack.sh: $(tail -2 "$TMP/pack1.out" | tr '\n' ';')"
+	fi
+	FZIP="$ZIP1/SqueezeboxGo-0.1.0-fixture.zip"
+	if [ -f "$FZIP" ]; then
+		WANT='APPS/Imgs/SqueezeboxGo.png
+APPS/SqueezeboxGo.sh
+APPS/SqueezeboxGo/SHA256SUMS
+APPS/SqueezeboxGo/VERSION
+APPS/SqueezeboxGo/payload.tar.gz'
+		HAVE="$(unzip -Z1 "$FZIP" | LC_ALL=C sort)"
+		if [ "$HAVE" = "$WANT" ]; then
+			ok 'ZIP file list exact (5 entries)'
+		else
+			fail "ZIP file list: $(echo "$HAVE" | tr '\n' ',')"
+		fi
+		mkdir -p "$TMP/unz" && (cd "$TMP/unz" && unzip -q "$FZIP")
+		if [ -z "$(find "$TMP/unz" -type l)" ]; then
+			ok 'no symlinks in FAT part'
+		else
+			fail "symlinks in FAT part: $(find "$TMP/unz" -type l)"
+		fi
+		if find "$TMP/unz" | LC_ALL=C grep -q '[^ -~]'; then
+			fail 'non-ASCII FAT names present'
+		else
+			ok 'FAT names ASCII-only'
+		fi
+		LOWER_DUPES="$(find "$TMP/unz" -type f | tr '[:upper:]' '[:lower:]' | sort | uniq -d)"
+		if [ -z "$LOWER_DUPES" ]; then
+			ok 'no FAT case-collision names'
+		else
+			fail "case collisions: $LOWER_DUPES"
+		fi
+		if (cd "$TMP/unz/APPS/SqueezeboxGo" && sha256sum -c SHA256SUMS >/dev/null 2>&1); then
+			ok 'SHA256SUMS verifies payload'
+		else
+			fail 'SHA256SUMS mismatch'
+		fi
+		mkdir -p "$TMP/pay" && tar -xzf "$TMP/unz/APPS/SqueezeboxGo/payload.tar.gz" -C "$TMP/pay"
+		for f in MANIFEST VERSION launch.sh restore.sh jive/bin/jive \
+				lib-fbcon/libSDL-1.2.so.0 \
+				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
+				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \
+				jive/share/jive/applets/RG35XXHBaseSkin/RG35XXHBaseSkinMeta.lua; do
+			if [ -e "$TMP/pay/$f" ]; then ok "payload has $f"; else fail "payload lacks $f"; fi
+		done
+		grep -q 'returnToFrontend' "$TMP/pay/jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua" \
+			&& ok 'payload applet carries returnToFrontend' \
+			|| fail 'payload applet lacks returnToFrontend'
+		[ "$(cat "$TMP/unz/APPS/SqueezeboxGo/VERSION")" = "$(cat "$GO_ROOT/VERSION")" ] \
+			&& ok 'ZIP VERSION matches repo VERSION' \
+			|| fail 'ZIP VERSION mismatch'
+		# reproducibility: second build, byte-identical
+		if bash "$GO_ROOT/pack.sh" --fixture --output "$ZIP2" --epoch 1767225600 >"$TMP/pack2.out" 2>&1 \
+			&& cmp -s "$FZIP" "$ZIP2/SqueezeboxGo-0.1.0-fixture.zip"; then
+			ok 'fixture ZIP reproducible (rebuild-twice identical)'
+		else
+			fail 'fixture ZIP NOT reproducible'
+		fi
+	else
+		fail 'fixture ZIP not produced'
+	fi
+else
+	skip 'zip toolchain (python3/tar/gzip/sha256sum/unzip) incomplete'
+fi
+
+# ------------------------------------------------- 7. device ZIP (artifacts-gated)
+JAMMY="${JAMMY_TARBALL:-/tmp/jammy-sp/squeezeplay/squeezeplay-aarch64-9.0.0.tgz}"
+FBCON="${FBCON_LIB:-/tmp/sdl-fbcon/out/lib/libSDL-1.2.so.0.11.4}"
+if [ -f "$JAMMY" ] && [ -f "$FBCON" ] && need python3; then
+	if bash "$GO_ROOT/pack.sh" --output "$TMP/zipdev" --epoch 1767225600 >"$TMP/packdev.out" 2>&1; then
+		ok 'device pack.sh build exit 0'
+		DZIP="$TMP/zipdev/SqueezeboxGo-0.1.0-stockos-rg35xxh.zip"
+		mkdir -p "$TMP/unzdev" && (cd "$TMP/unzdev" && unzip -q -o "$DZIP" 'APPS/SqueezeboxGo/payload.tar.gz')
+		mkdir -p "$TMP/paydev" && tar -xzf "$TMP/unzdev/APPS/SqueezeboxGo/payload.tar.gz" -C "$TMP/paydev" \
+			jive/bin/jive lib-fbcon/libSDL-1.2.so.0 2>/dev/null
+		if need file; then
+			file "$TMP/paydev/jive/bin/jive" | grep -q 'ARM aarch64' \
+				&& ok 'device payload jive is aarch64' \
+				|| fail "device jive: $(file -b "$TMP/paydev/jive/bin/jive" 2>/dev/null)"
+		else
+			skip 'file(1) missing for ELF check'
+		fi
+	else
+		fail "device pack.sh: $(tail -2 "$TMP/packdev.out" | tr '\n' ';')"
+	fi
+else
+	skip 'device artifacts absent (JAMMY_TARBALL/FBCON_LIB); device build not tested'
+fi
+
+# ------------------------------------------------- 8. entry install drills
+# The drills exec launch.sh with the fixture jive stub (exit-42 path),
+# hermetically: no cgroup escape, no frontend stop, RAM state cleaned
+# afterwards. (systemd/alsa/fb drill only warns — see E2E in
+# docs/test-results/go-app.md for the observed full-lifecycle runs.)
+if [ -f "$ZIP1/SqueezeboxGo-0.1.0-fixture.zip" ]; then
+	mkdir -p "$TMP/roms" && (cd "$TMP/roms" && unzip -q -o "$ZIP1/SqueezeboxGo-0.1.0-fixture.zip" 'APPS/*')
+	DRILL_ENV='SQUEEZEBOX_GO_NO_ESCAPE=1 SQUEEZEBOX_GO_NO_FRONTEND_STOP=1'
+	# fake-root install (entry guard requires a squeezebox-go leaf)
+	# shellcheck disable=SC2086
+	if env $DRILL_ENV SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go" \
+			sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entry.out" 2>&1; then
+		grep -q 'payload hash OK' "$TMP/entry.out" && grep -q 'installed' "$TMP/entry.out" \
+			&& ok 'entry installs with hash check, launch exits 0' \
+			|| fail "entry install: $(cat "$TMP/entry.out" | tr '\n' ';')"
+	else
+		fail "entry install rc: $(cat "$TMP/entry.out" | tr '\n' ';')"
+	fi
+	# re-run must skip the install (idempotent) and still exit 0
+	# shellcheck disable=SC2086
+	env $DRILL_ENV SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go" \
+		sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entry2.out" 2>&1 || true
+	grep -q 'skipping install' "$TMP/entry2.out" \
+		&& ok 'entry re-run skips install (idempotent)' \
+		|| fail "entry idempotence: $(cat "$TMP/entry2.out" | tr '\n' ';')"
+	# corrupt payload must be refused (fresh root forces reinstall path)
+	printf 'corrupt' >"$TMP/roms/APPS/SqueezeboxGo/payload.tar.gz"
+	rm -rf "$TMP/squeezebox-go2"
+	# shellcheck disable=SC2086
+	if env $DRILL_ENV SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go2" \
+			sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entry3.out" 2>&1; then
+		fail 'entry accepted corrupt payload'
+	else
+		grep -q 'hash mismatch' "$TMP/entry3.out" \
+			&& ok 'entry refuses corrupt payload' \
+			|| fail "entry corrupt-path: $(cat "$TMP/entry3.out" | tr '\n' ';')"
+	fi
+	rm -rf /dev/shm/squeezebox-go /tmp/squeezebox-go
+else
+	skip 'no fixture ZIP for entry drills'
+fi
+
+# ------------------------------------------------- report
+if [ "$JSON" = '1' ]; then
+	STATUS='PASS'; [ "$FAIL" -ne 0 ] && STATUS='FAIL'
+	printf '{"check": "go-app-package", "status": "%s", "target": "", "details": [' "$STATUS"
+	FIRST=1
+	for d in "${DETAILS[@]}"; do
+		esc=${d//\\/\\\\}; esc=${esc//\"/\\\"}
+		[ "$FIRST" -eq 1 ] && FIRST=0 || printf ', '
+		printf '"%s"' "$esc"
+	done
+	printf '], "pass": %d, "fail": %d, "skip": %d}\n' "$PASS" "$FAIL" "$SKIP"
+else
+	for d in "${DETAILS[@]}"; do printf '[go-app] %s\n' "$d"; done
+	printf '[go-app] totals: %d pass, %d fail, %d skip\n' "$PASS" "$FAIL" "$SKIP"
+	if [ "$FAIL" -ne 0 ]; then printf '[RESULT] go-app-package: FAIL\n';
+	elif [ "$PASS" -eq 0 ]; then printf '[RESULT] go-app-package: NOT RUN\n';
+	else printf '[RESULT] go-app-package: PASS\n'; fi
+fi
+[ "$FAIL" -ne 0 ] && exit 1
+[ "$PASS" -eq 0 ] && exit 3
+exit 0

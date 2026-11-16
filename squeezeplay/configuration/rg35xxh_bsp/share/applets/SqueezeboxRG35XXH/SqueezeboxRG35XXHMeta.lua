@@ -5,6 +5,8 @@ local pairs = pairs
 
 local oo            = require("loop.simple")
 
+local os            = require("os")
+
 local AppletMeta    = require("jive.AppletMeta")
 local LocalPlayer   = require("jive.slim.LocalPlayer")
 local SlimServer    = require("jive.slim.SlimServer")
@@ -70,6 +72,18 @@ function registerApplet(meta)
 
 	-- BSP is a resident Applet
 	appletManager:loadApplet("SqueezeboxRG35XXH")
+
+	-- SqueezeboxGo (StockOS App Center): "Return to Anbernic" home
+	-- item. Shown ONLY when the launcher exports SQUEEZEBOX_GO=1, so
+	-- the shared tree stays fork-free (mainline firmware never sets
+	-- it). Weight 1009 sits just above the desktop Quit item (1010);
+	-- the callback is SqueezeboxRG35XXHApplet:returnToFrontend.
+	if os.getenv("SQUEEZEBOX_GO") == "1" then
+		jiveMain:addItem(meta:menuItem('appletGoReturnToFrontend', 'home',
+			"GO_RETURN_TO_ANBERNIC",
+			function(applet, ...) applet:returnToFrontend(...) end,
+			1009))
+	end
 
 	-- audio playback defaults
 	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
