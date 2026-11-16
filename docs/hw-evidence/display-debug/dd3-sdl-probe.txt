@@ -1,0 +1,46 @@
+# dd3 — SDL_SetVideoMode(640,480,16,FULLSCREEN) probe via ctypes
+# Tool: /tmp/sdl-probe.py on device (ctypes against
+# /opt/squeezebox-go/lib-fbcon/libSDL-1.2.so.0). dmenu was stopped.
+
+## Attempt 1 (no SDL_NOMOUSE): init FAILS
+
+```text
+$ sudo -n python3 /tmp/sdl-probe.py
+vinfo-before: 1280x1024 virt=1280x1024 bpp=16
+SDL_Init(VIDEO) rc=-1 err=b'Unable to open mouse'
+```
+
+/dev/input/mice and /dev/misc/psaux do NOT exist on stock. Jive
+succeeds with the same lib, so jive's path sets SDL_NOMOUSE (or
+equivalent) — dmenu_ln even carries it as a commented-out export.
+
+## Attempt 2 (SDL_NOMOUSE=1): init OK, SetVideoMode HANGS
+
+```text
+$ sudo -n env SDL_NOMOUSE=1 python3 /tmp/sdl-probe.py
+vinfo-before: 1280x1024 virt=1280x1024 bpp=16
+SDL_Init(VIDEO) rc=0 err=b''
+driver=b'fbcon'
+[HANG inside SDL_SetVideoMode — no return in 4+ min; session killed]
+```
+
+vinfo after kill: STILL 1280x1024x16 (hang precedes any PUT).
+Orphan chain (bash→sudo→python3) needed kill -9 by PID.
+Hang-site forensics (wchan/stack) FAILED twice: first read the
+sudo parent's wait4 stack by mistake (do_wait, useless); the relaunch
+died to session SIGHUP (setsid-under-sudo does NOT survive ssh
+exit — use nohup+disown next time). Suspected site: VT_WAITACTIVE
+in SDL fbcon's FULLSCREEN path with no console VT (phase-3 chvt
+precedent: VT switches wedge on this device) — UNPROVEN, needs one
+nohup'd re-hang with correct python-child stack capture.
+
+## Reading for lead/UI
+
+- Driver is fbcon (answers the dd1 driver-name gap).
+- Jive's own SetVideoMode SUCCEEDS headless (stuck modes prove its
+  PUTs land) while bare SDL FULLSCREEN hangs → jive's call differs
+  (flags: not FULLSCREEN? SWSURFACE? and/or SDL_NOMOUSE + more env).
+  The exact jive_surface.c call (w/h/bpp/flags) is now load-bearing
+  for the corruption theory — please confirm from source.
+- Do NOT call bare FULLSCREEN SetVideoMode headless (hangs, needs
+  kill -9; leaves no vinfo damage but wedges the caller).

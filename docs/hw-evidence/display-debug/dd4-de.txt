@@ -1,0 +1,46 @@
+# dd4 — DE layer state: stock menu vs during-jive
+# Nodes are root-only (sudo cat). `sys` is the state dump; `disp`
+# reads back "0"; boot_para is static config.
+
+## STOCK (dmenu, FULL dump — no truncation)
+
+```text
+$ sudo -n cat /sys/class/disp/disp/attr/sys
+screen 0:
+de_rate 696000000 hz, ref_fps:59
+mgr0: 640x480 fmt[rgb] cs[0x204] range[full] eotf[0x4] bits[8bits] err[0] force_sync[0] unblank direct_show[false] iommu[1]
+dmabuf: cache[5] cache max[7] umap skip[0] umap skip max[0]
+	lcd output	backlight(140)	fps:59.5	 640x 480
+
+err:0	skip:0	irq:358212	vsync:0	vsync_skip:0
+```
+
+attr xres/yres = 640/480. boot_para:
+`disp_para=100 init_disp=0 tv_vdid=0 fb_base=0x0
+disp_config0=1,0 - 0,0,260,4 disp_config1=2,11 - 1,0,260,4`.
+
+## DURING headless jive (8587, pre-first-frame)
+
+mgr0/dmabuf/lcd lines IDENTICAL except dmabuf cache[6], PLUS TWO
+EXTRA lines after the vsync_skip line:
+
+```text
+   BUF    enable ch[1] lyr[0] z[20] prem[N] a[pixel 255] fmt[ 10] fb[ 640, 480;   0,   0;   0,   0] crop[   0,   0, 640, 480] frame[   0,   0, 640, 480] addr[ff600000,ff64b000,ff696000] flags[0x       0] trd[0,0]
+depth[ 0] transf[0]
+```
+
+i.e. an ENABLED 640x480 UI layer (ch1/lyr0, full-crop/full-frame)
+appears in the dump while jive runs. Caveat: the stock side was
+first captured with `head -8` (truncation scare) — RECAPTURED FULL
+above: the BUF line is genuinely absent under dmenu (8 lines,
+ends at vsync_skip). Volatility unknown (one sample each) —
+re-capture both sides in the human menu-run session to confirm.
+
+## dispdbg: BLOCKED (unsafe to read naively)
+
+`/sys/kernel/debug/dispdbg/{command,dbglvl,info,name,param,start}`
+exists, but `cat info` spews ~62 MB of NUL-padded binary with no
+newlines (session had to be killed; device unharmed, verified
+responsive after). Do NOT cat dispdbg nodes without `head -c` /
+`timeout` and the vendor command protocol (writes to command/param
+may be needed before info becomes text).

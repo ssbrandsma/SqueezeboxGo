@@ -1,0 +1,53 @@
+# dd2 — fb state stock / stuck / during-jive
+# Tool: /tmp/vinfo-full.py on device (get + put-stock; recipe below).
+# fbset is NOT on stock — all readings via sysfs + FBIOGET_VSCREENINFO.
+
+## STOCK (dmenu 8188/8939, after PUT-restore + start)
+
+```text
+$ python3 /tmp/vinfo-full.py get
+  xres=1280 yres=1024 xres_virtual=1280 yres_virtual=1024
+  xoffset=0 yoffset=0 bpp=16 grayscale=0
+  red_o/l/m=0/0/0 green=0/0/0 blue=0/0/0 transp=0/0/0   # stock has ZEROED bitfields
+  nonstd=0 activate=0 height=0 width=0 accel_flags=0
+  pixclock=9369 left=224 right=32 upper=32 lower=4 hsync=136 vsync=4
+  sync=0 vmode=0 rotate=0 colorspace=0 res*=0
+$ for f in virtual_size bits_per_pixel stride mode pan rotate state; ...
+virtual_size: 1280,1024 ; bits_per_pixel: 16 ; stride: 2560
+mode: (EMPTY — always empty on this stock fb) ; pan: 0,0 ; rotate: 0 ; state: 0
+$ python3 /tmp/fbhash.py
+fb 1280x1024x16 sha=6de7493c5c90f643   # == phase-3 run-1 original: stock pixels
+```
+
+## STUCK example (dmenu-7829 boot; PUT-quirk menagerie this session)
+
+```text
+xres=512 yres=384 virt=512x384 bpp=32 bitfields all 0
+pixclock=49603 margins 48/16/16/1 sync 64/3
+```
+Other stuck geometries seen: virtual 512,384 (owner run), 320x240x16
+(run-2), 512x384x32 (input probe). The quirk is nondeterministic:
+dmenu's own startup PUT flips it sometimes (phase-3: 1 flip in 2
+starts; this session: 7829 stuck, 8188/8939/6147/5458 clean).
+
+## DURING headless jive (8587, 18 s in)
+
+vinfo UNCHANGED stock (1280x1024x16 + vendor timings), fb UNCHANGED
+stock pixels (6de7493c) — no first frame yet (latency >18 s; other
+runs drew between t+22 and t+44: sha 31a13b7e→bb1ac45a). dbg log: 3
+lines (quiet-mode instance).
+
+## PUT-restore recipe (proven 3x this session, phase-3 pattern)
+
+Read current vinfo, overwrite geometry+timings, keep the rest, PUT:
+xres/yres/virt 1280/1024, offsets 0, bpp 16, all bitfields 0,
+pixclock 9369, margins 224/32/32/4, sync lens 136/4.
+`sudo python3 /tmp/vinfo-full.py put-stock` (device scratch copy).
+
+## OPEN (needs device — blocked on wake / human session)
+
+- vinfo AT first-flip and at menu-settled in a run that DRAWS (poll
+  fb sha until it leaves 6de7493c, then dump vinfo + DE sys): does
+  the skin's setVideoMode flip stock→stuck? Two GETs settle it.
+- Core-dump logger forensics (aborted by the sleep blackout — resume
+  steps in docs/test-results/hw-go-redeploy.md §blocked).
