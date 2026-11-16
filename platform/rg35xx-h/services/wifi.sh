@@ -14,7 +14,9 @@ WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant.conf}"
 PIDDIR="${PIDDIR:-/run/squeezebox}"
 
 log() { printf 'wifi.sh: %s\n' "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
+LED_SH="$(dirname "$0")/led.sh"
+led() { [ -x "$LED_SH" ] && "$LED_SH" "$@" || true; }
+die() { log "ERROR: $*"; led fail "wifi: $*"; exit 1; }
 
 dhcp_client() {
     if command -v udhcpc >/dev/null 2>&1; then echo udhcpc;
@@ -23,6 +25,7 @@ dhcp_client() {
 }
 
 do_start() {
+    led stage wifi
     [ "${WIFI_ENABLED:-1}" = "1" ] || die "disabled in $CONF"
     command -v wpa_supplicant >/dev/null 2>&1 || die "missing wpa_supplicant"
     [ -f "$WPA_CONF" ] || die "missing $WPA_CONF (provision from wpa_supplicant.conf.template)"

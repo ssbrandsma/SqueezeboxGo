@@ -11,6 +11,9 @@ CONF="${SYSTEM_CONF:-/etc/squeezebox/system.conf}"
 log() { printf 'splash.sh: %s\n' "$*" >&2; }
 [ "${SPLASH_ENABLED:-1}" = "1" ] || { log "disabled in $CONF"; exit 0; }
 
+# Boot progress: 1 Hz blink while the splash stage runs (never fatal).
+LED_SH="$(dirname "$0")/led.sh"; [ -x "$LED_SH" ] && "$LED_SH" stage splash || true
+
 # 1. Agent-4 provider wins when present (ui/splash/SERVICE_HOOKS.md):
 # init-splash.sh paints via drm_splash and holds DRM master (pidfile).
 SQUEEZE_BIN="${SQUEEZE_BIN:-/opt/squeezeplay/bin}"

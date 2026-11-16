@@ -39,6 +39,8 @@ else
     log "WARN: audio-owner not installed, continuing without arbitration"
 fi
 
-[ -x "$BIN" ] || { log "ERROR: missing $BIN (Agent 2 build not installed)"; exit 3; }
+LED_SH="$(dirname "$0")/led.sh"; [ -x "$LED_SH" ] || LED_SH=""
+[ -x "$BIN" ] || { log "ERROR: missing $BIN (Agent 2 build not installed)"; [ -n "$LED_SH" ] && "$LED_SH" fail "missing $BIN" || true; exit 3; }
 log "starting $BIN (alsa=$USEALSA_DEVICE mac=${UTMAC:-unset})"
+[ -n "$LED_SH" ] && "$LED_SH" ok || true
 exec "$BIN" "$@"

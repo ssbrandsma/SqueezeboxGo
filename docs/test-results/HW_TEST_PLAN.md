@@ -94,6 +94,17 @@ Hardware evidence checklist (attach to results file):
 
 ## 5. Failure triage
 
+Read the LEDs first (full table: `docs/hardware.md` "LEDs"), then UART:
+
+- Both LEDs dark → SPL never ran: check power, re-flash, try the other
+  SD slot, try another card. DRAM variant is NOT the suspect yet.
+- Power on, status off, no UART → SPL alive; suspect UART wiring/baud
+  (115200 8N1) first, then wrong DRAM image (try the other variant).
+- Status solid, no kernel log → U-Boot proper up, kernel not starting:
+  check `Image`/`dtb.img` on the FAT partition (re-flash).
+- Heartbeat but no login → kernel ok, userspace stuck: check firstboot
+  (dpkg configure) via UART console; status blink tells which service.
+- Status strobe → a service failed; UART/journal names it.
 - No UART output at all → re-flash, try other DRAM variant, try another
   SD card; record all three attempts.
 - SPL ok, U-Boot missing → SPL/U-Boot blob mismatch; capture log, file

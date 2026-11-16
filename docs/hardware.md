@@ -48,3 +48,29 @@ unit has been sighted; its TPR tuning is unvalidated (see
   the same capture on our image. Checklist: boot0/BROM banner, DRAM
   size + type print, PMU/rail lines, partition/boot-device lines, kernel
   version + cmdline, login prompt. Diffs isolate our bugs from board facts.
+
+## LEDs (boot progress, both green, active-high)
+
+- **Power** (PI12, U-Boot gpio 268): ON from SPL start
+  (`status_led_init`), stays on via kernel `default-state = "on"`.
+- **Status** (PI11, U-Boot gpio 267): off until U-Boot proper, then:
+
+| Status LED | Power LED | Meaning (0.3.0+) |
+|---|---|---|
+| off | off | BROM never ran SPL: power, SD slot/flash, or dead card |
+| off | on | SPL alive (or hung in DRAM init); U-Boot proper not reached |
+| solid on | on | U-Boot proper running `boot.scr`, kernel not started |
+| heartbeat | on | kernel alive, userspace not started yet |
+| fast blink 100 ms | on | `firstboot` (dpkg configure / ssh-keygen) running |
+| 1 Hz blink | on | splash stage |
+| slow blink 1000/250 | on | Wi-Fi stage |
+| solid on | on | squeezeplay running = boot complete |
+| strobe 50 ms | on | a service FAILED (see UART/journal for which) |
+
+Implementation: SPL (defconfig) → `boot.cmd` (`gpio set 267`, needs
+`CONFIG_CMD_GPIO` from `uboot-rg35xx-h-common-fragment.conf`) → DT
+`linux,default-trigger = "heartbeat"` (patch 0006) → `services/led.sh`
+stages (`trigger=timer`, needs `CONFIG_LEDS_TRIGGER_TIMER=y`). Kernel
+names: `green:power`, `green:status` under `/sys/class/leds/`.
+Note: 0.2.0-exp2 predates this scheme (power LED only, no heartbeat —
+an 0.2.0 unit that boots fully shows power on + status off).

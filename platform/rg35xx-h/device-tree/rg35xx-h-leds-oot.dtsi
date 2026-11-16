@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+/*
+ * RG35XX-H status-LED trigger (out-of-tree). Master copy — mirrored verbatim
+ * into the kernel tree by platform/rg35xx-h/kernel/patches/0006 (keep in sync).
+ *
+ * The in-tree board DTS already defines gpio-leds (led-0 power on PI12 with
+ * default-state "on", led-1 status on PI11, both active-high). This override
+ * binds the heartbeat trigger to the STATUS led at probe: a kernel-alive
+ * signal until userspace led.sh takes over with per-stage patterns
+ * (see platform/rg35xx-h/services/led.sh and docs/hardware.md "LEDs").
+ * Needs CONFIG_LEDS_TRIGGER_HEARTBEAT=y (in linux-rg35xx-h-aarch64.conf).
+ */
+
+&{/leds/led-1} {
+	linux,default-trigger = "heartbeat";
+};

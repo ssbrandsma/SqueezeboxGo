@@ -3,3 +3,4 @@
 0003-pwm-sun4i-h616-compatible.patch
 0004-arm64-dts-h616-display-soc.patch
 0005-arm64-dts-rg35xx-h-display-oot.patch
+0006-arm64-dts-rg35xx-h-leds-oot.patch

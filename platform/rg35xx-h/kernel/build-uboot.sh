@@ -8,6 +8,8 @@
 # Variants (WP0: units ship with DDR3 or LPDDR4; ID method TBD on hardware):
 #   ddr4 = $UBOOT_DEFCONFIG as-is (SUNXI_DRAM_H616_LPDDR4)
 #   ddr3 = same defconfig with LPDDR4 -> SUNXI_DRAM_H616_DDR3_1333
+# Both variants also apply config/uboot-rg35xx-h-common-fragment.conf
+# (Squeezebox additions, e.g. CONFIG_CMD_GPIO for the boot.scr status LED).
 # Output per variant: u-boot-sunxi-with-spl.bin (+ u-boot.itb, bl31.bin).
 set -euo pipefail
 
@@ -60,8 +62,13 @@ build_variant() { # name extra-conf-fragment-or-empty
     local name="$1"
     local frag="$2"
     local obj="$OUT/obj-$name"
+    local common_frag="$HERE/config/uboot-rg35xx-h-common-fragment.conf"
     run mkdir -p "$obj"
     run make -C "$USRC" O="$obj" "$UBOOT_DEFCONFIG"
+    if [ -f "$common_frag" ]; then
+        run bash -c "cat '$common_frag' >> '$obj/.config'"
+        run make -C "$USRC" O="$obj" olddefconfig
+    fi
     if [ -n "$frag" ]; then
         run bash -c "cat '$frag' >> '$obj/.config'"
         run make -C "$USRC" O="$obj" olddefconfig

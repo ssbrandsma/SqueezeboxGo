@@ -13,11 +13,15 @@ log() { printf 'firstboot.sh: %s\n' "$*" >&2; }
 
 [ -f "$STAMP" ] && { log "already finalized, nothing to do"; exit 0; }
 
+LED_SH="$(dirname "$0")/led.sh"; [ -x "$LED_SH" ] || LED_SH=""
+led() { [ -n "$LED_SH" ] && "$LED_SH" "$@" || true; }
+led stage firstboot
+
 if command -v dpkg >/dev/null 2>&1; then
     if dpkg --configure -a; then
         log "dpkg --configure -a OK"
     else
-        log "ERROR: dpkg --configure -a failed (see journal)"; exit 1
+        log "ERROR: dpkg --configure -a failed (see journal)"; led fail "dpkg configure"; exit 1
     fi
 else
     log "no dpkg in this tree (skeleton-only staging?), skipping configure"
@@ -27,7 +31,7 @@ if command -v ssh-keygen >/dev/null 2>&1; then
     if ssh-keygen -A; then
         log "ssh host keys present"
     else
-        log "ERROR: ssh-keygen -A failed"; exit 1
+        log "ERROR: ssh-keygen -A failed"; led fail "ssh-keygen"; exit 1
     fi
 else
     log "no ssh-keygen in this tree, skipping host keys"

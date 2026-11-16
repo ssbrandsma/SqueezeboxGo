@@ -57,7 +57,7 @@ fi
 
 # 3. Service scripts -> /usr/lib/squeezebox (executable).
 if [ "$WITH_SVC" = 1 ]; then
-    for s in squeezeplay.sh splash.sh wifi.sh firstboot.sh; do
+    for s in squeezeplay.sh splash.sh wifi.sh firstboot.sh led.sh; do
         [ -f "$DEV/services/$s" ] || die "missing services/$s"
         install -m 0755 "$DEV/services/$s" "$STAGING/usr/lib/squeezebox/$s"
     done

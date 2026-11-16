@@ -1,7 +1,8 @@
 # OOT kernel patch list (RG35XX H, linux v7.3.4)
 
-Status: WP3 — first patch series LANDED (`series`: 0001-0005, display
-bring-up, compile-verified + HW-gated). `build-kernel.sh` applies `series`
+Status: WP3 + LED follow-up — series LANDED (`series`: 0001-0006:
+display bring-up + status-LED heartbeat, compile-verified + HW-gated).
+`build-kernel.sh` applies `series`
 in order. Patch format: see `0000-TEMPLATE.patch`. License rule (ADR-0001):
 GPL components with attribution only; no ROCKNIX CC BY-NC-SA /
 non-commercial material.
@@ -47,7 +48,7 @@ Evidence base (all verified 2026-11-15 at the pinned tags):
 | USB-01 | OTG/host role + VBUS quirks IF in-tree proves wrong | in-tree usbphy/ehci/ohci + `reg_vcc5v0_usb` look complete (E1) | none yet | HOLD |
 | WIFI-01 | RTW88_8821CS quirks + firmware packaging notes | in-tree DTS (E1) + `CONFIG_RTW88_8821CS` exist; firmware blobs ship in rootfs | linux-firmware `rtw88/rtw8821c_fw.bin`, `rtl_bt/rtl8821c_*` | TODO (WP2) |
 
-## Landed series (WP3, `series` 0001-0005)
+## Landed series (WP3 + LED follow-up, `series` 0001-0006)
 
 | File | Content | Validation |
 |------|---------|------------|
@@ -56,6 +57,7 @@ Evidence base (all verified 2026-11-15 at the pinned tags):
 | 0003-pwm-sun4i-h616-compatible.patch | H616 PWM match, H6 data (Squeezebox OOT) | applies clean; pwm-sun4i.o cross-built, 0 warnings |
 | 0004-arm64-dts-h616-display-soc.patch | SoC display nodes (lore 2/5/6 + PWM, review-fixed) | 15/15 h616-family DTBs build, 0 warnings |
 | 0005-arm64-dts-rg35xx-h-display-oot.patch | -H OOT display dtsi + include (lore 7/8+8/8 adapted) | H DTB builds; graph verified in decompiled DTB |
+| 0006-arm64-dts-rg35xx-h-leds-oot.patch | heartbeat default-trigger on in-tree status LED (PI11); master: `device-tree/rg35xx-h-leds-oot.dtsi` | applies after 0005, no fuzz (verified vs v7.3.4 file); DTB build in 0.3.0 |
 | display-defconfig.delta | =y delta for Agent 1's config fragment (NOT a kernel patch; do not list in `series`) | olddefconfig accepts all; panel/spi/regulator .o cross-built |
 
 Full `Image modules dtbs` result: see `docs/test-results/wp3-panel.md`.

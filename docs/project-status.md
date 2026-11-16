@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, WP3 merged; host-complete, HW-gated).
+Last updated: 2026-11-16 (Agent 0, LED scheme implemented; 0.3.0 rebuild next).
 
 ## Completed
 
@@ -115,14 +115,31 @@ Last updated: 2026-11-16 (Agent 0, WP3 merged; host-complete, HW-gated).
   arbiter 42/42, audio 7/0, selftest 27/27, gates 6 PASS + arch NOT RUN
   (`docs/test-results/wp3-merge-gates.md`).
 
+## Completed (LED boot-progress scheme)
+
+- User report: dark display on boot attempt (stage unknown — UART log
+  pending). Cause candidates triaged in `docs/hardware.md` + HW_TEST_PLAN
+  §5; note 0.2.0-exp2 has NO panel driver, so a dark display is expected
+  even on a fully successful 0.2.0 boot.
+- Implemented: SPL power-LED already on (verified in U-Boot source);
+  `boot.cmd` drives status LED via `gpio set 267` (new
+  `uboot-rg35xx-h-common-fragment.conf` with `CONFIG_CMD_GPIO=y`,
+  applied to both variants in `build-uboot.sh`); kernel heartbeat via
+  new OOT `rg35xx-h-leds-oot.dtsi` + patch 0006 (validated: applies
+  after 0005 with fuzz=0 against the real v7.3.4 DTS, mirror identical);
+  `CONFIG_LEDS_TRIGGER_TIMER=y` added; userspace `services/led.sh`
+  (firstboot/splash/wifi/squeezeplay/ok/fail signatures, never fatal)
+  hooked into all four services + installed by `mkrootfs.sh`.
+- Tests: new `services/tests/test-led.sh` 11/11; `bash -n` clean;
+  DTB compile + boot.scr build ride the 0.3.0 rebuild (dtc/mkimage
+  absent on host — stated, not faked).
+
 ## Current work
 
-- HOST-COMPLETE: everything verifiable without the device is implemented,
-  merged, and green. Remaining work is hardware-gated (first flash, panel
-  light, H1-H18, ALSA/evtest/wifi probes) or follows from hardware results
-  (TPR tuning, DDR-ID, suspend, WP4 polish).
-- Next human actions: flash 0.2.0-exp2 (see `docs/INSTALL.md`), capture UART
-  boot per `docs/test-results/HW_TEST_PLAN.md`, report H1-H18 results.
+- 0.3.0 rebuild workflow: kernel+DTB (OOT incl. 0006) + U-Boot (CMD_GPIO)
+  + payload (led.sh) + QA verify → bootable image WITH panel + LEDs.
+- Still need from human: UART log of the failing boot (proves the stage)
+  + which image was flashed (ddr3/ddr4, which release).
 
 ## Blockers / external deps
 
