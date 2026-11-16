@@ -1,0 +1,90 @@
+# go-redeploy install — 2026-11-16 (device ANBERNIC, live SSH)
+# Method: squeezebox-go/INSTALL.md user path (copy ZIP APPS/ -> card Roms/APPS).
+# stock/go/install-squeezebox-go.sh NOT used: it installs the superseded
+# provisional layout (old entry + provisional icon) and would REGRESS the
+# final files. Follow-up for lead/GO-APP: update or retire that script.
+
+===== 0. host pre-verify (sha + payload contents) =====
+$ sha256sum /tmp/sbgo-dist/SqueezeboxGo-0.1.0-stockos-rg35xxh.zip
+99c28329fcf506c3b9f82242b06d3265bdbce7430b873c776a22a9bbe036c3af  (MATCHES brief)
+$ unzip -l ...zip
+     2753  APPS/Imgs/SqueezeboxGo.png
+     3443  APPS/SqueezeboxGo.sh
+       81  APPS/SqueezeboxGo/SHA256SUMS
+        6  APPS/SqueezeboxGo/VERSION (= "0.1.0")
+ 24771526  APPS/SqueezeboxGo/payload.tar.gz
+$ sha256sum APPS/Imgs/SqueezeboxGo.png APPS/SqueezeboxGo.sh (host, from ZIP)
+0b7b721ccd6715ca6476b66df4559296cc6d3d1f0b9c0a1934058ec7b32eaef6  icon (240x180 RGBA per file+IHDR)
+05b8e6b79d5ed40953341c7f728d4196231ad8a985da433cf6f890bacfac20b4  entry
+$ unzip -p ... APPS/SqueezeboxGo/SHA256SUMS
+dafdbbf099524e7ec2f96f90778da1bd7e07206debb4f9978c623d45cc90b130  payload.tar.gz
+$ tar -tzf payload.tar.gz | grep -i -E 'SqueezeboxRG35XXH|launch.sh|restore.sh|lib-fbcon'
+jive/share/jive/applets/SqueezeboxRG35XXH/
+jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua
+jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua
+jive/share/jive/applets/SqueezeboxRG35XXH/loadPriority.lua
+jive/share/jive/applets/SqueezeboxRG35XXH/strings.txt   (contains GO_RETURN_TO_ANBERNIC)
+launch.sh
+lib-fbcon/
+lib-fbcon/libSDL-1.2.so.0
+restore.sh
+(payload: 3430 files; VERSION inside = 0.1.0; RG35XXHBaseSkin overlay present)
+
+===== 1. ending the owner's provisional menu session (documented SSH fallback) =====
+NOTE: owner's 14:39 menu session (old build, no Return action) was still
+running. Ended 15:12 CET via SIGTERM so the redeploy could proceed; the LCD
+observation window 14:39-15:12 is queued as human-ask.
+$ sudo -n kill -TERM $(pidof jive) && echo SIGTERM_SENT; ...(poll 12x5s)...
+SIGTERM_SENT
+dmenu=5458 jive=
+/dev/snd/pcmC0D0p:    5458        # dmenu re-holding PCM
+$ tail -3 /opt/squeezebox-go/logs/jive.log
+... ERROR ... term_handler:332 SIGTERM squeezeplay 9.0.0 r541
+... WARN  ... jiveL_process_events:482 JIVE_EVENT_QUIT
+(clean SIGTERM -> QUIT path; dmenu_ln restarted dmenu, NO reboot)
+
+===== 2. stock-healthy checkpoint after session end =====
+$ ioctl FBIOGET_VSCREENINFO on /dev/fb0
+vinfo: xres=1280 yres=1024 bpp=16 xres_v=0 yres_v=0   # STOCK (dmenu self-healed)
+  (NOTE: xres_v/yres_v read from wrong ioctl offsets in my one-liner — xres/
+  yres/bpp offsets are correct; virtual_size sysfs = 1280,1024 confirms.)
+$ cat /sys/class/graphics/fb0/{mode,modes,virtual_size,bits_per_pixel,stride}
+mode: (empty — always empty on this stock fb; current mode not reflected)
+modes: U:512x384p-77 / U:1280x1024p-59
+virtual_size: 1280,1024 ; bits_per_pixel: 16 ; stride: 2560
+$ fbset -s -> "fbset: command not found"   # NOT on stock: launch.sh/restore.sh
+  take the sysfs-only snapshot path (handled gracefully, logged). Real fb
+  safety net remains dmenu self-heal (proven 3x incl. this session).
+$ systemctl is-active launcher.service -> active
+
+===== 3. upload + on-device sha =====
+$ scp /tmp/sbgo-dist/SqueezeboxGo-0.1.0-stockos-rg35xxh.zip rg35xxh:/tmp/sbgo-upload.zip
+scp_rc=0
+$ sha256sum /tmp/sbgo-upload.zip
+99c28329fcf506c3b9f82242b06d3265bdbce7430b873c776a22a9bbe036c3af  MATCH ✓
+
+===== 4. INSTALL.md step 1: merge ZIP APPS/ -> card Roms/APPS =====
+$ cd /mnt/mmc/Roms && sudo -n unzip -o /tmp/sbgo-upload.zip "APPS/*"
+Archive:  /tmp/sbgo-upload.zip
+  inflating: APPS/Imgs/SqueezeboxGo.png
+  inflating: APPS/SqueezeboxGo.sh
+  inflating: APPS/SqueezeboxGo/SHA256SUMS
+  inflating: APPS/SqueezeboxGo/VERSION
+  inflating: APPS/SqueezeboxGo/payload.tar.gz
+$ ls -la ... ; file .../SqueezeboxGo.png; sha256sum ...; cat .../VERSION; (cd ... && sha256sum -c SHA256SUMS); sh -n ...
+-rwxrwxrwx 1 root root 2753 .../APPS/Imgs/SqueezeboxGo.png
+-rwxrwxrwx 1 root root 3443 .../APPS/SqueezeboxGo.sh
+.../APPS/SqueezeboxGo: SHA256SUMS(81) VERSION(6) payload.tar.gz(24771526)
+.../SqueezeboxGo.png: PNG image data, 240 x 180, 8-bit/color RGBA, non-interlaced
+0b7b721ccd6715ca6476b66df4559296cc6d3d1f0b9c0a1934058ec7b32eaef6  icon  MATCH(final art; provisional 8513a16d OVERWRITTEN) ✓
+05b8e6b79d5ed40953341c7f728d4196231ad8a985da433cf6f890bacfac20b4  entry MATCH ✓
+0.1.0
+payload.tar.gz: OK
+ENTRY_SYNTAX_OK
+
+===== 5. /tmp/.next hygiene (new mechanism detail) =====
+After the SIGTERM-return cycle, /tmp/.next is GONE (fresh dmenu startup
+removes the stale action file). Stale-.next concern: none — recon refined.
+Byte reconstruction of dmenu's write (39 B observed at 14:39):
+  `"/mnt/mmc/Roms/APPS/SqueezeboxGo.sh"  \n` = 36 + 2sp + \n = 39 ✓
+Used verbatim for the lifecycle repro below.
