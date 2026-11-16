@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, SqueezeboxGo track launched).
+Last updated: 2026-11-16 (Agent 0, SqueezeboxGo merged; icon+lint fixed).
 
 ## Completed
 
@@ -213,13 +213,19 @@ Last updated: 2026-11-16 (Agent 0, SqueezeboxGo track launched).
   TF slot selectable; scripts run as root; stdout lost (log to files);
   Roms is VFAT (no symlinks/perms) → runtime lives on ext4, APPS entry
   script is the launcher. Device is source of truth for mount paths.
-- Workflow `SqueezeboxGo App Build` (2 agents): GO-HW (device recon +
-  install + lifecycle test, owns `stock/` + evidence) and GO-APP (host:
-  icon, Jive Return-to-Anbernic action gated by `SQUEEZEBOX_GO=1`,
-  packaging, docs; owns `squeezebox-go/` + BSP applet).
-- Milestone: SqueezeboxGo in App Center → native Jive → Return to
-  Anbernic, no reboot, games/saves intact. Human-gated: icon/menu
-  visibility, button nav, audio ears, game-after-exit check.
+- Workflow `SqueezeboxGo App Build` completed; both branches merged.
+  GO-HW: APPS recon (icons are 240x180!, dmenu exits via /tmp/.next),
+  /opt/squeezebox-go install, 71 s Jive lifecycle, no-reboot return.
+  GO-APP: 240x180 icon generator, Return-to-Anbernic action (exit 42),
+  reproducible ZIP, 62-test suite.
+- Lead integration: icon rescaled to device-true 240x180 (render
+  inspected); real shellcheck 0.9.0 run closed B3 — 25 findings fixed
+  (case shadowing, local-ordering, jammy loop, directives, unused vars;
+  incl. a shellcheck quirk: directives ignored on multi-command source
+  lines); real device ZIP rebuilt (`/tmp/sbgo-dist/`, sha 99c28329…,
+  240x180 icon, FAT-safe). Suites: go 62/62, bundle 45/45, selftest 27/27.
+- Next: hw redeploy (final icon + Return action) → human observation
+  batch (icon/menu/buttons/ears/game/evtest/live color/0.3.0 boot).
 
 ## Prior state (human-gated proofs)
 

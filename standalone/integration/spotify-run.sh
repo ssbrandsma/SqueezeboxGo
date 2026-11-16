@@ -55,8 +55,13 @@ BIN="$(find_bin 2>/dev/null)" || BIN=""
 
 # --- load config: LIBRESPOT_* assignments, exported for the binary ---
 if [ -f "$CONF" ]; then
-	# shellcheck disable=SC1090
-	set -a; . "$CONF"; set +a
+	# CONF path intentionally overridable; split across lines so the
+	# lint directive below attaches (shellcheck 0.9.0 ignores directives
+	# on multi-command source lines).
+	set -a
+	# shellcheck source=/dev/null
+	. "$CONF"
+	set +a
 elif [ -n "${SPOTIFY_CONF:-}" ]; then
 	die 2 "config not found: $CONF (SPOTIFY_CONF explicitly set)"
 fi

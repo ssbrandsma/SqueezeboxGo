@@ -37,7 +37,7 @@ squeezeplay/configuration/rg35xxh_bsp/share/applets/SqueezeboxRG35XXH/
 
 ## App Center mechanism (verified from references; device is truth)
 
-- `Roms/APPS/<Name>.sh` + `Roms/APPS/Imgs/<Name>.png` (**160x120 RGBA**)
+- `Roms/APPS/<Name>.sh` + `Roms/APPS/Imgs/<Name>.png` (**240x180 RGBA**, device-verified)
   + optional `Roms/APPS/<Name>/` payload dir.
 - TF slot 01/02 selectable; scripts run as **root**; **stdout is lost**
   (log to files).
@@ -51,7 +51,7 @@ squeezeplay/configuration/rg35xxh_bsp/share/applets/SqueezeboxRG35XXH/
 ```text
 SqueezeboxGo-<ver>-stockos-rg35xxh.zip
   APPS/SqueezeboxGo.sh              entry (install/upgrade + exec)
-  APPS/Imgs/SqueezeboxGo.png        icon (generated, 160x120 RGBA)
+  APPS/Imgs/SqueezeboxGo.png        icon (generated, 240x180 RGBA)
   APPS/SqueezeboxGo/VERSION         payload version (upgrade detection)
   APPS/SqueezeboxGo/SHA256SUMS      payload hash (entry verifies pre-install)
   APPS/SqueezeboxGo/payload.tar.gz  ext4 runtime:

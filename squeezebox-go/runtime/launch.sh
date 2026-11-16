@@ -94,9 +94,11 @@ if [ -z "$UNIT" ] && [ -f "$CONFIG/frontend-unit.txt" ]; then
 fi
 [ -n "$UNIT" ] || UNIT='launcher.service'
 # Refuse infrastructure units (same policy as stock/bundle/lib-safety.sh).
+# NB: ssh* covers sshd*; systemd-* covers systemd-networkd/logind/udevd —
+# listing them separately would be dead patterns (SC2221/2222).
 case "$UNIT" in
-	systemd-*|dbus*|ssh*|sshd*|NetworkManager*|systemd-networkd*|\
-	systemd-logind*|systemd-udevd*|getty*|serial-getty*|*.target|\
+	systemd-*|dbus*|ssh*|NetworkManager*|\
+	getty*|serial-getty*|*.target|\
 	*[\;\|\&\$\`\(\)\<\>\*\?]*)
 		log "REFUSE: will not stop infrastructure/dangerous unit: $UNIT"
 		UNIT='' ;;

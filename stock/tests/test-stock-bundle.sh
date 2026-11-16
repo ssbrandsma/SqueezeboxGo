@@ -53,7 +53,7 @@ else
 	printf 'SKIP: shellcheck not installed (repo gate falls back to bash -n)\n'
 fi
 # jive-env.sh must source cleanly under `set -u` (run-jive.sh does this).
-if (set -u; BUNDLE_ROOT="$TMP/fakebundle"; . "$STOCK_ROOT/bundle/jive-env.sh") 2>"$TMP/env.err"; then
+if (set -u; export BUNDLE_ROOT="$TMP/fakebundle"; . "$STOCK_ROOT/bundle/jive-env.sh") 2>"$TMP/env.err"; then
 	ok 'jive-env.sh sources under set -u'
 else
 	fail "jive-env.sh set -u: $(cat "$TMP/env.err")"

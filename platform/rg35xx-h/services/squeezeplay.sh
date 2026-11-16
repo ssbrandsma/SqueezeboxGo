@@ -13,6 +13,7 @@ SRC_ID="jive"
 
 log() { printf 'squeezeplay.sh: %s\n' "$*" >&2; }
 
+# shellcheck disable=SC1090 # CONF path intentionally overridable (SYSTEM_CONF)
 [ -f "$CONF" ] && . "$CONF"
 
 # Contract env knobs (docs/interface-contracts.md), overridable via system.conf.

@@ -6,6 +6,7 @@ set -eu
 
 SPLASH_DIR="${SPLASH_DIR:-/usr/share/squeezebox}"
 CONF="${SYSTEM_CONF:-/etc/squeezebox/system.conf}"
+# shellcheck disable=SC1090 # CONF path intentionally overridable (SYSTEM_CONF)
 [ -f "$CONF" ] && . "$CONF"
 
 log() { printf 'splash.sh: %s\n' "$*" >&2; }

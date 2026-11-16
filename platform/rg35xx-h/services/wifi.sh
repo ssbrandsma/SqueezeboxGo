@@ -8,6 +8,7 @@
 set -eu
 
 CONF="${SYSTEM_CONF:-/etc/squeezebox/system.conf}"
+# shellcheck disable=SC1090 # CONF path intentionally overridable (SYSTEM_CONF)
 [ -f "$CONF" ] && . "$CONF"
 IFACE="${WIFI_IF:-wlan0}"
 WPA_CONF="${WPA_CONF:-/etc/wpa_supplicant/wpa_supplicant.conf}"

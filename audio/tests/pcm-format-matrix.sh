@@ -16,7 +16,6 @@
 
 set -u
 
-HERE="$(cd "$(dirname "$0")" && pwd)"
 PROC_ASOUND="${PROC_ASOUND:-/proc/asound}"
 PLAY=0; ONLY_CARD=""
 while [ $# -gt 0 ]; do

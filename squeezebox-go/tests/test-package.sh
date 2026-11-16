@@ -2,9 +2,9 @@
 # test-package.sh — SqueezeboxGo package-content tests (host-only).
 #
 # Asserts, from the repo tree alone (+ a fixture ZIP build):
-#   files present, icon 160x120 RGBA + deterministic, no secrets/keys,
+#   files present, icon 240x180 RGBA + deterministic, no secrets/keys,
 #   no symlinks in the FAT part, FAT-safe names, scripts bash -n +
-#   shellcheck gate, Jive action luac-clean, Lua harness (gating +
+#   repo lint gate, Jive action luac-clean, Lua harness (gating +
 #   cleanup sequence + exit 42), fixture ZIP content + reproducibility,
 #   SHA256SUMS verification, entry install/upgrade/idempotence drills.
 # A device-ZIP build runs only when the real artifacts exist (else SKIP).
@@ -64,8 +64,8 @@ if need python3; then
 	if python3 "$GO_ROOT/icon/make-icon.py" -o "$TMP/icon-a.png" >"$TMP/icon.out" 2>&1 \
 		&& python3 "$GO_ROOT/icon/make-icon.py" -o "$TMP/icon-b.png" >>"$TMP/icon.out" 2>&1; then
 		if need file; then
-			file "$TMP/icon-a.png" | grep -q '160 x 120' \
-				&& ok 'icon file(1): 160x120' \
+			file "$TMP/icon-a.png" | grep -q '240 x 180' \
+				&& ok 'icon file(1): 240x180' \
 				|| fail "icon file(1): $(file -b "$TMP/icon-a.png")"
 			file "$TMP/icon-a.png" | grep -q 'RGBA' \
 				&& ok 'icon file(1): RGBA' \
@@ -82,8 +82,8 @@ assert typ == b'IHDR', 'first chunk not IHDR'
 w, h, bd, ct, comp, filt, inter = struct.unpack('>IIBBBBB', d[16:29])
 print('%d %d %d %d' % (w, h, bd, ct))
 EOF
-		if [ "$(cat "$TMP/ihdr.out" 2>/dev/null)" = '160 120 8 6' ]; then
-			ok 'icon IHDR: 160x120 8-bit RGBA (color type 6)'
+		if [ "$(cat "$TMP/ihdr.out" 2>/dev/null)" = '240 180 8 6' ]; then
+			ok 'icon IHDR: 240x180 8-bit RGBA (color type 6)'
 		else
 			fail "icon IHDR: $(cat "$TMP/ihdr.out" 2>/dev/null || echo unreadable)"
 		fi

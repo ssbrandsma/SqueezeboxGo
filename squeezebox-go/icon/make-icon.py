@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""make-icon.py — generate the SqueezeboxGo App Center icon (160x120 RGBA PNG).
+"""make-icon.py — generate the SqueezeboxGo App Center icon (240x180 RGBA PNG).
+
+Size is device truth: all 6 stock APPS icons measure 240x180 (verified on
+hardware; community 160x120 references are wrong for this firmware).
 
 Stdlib-only (struct + zlib); deterministic byte-for-byte output so the
 icon is reproducible at pack time and never committed to git (repo policy:
@@ -11,13 +14,16 @@ Usage:
 Design (readable at App Center thumbnail size):
   dark rounded backdrop -> orange handheld-device slab with a glowing
   display showing EQ bars (audio motif) + speaker arcs + play triangle.
-  High-contrast silhouette, no fine text (illegible at 160x120).
+  High-contrast silhouette, no fine text (illegible at thumbnail size).
+
+All geometry is the original 160x120 composition scaled x1.5 (round half
+up), except the EQ gap (rounded down to preserve the right margin).
 """
 import struct
 import sys
 import zlib
 
-W, H = 160, 120
+W, H = 240, 180
 
 # Palette
 BG_TOP = (24, 28, 40, 255)       # deep navy
@@ -116,49 +122,49 @@ def draw():
     for y in range(H):
         cv.rect(0, y, W, y + 1, lerp(BG_TOP, BG_BOT, y / (H - 1)))
     for (vx, vy) in ((0, 0), (W - 1, 0), (0, H - 1), (W - 1, H - 1)):
-        cv.disc(vx, vy, 46, (0, 0, 0, 70))
+        cv.disc(vx, vy, 69, (0, 0, 0, 70))
 
     # drop shadow + device slab (portable music player, left 2/3)
-    sx0, sy0, sx1, sy1 = 18, 14, 108, 106
-    cv.rrect(sx0 + 4, sy0 + 5, sx1 + 4, sy1 + 5, 12, SHADOW)
-    cv.rrect(sx0, sy0, sx1, sy1, 12, SLAB)
+    sx0, sy0, sx1, sy1 = 27, 21, 162, 159
+    cv.rrect(sx0 + 6, sy0 + 8, sx1 + 6, sy1 + 8, 18, SHADOW)
+    cv.rrect(sx0, sy0, sx1, sy1, 18, SLAB)
     # slab edge shading: dark bottom strip + top highlight line
-    cv.rrect(sx0, sy1 - 12, sx1, sy1, 6, (0, 0, 0, 60))
-    cv.rect(sx0 + 12, sy0 + 2, sx1 - 12, sy0 + 4, (255, 255, 255, 70))
+    cv.rrect(sx0, sy1 - 18, sx1, sy1, 9, (0, 0, 0, 60))
+    cv.rect(sx0 + 18, sy0 + 3, sx1 - 18, sy0 + 6, (255, 255, 255, 70))
 
     # display glass
-    dx0, dy0, dx1, dy1 = sx0 + 9, sy0 + 10, sx1 - 9, sy0 + 62
-    cv.rrect(dx0, dy0, dx1, dy1, 5, SCREEN)
-    cv.rect(dx0 + 4, dy0 + 2, dx1 - 4, dy0 + 4, (255, 255, 255, 40))
+    dx0, dy0, dx1, dy1 = sx0 + 14, sy0 + 15, sx1 - 14, sy0 + 93
+    cv.rrect(dx0, dy0, dx1, dy1, 8, SCREEN)
+    cv.rect(dx0 + 6, dy0 + 3, dx1 - 6, dy0 + 6, (255, 255, 255, 40))
     # display glow dot (power LED)
-    cv.disc(dx1 - 8, dy0 + 8, 2, SCREEN_GLOW)
+    cv.disc(dx1 - 12, dy0 + 12, 3, SCREEN_GLOW)
 
     # EQ bars inside display (audio motif)
-    bars = (14, 26, 20, 34, 24, 38, 28, 16)
-    bw, gap = 5, 3
-    base = dy1 - 7
-    x = dx0 + 7
+    bars = (21, 39, 30, 51, 36, 57, 42, 24)
+    bw, gap = 8, 4  # gap rounded down (not half-up) to preserve right margin
+    base = dy1 - 11
+    x = dx0 + 11
     for i, bh in enumerate(bars):
         c = BAR_HOT if i == 5 else BAR
         cv.rect(x, base - bh, x + bw, base, c)
-        cv.rect(x, base - bh, x + bw, base - bh + 2, (255, 255, 255, 120))
+        cv.rect(x, base - bh, x + bw, base - bh + 3, (255, 255, 255, 120))
         x += bw + gap
 
     # play triangle (media motif) centered under display
-    cv.tri(52, 76, 52, 94, 68, 85, PLAY)
+    cv.tri(78, 114, 78, 141, 102, 128, PLAY)
     # control dots row (player buttons)
-    for dx in (30, 42, 84, 96):
-        cv.disc(dx, 85, 4, SLAB_DK)
-        cv.disc(dx, 85, 2, (255, 255, 255, 160))
+    for dx in (45, 63, 126, 144):
+        cv.disc(dx, 128, 6, SLAB_DK)
+        cv.disc(dx, 128, 3, (255, 255, 255, 160))
 
     # speaker + waves on the right third
-    cv.disc(128, 60, 13, (30, 34, 48, 255))
-    cv.disc(128, 60, 13, WAVE, fill=False, thick=3)
-    cv.disc(128, 60, 6, WAVE)
-    cv.disc(128, 60, 2, (30, 34, 48, 255))
-    cv.arc(128, 60, 22, WAVE, xside=1, thick=3)
-    cv.arc(128, 60, 30, (235, 240, 250, 160), xside=1, thick=3)
-    cv.arc(128, 60, 22, WAVE, xside=-1, thick=3)
+    cv.disc(192, 90, 20, (30, 34, 48, 255))
+    cv.disc(192, 90, 20, WAVE, fill=False, thick=5)
+    cv.disc(192, 90, 9, WAVE)
+    cv.disc(192, 90, 3, (30, 34, 48, 255))
+    cv.arc(192, 90, 33, WAVE, xside=1, thick=5)
+    cv.arc(192, 90, 45, (235, 240, 250, 160), xside=1, thick=5)
+    cv.arc(192, 90, 33, WAVE, xside=-1, thick=5)
     return cv
 
 

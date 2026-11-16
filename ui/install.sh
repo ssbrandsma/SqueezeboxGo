@@ -102,7 +102,7 @@ chmod 0644 "$SPLASH_D/splash_640x480.png"
 
 # shellcheck disable=SC2086
 for s in $SKINS; do
-    rm -rf "$APPLETS_D/$s"
+    rm -rf "${APPLETS_D:?}/$s"
     mkdir -p "$APPLETS_D/$s"
     cp "$HERE/skins/$s/${s}Applet.lua" "$HERE/skins/$s/${s}Meta.lua" "$APPLETS_D/$s/"
     cp -r "$HERE/skins/$s/images" "$APPLETS_D/$s/images"

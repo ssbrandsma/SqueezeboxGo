@@ -11,7 +11,7 @@
 #
 # ZIP layout (merge APPS/ into the card's Roms/):
 #   APPS/SqueezeboxGo.sh                 FAT entry (POSIX sh)
-#   APPS/Imgs/SqueezeboxGo.png           160x120 RGBA icon
+#   APPS/Imgs/SqueezeboxGo.png           240x180 RGBA icon (device truth)
 #   APPS/SqueezeboxGo/VERSION            payload version
 #   APPS/SqueezeboxGo/SHA256SUMS         payload.tar.gz hash (entry verifies)
 #   APPS/SqueezeboxGo/payload.tar.gz     ext4 runtime (jive/ + lib-fbcon/ +

@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # lib-safety.sh — shared plan/confirm/refusal helpers for the stock bundle.
 #
 # Sourced by install.sh / run-jive.sh / restore.sh. Bash + POSIX sh
@@ -54,7 +55,9 @@ refuse_destructive_path() {
 		*) fatal "relative path refused: $p (use an absolute path)" ;;
 	esac
 	case "$p" in
-		*'/../'*|*'/../'|'/..'|*/..) fatal "dot-dot path refused: $p" ;;
+		# '*' matches empty, so these two cover middle, trailing ('x/../',
+		# 'x/..') and root ('/..') dot-dot forms; longer lists are dead.
+		*'/../'*|*/..) fatal "dot-dot path refused: $p" ;;
 	esac
 	# Strip trailing slashes (but keep root detectable).
 	while [ "${p%/}" != "$p" ] && [ "$p" != '/' ]; do p="${p%/}"; done

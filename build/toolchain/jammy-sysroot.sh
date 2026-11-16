@@ -193,7 +193,7 @@ EOF
       dpkg-deb -x "$deb" "$PREFIX"
     done
     # Fix 1: absolute symlinks (/lib/...) must resolve INSIDE the sysroot.
-    for l in $(find "$PREFIX" -type l); do
+    find "$PREFIX" -type l | while IFS= read -r l; do
       t="$(readlink "$l")"
       case "$t" in
         /*) ln -sfn "$PREFIX$t" "$l" ;;

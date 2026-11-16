@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # jive-env.sh — environment for running Jive on the STOCK system.
 #
 # Sourced by run-jive.sh (and only by it). Copy to the install dir and

@@ -69,7 +69,8 @@ fetch_git() { # repo tag sha dest
 }
 
 fetch_linux() { # dir method
-    local dir="$1" method="$2" dest="$dir/linux-$LINUX_VERSION"
+    local dir="$1" method="$2"
+    local dest="$dir/linux-$LINUX_VERSION"
     if [ "$method" = "git" ]; then
         fetch_git "$LINUX_REPO" "$LINUX_TAG" "$LINUX_SHA" "$dest"
     else
@@ -97,7 +98,8 @@ fetch_linux() { # dir method
 }
 
 fetch_uboot() { # dir method
-    local dir="$1" method="$2" dest="$dir/u-boot-$UBOOT_VERSION"
+    local dir="$1" method="$2"
+    local dest="$dir/u-boot-$UBOOT_VERSION"
     if [ "$method" = "tarball" ]; then
         local tb="$dir/u-boot-$UBOOT_VERSION.tar.gz"
         fetch_tarball "$UBOOT_REPO/archive/refs/tags/$UBOOT_TAG.tar.gz" \
@@ -112,7 +114,8 @@ fetch_uboot() { # dir method
 }
 
 fetch_atf() { # dir method
-    local dir="$1" method="$2" dest="$dir/atf-$ATF_VERSION"
+    local dir="$1" method="$2"
+    local dest="$dir/atf-$ATF_VERSION"
     if [ "$method" = "tarball" ]; then
         local tb="$dir/atf-$ATF_VERSION.tar.gz"
         fetch_tarball "$ATF_REPO/archive/refs/tags/$ATF_TAG.tar.gz" \

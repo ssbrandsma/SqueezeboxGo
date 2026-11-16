@@ -39,7 +39,8 @@ export ARCH="$KARCH" CROSS_COMPILE="$KCROSS_COMPILE" KCFLAGS="$KCFLAGS"
 # uses `date` unless told otherwise, which made every Image unique). GNU date
 # syntax; the pinned container and Ubuntu hosts both provide it.
 if date -u -d "@$EPOCH" '+%a %b %d %H:%M:%S UTC %Y' >/dev/null 2>&1; then
-    export KBUILD_BUILD_TIMESTAMP="$(date -u -d "@$EPOCH" '+%a %b %d %H:%M:%S UTC %Y')"
+    KBUILD_BUILD_TIMESTAMP="$(date -u -d "@$EPOCH" '+%a %b %d %H:%M:%S UTC %Y')"
+    export KBUILD_BUILD_TIMESTAMP
     export KBUILD_BUILD_USER="${KBUILD_BUILD_USER:-builder}"
     export KBUILD_BUILD_HOST="${KBUILD_BUILD_HOST:-repro}"
 fi
