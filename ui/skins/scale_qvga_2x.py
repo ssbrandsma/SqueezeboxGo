@@ -32,6 +32,10 @@ import sys
 import zlib
 
 SCALE = 2
+# Display depth our skins request. Upstream uses 16 (Radio LCD); the
+# RG35XX H needs 32 (proven live: 16 bpp scanout is broken, 32 bpp
+# clean). Overridable via --video-bpp for experiments only.
+VIDEO_BPP = 32
 APPLETS_SUBDIR = os.path.join("src", "squeezeplay", "share", "applets")
 
 SKINS = (
@@ -192,6 +196,17 @@ def scale_applet_lua(text, src_applet, pin):
         return "artworkSize = '%dx%d'" % (int(m.group(1)) * SCALE,
                                          int(m.group(2)) * SCALE)
     text = re.sub(r"artworkSize = '(\d+)x(\d+)'", _art, text)
+    # Target video depth: upstream Radio skins request 16 bpp, but the
+    # RG35XX H stock scanout only shows 32 bpp correctly (16 bpp mode
+    # renders "too narrow with residue", proven live 2026-11-16), so
+    # pin the request to VIDEO_BPP. Strict shape: Framework or plain
+    # setVideoMode(w, h, <bpp>, ...).
+    def _bpp(m):
+        return "%s%d%s" % (m.group(1), VIDEO_BPP, m.group(2))
+    text, n = re.subn(r"(setVideoMode\([^,]+,[^,]+,\s*)16(\s*,)",
+                      _bpp, text)
+    if n != text.count("setVideoMode("):
+        raise SystemExit("video-bpp pin missed a setVideoMode call")
     return GENERATED_HEADER.format(src_applet=src_applet, pin=pin) + text
 
 
@@ -383,6 +398,7 @@ def generate(src_tree, out_dir, pin, do_lua=True, do_img=True):
 
 
 def main(argv=None):
+    global VIDEO_BPP
     ap = argparse.ArgumentParser(description="2x bootstrap RG35XX H skin")
     ap.add_argument("--src", required=True, help="pinned squeezeplay tree")
     ap.add_argument("--out", required=True, help="output dir (ui/skins)")
@@ -390,7 +406,10 @@ def main(argv=None):
                     help="upstream pin label for provenance header")
     ap.add_argument("--lua-only", action="store_true")
     ap.add_argument("--img-only", action="store_true")
+    ap.add_argument("--video-bpp", type=int, default=VIDEO_BPP,
+                    help="setVideoMode depth to emit (default %(default)s)")
     args = ap.parse_args(argv)
+    VIDEO_BPP = args.video_bpp
     stats = generate(args.src, args.out, args.pin,
                      do_lua=not args.img_only, do_img=not args.lua_only)
     print("lua=%d img=%d bytes_in=%d bytes_out=%d" % (

@@ -226,6 +226,7 @@ cleanup() {
 		log "WARN: $ROOT/restore.sh missing; mixer/fb NOT restored"
 		RESTORE_FAILED=1
 	fi
+	stop_mapper
 	start_frontend || RESTORE_FAILED=1
 	if [ "$RESTORE_FAILED" = '1' ]; then
 		log "cleanup done with FAILURES (jive rc=$rc)"
@@ -237,6 +238,56 @@ trap 'log "got SIGTERM"; cleanup 143; exit 143' TERM
 trap 'log "got SIGINT"; cleanup 130; exit 130' INT
 trap 'rc=$?; cleanup "$rc"; exit "$rc"' EXIT
 
+# --- input mapper ----------------------------------------------------------
+# Jive reads the physical buttons through a uinput keyboard node the
+# mapper creates (evdev ANBERNIC-keys -> rg35xxh-jive-keys); without
+# it controls are dead (proven live: Go 0.2.1). Started after the
+# frontend stop (exclusive grab), stopped before the frontend returns.
+# Defined up here (not in main flow) so the EXIT trap can always call
+# stop_mapper, even when main bails out early.
+MAPPER_BIN="$ROOT/input/evdev2jive-stock"
+MAPPER_MAP="$ROOT/input/rg35xxh-stock.map"
+MAPPER_PID=''
+# Kill stale mappers by EXE link, never by argv match: pkill -f with a
+# bare name also kills admin shells whose command line merely mentions
+# it (proven live: it SIGTERMed our own SSH session twice). Our exe is
+# bash, so an exe scan can never match us.
+kill_mapper_tree() {
+	local exe pid sig
+	for sig in TERM KILL; do
+		for exe in /proc/[0-9]*/exe; do
+			pid="${exe#/proc/}"; pid="${pid%/exe}"
+			[ "$(readlink "$exe" 2>/dev/null)" = "$MAPPER_BIN" ] || continue
+			kill "-$sig" "$pid" 2>/dev/null || true
+		done
+		sleep 1
+	done
+}
+start_mapper() {
+	[ -x "$MAPPER_BIN" ] || { log "WARN: mapper missing ($MAPPER_BIN); controls will not work"; return 0; }
+	[ -f "$MAPPER_MAP" ] || { log "WARN: mapper map missing ($MAPPER_MAP); controls will not work"; return 0; }
+	kill_mapper_tree
+	"$MAPPER_BIN" "$MAPPER_MAP" >>"$STATE/logs/mapper.log" 2>&1 &
+	MAPPER_PID="$!"
+	sleep 1
+	if kill -0 "$MAPPER_PID" 2>/dev/null; then
+		log "mapper started (pid $MAPPER_PID)"
+	else
+		log 'WARN: mapper died instantly; controls will not work'
+		MAPPER_PID=''
+	fi
+}
+stop_mapper() {
+	if [ -n "$MAPPER_PID" ] && kill -0 "$MAPPER_PID" 2>/dev/null; then
+		kill -TERM "$MAPPER_PID" 2>/dev/null || true
+		sleep 1
+		kill -KILL "$MAPPER_PID" 2>/dev/null || true
+		log 'mapper stopped'
+	fi
+	kill_mapper_tree
+	MAPPER_PID=''
+}
+
 # --- main ------------------------------------------------------------------
 JIVE_BIN="$ROOT/jive/bin/jive"
 if [ ! -x "$JIVE_BIN" ]; then
@@ -247,6 +298,8 @@ fi
 stop_frontend
 snapshot
 
+start_mapper
+
 # Jive environment (stock-verified defaults; see stock/bundle/jive-env.sh).
 export SQUEEZEBOX_GO=1
 export SQUEEZEBOX_GO_ROOT="$ROOT"
@@ -256,14 +309,57 @@ export SQUEEZEBOX_GO_EXIT_FRONTEND="$EXIT_FRONTEND"
 export NP_STATE_DIR="$STATE/np"
 export JIVE_HOME_DIR="$CONFIG/jive-home"
 mkdir -p "$JIVE_HOME_DIR" "$NP_STATE_DIR" 2>/dev/null || true
+# Jive home (0.2.0): App Center runs HOME-less and Jive segvs on unset
+# HOME (strlen(NULL) in platform_get_home_dir — proven, exit 139 with
+# zero log output). SQUEEZEPLAY_HOME is the homedir Jive actually
+# honors (JIVE_HOME_DIR alone is ignored); HOME is set as a backstop.
+export HOME="${HOME:-$CONFIG}"
+export SQUEEZEPLAY_HOME="${SQUEEZEPLAY_HOME:-$JIVE_HOME_DIR}"
+log "env: HOME=$HOME SQUEEZEPLAY_HOME=$SQUEEZEPLAY_HOME"
+# Jive also dies silently when $home/userpath/ or its logconf.lua is
+# missing (proven by bisection: needs the dir + a parseable logconf).
+mkdir -p "$SQUEEZEPLAY_HOME/userpath/applets" "$SQUEEZEPLAY_HOME/userpath/settings" 2>/dev/null \
+	|| { log 'FATAL: cannot create Jive userpath'; exit 1; }
+if [ ! -f "$SQUEEZEPLAY_HOME/userpath/logconf.lua" ]; then
+	if [ -f "$ROOT/logconf.lua" ]; then
+		cp "$ROOT/logconf.lua" "$SQUEEZEPLAY_HOME/userpath/logconf.lua" 2>/dev/null \
+			&& log 'seeded userpath/logconf.lua' \
+			|| log 'WARN: logconf seed copy failed (Jive may not boot)'
+	else
+		log 'WARN: payload logconf.lua missing; Jive may not boot'
+	fi
+fi
 export LD_LIBRARY_PATH="$ROOT/lib-fbcon:$ROOT/jive/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+# SysV SHM shim for the SYSVIPC=n stock kernel: without it
+# decode_alsa_init fails and Jive has no audio (proven live).
+if [ -f "$ROOT/lib-compat/sysv_shim.so" ]; then
+	export LD_PRELOAD="$ROOT/lib-compat/sysv_shim.so${LD_PRELOAD:+:$LD_PRELOAD}"
+	log "env: LD_PRELOAD=$LD_PRELOAD"
+else
+	log 'WARN: lib-compat/sysv_shim.so missing; Jive audio will fail'
+fi
 export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-fbcon}"
 export SDL_FBDEV="${SDL_FBDEV:-/dev/fb0}"
 export SDL_AUDIODRIVER="${SDL_AUDIODRIVER:-alsa}"
-export USEALSA_DEVICE="${USEALSA_DEVICE:-hw:CARD=audiocodec,DEV=0}"
-export SQUEEZEPLAY_NOPLAYBACK="${SQUEEZEPLAY_NOPLAYBACK:-0}"
+# decode_alsa.c reads USEALSADEVICE (no underscore); USEALSA_DEVICE is
+# kept as the documented alias. plughw verified live, zero XRUNs.
+export USEALSA_DEVICE="${USEALSA_DEVICE:-plughw:CARD=audiocodec,DEV=0}"
+export USEALSADEVICE="${USEALSADEVICE:-$USEALSA_DEVICE}"
+# decode_alsa.c presence-tests SQUEEZEPLAY_NOPLAYBACK (getenv != NULL
+# disables the backend fork): export ONLY to disable, never a default
+# value (proven live: =0 shipped no backend in Go 0.2.2).
+if [ -n "${SQUEEZEPLAY_NOPLAYBACK:-}" ] && [ "$SQUEEZEPLAY_NOPLAYBACK" != '0' ]; then
+	export SQUEEZEPLAY_NOPLAYBACK=1
+	log 'playback disabled via SQUEEZEPLAY_NOPLAYBACK'
+else
+	unset SQUEEZEPLAY_NOPLAYBACK
+fi
+# Helpers (vt-reset, fb-preset) must run with SYSTEM libraries only:
+# jive/lib ships an ancient libexpat that breaks system python3
+# (proven live: XML_SetHashSalt lookup error killed both helpers).
+run_helper() { env -u LD_LIBRARY_PATH -u LD_PRELOAD "$@"; }
 log "env: SQUEEZEBOX_GO=1 JIVE=$JIVE_BIN"
-log "env: SDL video=$SDL_VIDEODRIVER fbdev=$SDL_FBDEV audio=$SDL_AUDIODRIVER/$USEALSA_DEVICE"
+log "env: SDL video=$SDL_VIDEODRIVER fbdev=$SDL_FBDEV audio=$SDL_AUDIODRIVER/$USEALSADEVICE"
 log "env: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
 
 JIVE_LOG="$STATE/logs/jive.log"
@@ -273,10 +369,13 @@ JIVE_LOG="$STATE/logs/jive.log"
 # next SDL_SetVideoMode in VT_WAITACTIVE (proven by kernel stack).
 # Best-effort: a failure here must never block the launch attempt.
 if [ -x "$ROOT/vt-reset.py" ]; then
-	vt_out="$("$ROOT/vt-reset.py" 2>&1)" || log "vt-reset rc=$? (continuing anyway)"
+	vt_out="$(run_helper "$ROOT/vt-reset.py" 2>&1)" || log "vt-reset rc=$? (continuing anyway)"
 	[ -n "$vt_out" ] && log "vt-reset output: $vt_out"
 fi
 log "starting jive (log: $JIVE_LOG)"
+# decode_alsa execs the jive_alsa backend via getcwd()/jive_alsa, so
+# Jive must start with cwd=jive/bin (App Center/system give cwd=/).
+cd "$ROOT/jive/bin" || { log "FATAL: cannot cd to $ROOT/jive/bin"; exit 1; }
 # Unbuffered stdio: jive's block-buffered C logger lines (incl. the
 # "Video mode:" line) are otherwise lost when it dies on SIGTERM, and
 # the SYSVIPC-less stock kernel spams unbuffered sem errors that drown
@@ -290,6 +389,16 @@ else
 	"$JIVE_BIN" ${SQUEEZEBOX_GO_JIVE_ARGS:-} ${1+"$@"} >>"$JIVE_LOG" 2>&1 &
 fi
 JIVE_PID="$!"
+# SDL's first FBIOPUT clobbers vinfo to 512x384x32 while painting a
+# 640x480x32 frame (proven live); the watcher re-asserts 640x480x32
+# the moment the clobber appears. Self-limiting; only reacts to the
+# clobber geometry, so a fast Jive exit is unaffected.
+if [ -x "$ROOT/fb-preset.py" ]; then
+	run_helper "$ROOT/fb-preset.py" --watch-clobber >>"$LOG" 2>&1 &
+	log 'fb-preset clobber watcher started'
+else
+	log 'WARN: fb-preset.py missing; 512x384 clobber will show'
+fi
 wait "$JIVE_PID"
 JIVE_RC="$?"
 JIVE_PID=''

@@ -111,7 +111,7 @@ function skin(self, s, reload, useDefaultSize)
                 screenHeight = 480
         end
 
-        Framework:setVideoMode(screenWidth, screenHeight, 16, jiveMain:isFullscreen())
+        Framework:setVideoMode(screenWidth, screenHeight, 32, jiveMain:isFullscreen())
 
 	--init lastInputType so selected item style is not shown on skin load
 	Framework.mostRecentInputType = "scroll"

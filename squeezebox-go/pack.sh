@@ -3,8 +3,9 @@
 #
 # Builds SqueezeboxGo-<ver>-stockos-rg35xxh.zip from:
 #   repo      this tree (entry script, lifecycle scripts, icon generator,
-#             BSP applet overlay) + ui/skins/RG35XXHBaseSkin overlay (read-only
-#             packaging use; Agent 4's tree is never modified)
+#             BSP applet overlay) + ui/skins/RG35XXH{Base,Landscape}Skin
+#             overlays (read-only packaging use; Agent 4's tree is never
+#             modified) + stock/compat sysv_shim.so + identity patch
 #   Jammy tarball  aarch64 squeezeplay build (glibc <= 2.35)
 #   fbcon SDL      stock-kernel framebuffer libSDL shadowing the dummy one
 #   icon      generated at pack time (git stays text-only)
@@ -83,10 +84,17 @@ fi
 case "$EPOCH" in ''|*[!0-9]*) printf 'pack.sh: bad epoch: %s\n' "$EPOCH" >&2; exit 2 ;; esac
 
 APPLET_SRC="$REPO/squeezeplay/configuration/rg35xxh_bsp/share/applets/SqueezeboxRG35XXH"
-SKIN_SRC="$REPO/ui/skins/RG35XXHBaseSkin"
-for d in "$APPLET_SRC" "$SKIN_SRC"; do
+SKIN_BASE="$REPO/ui/skins/RG35XXHBaseSkin"
+SKIN_LAND="$REPO/ui/skins/RG35XXHLandscapeSkin"
+SHIM_SO="$REPO/stock/compat/sysv_shim.so"
+IDENTITY_PATCH="$REPO/stock/bundle/rg35xxh-identity.patch"
+for d in "$APPLET_SRC" "$SKIN_BASE" "$SKIN_LAND"; do
 	[ -d "$d" ] || { printf 'pack.sh: missing overlay source: %s\n' "$d" >&2; exit 2; }
 done
+[ -f "$SHIM_SO" ] || { printf 'pack.sh: missing SysV shim: %s\n' "$SHIM_SO" >&2; exit 2; }
+[ -f "$IDENTITY_PATCH" ] || { printf 'pack.sh: missing identity patch: %s\n' "$IDENTITY_PATCH" >&2; exit 2; }
+[ -f "$HERE/runtime/fb-preset.py" ] || { printf 'pack.sh: missing runtime/fb-preset.py\n' >&2; exit 2; }
+[ -f "$HERE/runtime/logconf.lua" ] || { printf 'pack.sh: missing runtime/logconf.lua\n' >&2; exit 2; }
 
 if [ "$FIXTURE" = '1' ]; then
 	MODE='fixture'
@@ -113,7 +121,18 @@ printf 'pack.sh: mode=%s version=%s epoch=%s\n' "$MODE" "$VERSION" "$EPOCH"
 # --- payload tree ---------------------------------------------------------
 if [ "$FIXTURE" = '1' ]; then
 	mkdir -p "$PAY/jive/bin" "$PAY/jive/lib" "$PAY/jive/share/jive/applets"
-	printf '#!/bin/sh\necho "fixture jive (packaging test only)"\nexit 42\n' >"$PAY/jive/bin/jive"
+	# Fixture jive stub: asserts the boot env contract launch.sh must
+	# establish (regression: unset HOME segv, unseeded userpath death),
+	# then takes the clean exit-42 path. Real jive crashes without it.
+	{
+		printf '#!/bin/sh\n'
+		printf '[ -n "${HOME:-}" ] || { echo "stub: HOME unset" >&2; exit 99; }\n'
+		printf '[ -n "${SQUEEZEPLAY_HOME:-}" ] || { echo "stub: SQUEEZEPLAY_HOME unset" >&2; exit 99; }\n'
+		printf '[ -f "$SQUEEZEPLAY_HOME/userpath/logconf.lua" ] || { echo "stub: logconf not seeded" >&2; exit 99; }\n'
+		printf '[ -z "${SQUEEZEPLAY_NOPLAYBACK:-}" ] || { echo "stub: NOPLAYBACK set" >&2; exit 98; }\n'
+		printf 'echo "fixture jive (packaging test only)"\n'
+		printf 'exit 42\n'
+	} >"$PAY/jive/bin/jive"
 	chmod +x "$PAY/jive/bin/jive"
 	mkdir -p "$PAY/lib-fbcon"
 	printf 'fixture libSDL (packaging test only)\n' >"$PAY/lib-fbcon/libSDL-1.2.so.0"
@@ -126,13 +145,31 @@ fi
 # Repo overlays (read-only copies; source trees untouched).
 mkdir -p "$PAY/jive/share/jive/applets"
 cp -r "$APPLET_SRC" "$PAY/jive/share/jive/applets/SqueezeboxRG35XXH"
-cp -r "$SKIN_SRC" "$PAY/jive/share/jive/applets/RG35XXHBaseSkin"
+cp -r "$SKIN_BASE" "$PAY/jive/share/jive/applets/RG35XXHBaseSkin"
+cp -r "$SKIN_LAND" "$PAY/jive/share/jive/applets/RG35XXHLandscapeSkin"
 # Prune overlay junk that must never ship (editor backups, if any).
-find "$PAY/jive/share/jive/applets/SqueezeboxRG35XXH" "$PAY/jive/share/jive/applets/RG35XXHBaseSkin" \
+find "$PAY/jive/share/jive/applets/SqueezeboxRG35XXH" \
+	"$PAY/jive/share/jive/applets/RG35XXHBaseSkin" \
+	"$PAY/jive/share/jive/applets/RG35XXHLandscapeSkin" \
 	\( -name '*~' -o -name '.DS_Store' \) -delete 2>/dev/null || true
+# Device tree: apply the live-verified identity + skin-default patch.
+if [ "$FIXTURE" != '1' ]; then
+	command -v patch >/dev/null 2>&1 \
+		|| { printf 'pack.sh: patch(1) required for device build\n' >&2; exit 2; }
+	(cd "$PAY" && patch -p1 --forward -s <"$IDENTITY_PATCH") \
+		|| { printf 'pack.sh: identity patch failed to apply\n' >&2; exit 2; }
+	printf 'pack.sh: identity patch applied\n'
+fi
+# Compat + tools (real files in both modes).
+mkdir -p "$PAY/lib-compat"
+cp "$SHIM_SO" "$PAY/lib-compat/sysv_shim.so"
+mkdir -p "$PAY/input"
+cp "$REPO/stock/compat/evdev2jive-stock" "$PAY/input/evdev2jive-stock"
+cp "$REPO/ui/input/rg35xxh-stock.map" "$PAY/input/rg35xxh-stock.map"
 
 cp "$HERE/runtime/launch.sh" "$HERE/runtime/restore.sh" \
-	"$HERE/runtime/vt-reset.py" "$PAY/"
+	"$HERE/runtime/vt-reset.py" "$HERE/runtime/fb-preset.py" \
+	"$HERE/runtime/logconf.lua" "$PAY/"
 printf '%s\n' "$VERSION" >"$PAY/VERSION"
 mkdir -p "$PAY/config"
 {
@@ -142,18 +179,26 @@ mkdir -p "$PAY/config"
 	printf 'epoch: %s\n' "$EPOCH"
 	printf 'jammy_tarball_sha256: %s\n' "$JAMMY_SHA"
 	printf 'fbcon_libsha256: %s\n' "$FBCON_SHA"
+	printf 'identity_patch_sha256: %s\n' "$(sha256sum "$IDENTITY_PATCH" | cut -d' ' -f1)"
+	printf 'sysv_shim_sha256: %s\n' "$(sha256sum "$SHIM_SO" | cut -d' ' -f1)"
 } >"$PAY/MANIFEST"
 
 # Fixed modes for reproducibility (FAT transit ignores them, but the
 # ext4 extract + rebuild-twice comparison need them stable).
 find "$PAY" -type d -exec chmod 755 {} +
 find "$PAY" -type f -exec chmod 644 {} +
-chmod 755 "$PAY/launch.sh" "$PAY/restore.sh" "$PAY/vt-reset.py"
-[ -f "$PAY/jive/bin/jive" ] && chmod 755 "$PAY/jive/bin/jive"
+chmod 755 "$PAY/launch.sh" "$PAY/restore.sh" "$PAY/vt-reset.py" "$PAY/fb-preset.py"
+# bin/ holds executables (jive, jive_alsa, lua, ...): the blanket 644
+# above would break backend fork+exec (proven live: 644 jive_alsa).
+for b in "$PAY"/jive/bin/*; do
+	[ -f "$b" ] && chmod 755 "$b"
+done
+[ -f "$PAY/input/evdev2jive-stock" ] && chmod 755 "$PAY/input/evdev2jive-stock"
 
 # --- payload.tar.gz (ordered top level, sorted, fixed meta, gzip -n) ------
 (cd "$PAY" && tar --sort=name --mtime="@$EPOCH" --owner=0 --group=0 \
-	--numeric-owner -cf - MANIFEST VERSION config jive launch.sh lib-fbcon restore.sh vt-reset.py \
+	--numeric-owner -cf - MANIFEST VERSION config fb-preset.py input jive launch.sh \
+	lib-compat lib-fbcon logconf.lua restore.sh vt-reset.py \
 	| gzip -n >"$ZIPROOT/APPS/SqueezeboxGo/payload.tar.gz")
 
 # --- FAT part --------------------------------------------------------------

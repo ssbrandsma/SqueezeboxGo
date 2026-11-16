@@ -1,7 +1,10 @@
---- upstream: ralph-irving/squeezeplay@758bc11
+--- upstream: ralph-irving/squeezeplay@758bc110e16de4a61905e19d012a0ad25d97859b
+--- subject: RG35XXH platform identity (machine rg35xxh, applet target rg35xxh+baby fallback) + default skin RG35XXHLandscapeSkin
+--- verified: live on RG35XX H stock OS 2026-11-16 (jive 9.0.0 r541)
+--- apply: patch -p1 --forward < stock/bundle/rg35xxh-identity.patch (from payload root)
 
---- DesktopJiveMeta.lua.bak	2026-11-16 18:52:30.734791940 +0100
-+++ DesktopJiveMeta.lua	2026-11-16 18:50:47.830846188 +0100
+--- a/jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua
++++ b/jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua
 @@ -89,10 +89,17 @@
  	end
  
@@ -30,8 +33,8 @@
  
  	Framework:addActionListener("soft_reset", self, _softResetAction, true)
 
---- SetupAppletInstallerApplet.lua.bak	2026-11-16 18:52:31.278791677 +0100
-+++ SetupAppletInstallerApplet.lua	2026-11-16 18:45:39.786976793 +0100
+--- a/jive/share/jive/applets/SetupAppletInstaller/SetupAppletInstallerApplet.lua
++++ b/jive/share/jive/applets/SetupAppletInstaller/SetupAppletInstallerApplet.lua
 @@ -89,6 +89,7 @@
  	-- query all non Squeezenetwork servers (will try SN later if no useful response from these)
  	self.waitingfor = 0

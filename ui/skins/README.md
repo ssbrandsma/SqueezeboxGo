@@ -23,7 +23,9 @@ and are intentionally not carried over.
 Lua (`...Applet.lua`, audited line-by-line against the WP0 literal survey):
 
 - Renames applet ids/paths/skin key to `RG35XXH*` (code, strings, imgpath,
-  `registerSkin`); default video mode becomes 640x480 at 16 bpp.
+  `registerSkin`); default video mode becomes 640x480 at 32 bpp
+  (`--video-bpp`, was 16 until live testing proved the stock 16 bpp
+  scanout broken on 2026-11-16).
 - Doubles every decimal geometry literal (positions, sizes, paddings,
   borders, font sizes, line heights, artwork sizes: `320x320`→`640x640`,
   `143x143`→`286x286`).

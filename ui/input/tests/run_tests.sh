@@ -27,15 +27,17 @@ if "$TMP/evdev2jive" --dump-map "$HERE/../rg35xxh-stock.map" >/dev/null 2>&1; th
 else
     echo "FAIL stock-dump"; fail=$((fail+1))
 fi
-if "$TMP/evdev2jive" --test "$HERE/../rg35xxh-stock.map" "$HERE/stock-hat.script" >"$TMP/out" 2>"$TMP/err"; then
-    if cmp -s "$TMP/out" "$HERE/stock-hat.expected"; then
-        echo "PASS stock-hat"; pass=$((pass+1))
+for st in stock-hat stock-full; do
+if "$TMP/evdev2jive" --test "$HERE/../rg35xxh-stock.map" "$HERE/$st.script" >"$TMP/out" 2>"$TMP/err"; then
+    if cmp -s "$TMP/out" "$HERE/$st.expected"; then
+        echo "PASS $st"; pass=$((pass+1))
     else
-        echo "FAIL stock-hat (output differs)"; diff -u "$HERE/stock-hat.expected" "$TMP/out" | head -20; fail=$((fail+1))
+        echo "FAIL $st (output differs)"; diff -u "$HERE/$st.expected" "$TMP/out" | head -20; fail=$((fail+1))
     fi
 else
-    echo "FAIL stock-hat (exit $?)"; head -5 "$TMP/err"; fail=$((fail+1))
+    echo "FAIL $st (exit $?)"; head -5 "$TMP/err"; fail=$((fail+1))
 fi
+done
 # config-lint negatives: each must exit 2
 printf 'key BTN_A KEY_X hold\n' >"$TMP/bad1.map"
 printf 'key BTN_SOUTH KEY_X hold\nkey BTN_SOUTH KEY_Y hold\n' >"$TMP/bad2.map"

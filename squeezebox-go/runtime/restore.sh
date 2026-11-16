@@ -18,6 +18,11 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 set -u
 
+# System libraries only (same reason as launch.sh run_helper): this
+# script inherits Jive's loader env, whose ancient libexpat breaks
+# system tools. Unset before any external call.
+unset LD_LIBRARY_PATH LD_PRELOAD
+
 TAG='launcher'
 STATE_DIR="${SQUEEZEBOX_GO_STATE:-}"
 while [ $# -gt 0 ]; do
@@ -51,6 +56,19 @@ log() {
 }
 
 [ -n "$STATE_DIR" ] || { log WARN 'no state dir; nothing to restore from'; exit 0; }
+
+# --- console/VT ----------------------------------------------------------
+# os.exit(42) skips SDL_Quit, leaving KD_GRAPHICS + a possible switch
+# lock behind; reset first so the frontend restart cannot wedge in
+# VT_WAITACTIVE (proven by kernel stack).
+ROOT_HERE="$(cd "$(dirname "$0")" && pwd)"
+if [ -x "$ROOT_HERE/vt-reset.py" ]; then
+	"$ROOT_HERE/vt-reset.py" >>"$LOG" 2>&1 \
+		&& log INFO 'VT reset (vt-reset.py)' \
+		|| log WARN 'vt-reset.py failed (continuing anyway)'
+else
+	log WARN 'vt-reset.py missing; VT state unrestored'
+fi
 
 # --- mixer ---------------------------------------------------------------
 if [ -f "$STATE_DIR/mixer.pre" ]; then

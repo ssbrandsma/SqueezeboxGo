@@ -88,7 +88,7 @@ function registerApplet(meta)
 	-- audio playback defaults
 	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
 
-	jiveMain:setDefaultSkin("RG35XXHBaseSkin")
+	jiveMain:setDefaultSkin("RG35XXHLandscapeSkin")
 
 	-- services (subset of fab4's, matching implemented hooks)
 	meta:registerService("getBrightness")

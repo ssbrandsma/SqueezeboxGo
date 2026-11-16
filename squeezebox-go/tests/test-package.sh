@@ -22,6 +22,7 @@ else
 	REPO="$(cd "$GO_ROOT/../.." && pwd)"
 fi
 APPLET_DIR="$REPO/squeezeplay/configuration/rg35xxh_bsp/share/applets/SqueezeboxRG35XXH"
+PKGVER="$(cat "$GO_ROOT/VERSION" 2>/dev/null | tr -d '[:space:]')"
 
 JSON=0
 [ "${1:-}" = '--json' ] && JSON=1
@@ -40,7 +41,7 @@ need() { command -v "$1" >/dev/null 2>&1; }
 # ------------------------------------------------- 1. files present
 for f in pack.sh VERSION README.md INSTALL.md UNINSTALL.md \
 		apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh \
-		runtime/vt-reset.py \
+		runtime/vt-reset.py runtime/fb-preset.py \
 		icon/make-icon.py tests/test-package.sh tests/test-jive-action.lua; do
 	if [ -f "$GO_ROOT/$f" ]; then ok "file present: $f"; else fail "file missing: $f"; fi
 done
@@ -53,12 +54,64 @@ grep -q 'GO_RETURN_TO_ANBERNIC' "$APPLET_DIR/strings.txt" 2>/dev/null \
 grep -q 'SQUEEZEBOX_GO' "$APPLET_DIR/SqueezeboxRG35XXHMeta.lua" 2>/dev/null \
 	&& ok 'Meta gates on SQUEEZEBOX_GO' \
 	|| fail 'Meta lacks SQUEEZEBOX_GO gate'
+grep -q 'setDefaultSkin("RG35XXHLandscapeSkin")' "$APPLET_DIR/SqueezeboxRG35XXHMeta.lua" 2>/dev/null \
+	&& ok 'BSP default skin is Landscape (fullscreen)' \
+	|| fail 'BSP default skin is not Landscape (Base falls back to upstream QVGA)'
 grep -q 'EXIT_RETURN_TO_FRONTEND = 42' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null \
 	&& ok 'Applet exit code is 42' \
 	|| fail 'Applet lacks EXIT_RETURN_TO_FRONTEND = 42'
 grep -q 'EXIT_FRONTEND=42' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 	&& ok 'launch.sh exit code matches (42)' \
 	|| fail 'launch.sh/Applet exit code mismatch'
+# boot env contract (0.2.0: App Center runs HOME-less; Jive segvs on
+# unset HOME and dies silently without a seeded userpath/logconf).
+for marker in 'JIVE_HOME_DIR' 'SQUEEZEPLAY_HOME' 'userpath' \
+		'logconf.lua' 'USEALSADEVICE' 'sysv_shim' 'vt-reset' 'fb-preset'; do
+	grep -q "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+		&& ok "launch.sh wires $marker" \
+		|| fail "launch.sh lacks $marker"
+done
+# SQUEEZEPLAY_NOPLAYBACK is presence-tested by decode_alsa.c: exporting
+# it (even =0) disables the backend fork entirely (proven live: Go 0.2.2
+# ran with no jive_alsa). It must default to UNSET.
+if grep -q 'SQUEEZEPLAY_NOPLAYBACK:-0' "$GO_ROOT/runtime/launch.sh" 2>/dev/null; then
+	fail 'launch.sh exports NOPLAYBACK=0 by default (disables backend)'
+else
+	ok 'launch.sh does not default NOPLAYBACK on'
+fi
+grep -qF 'unset SQUEEZEPLAY_NOPLAYBACK' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+	&& ok 'launch.sh unsets NOPLAYBACK by default' \
+	|| fail 'launch.sh lacks NOPLAYBACK unset'
+# helpers must run with SYSTEM libs: jive/lib's ancient libexpat breaks
+# system python3 (proven live: XML_SetHashSalt lookup error killed both
+# python helpers). Fixed strings match the run_helper() implementation.
+for marker in 'run_helper() {' 'run_helper "$ROOT/vt-reset.py"' \
+		'run_helper "$ROOT/fb-preset.py"'; do
+	grep -qF "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+		&& ok "launch.sh helper sanitize: $marker" \
+		|| fail "launch.sh helper not sanitized: $marker"
+done
+# input mapper lifecycle (0.2.2: physical controls dead without it).
+for marker in 'MAPPER_BIN="$ROOT/input/evdev2jive-stock"' \
+		'MAPPER_MAP="$ROOT/input/rg35xxh-stock.map"' \
+		'start_mapper' 'stop_mapper' 'kill_mapper_tree'; do
+	grep -qF "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+		&& ok "launch.sh mapper: $marker" \
+		|| fail "launch.sh mapper lacks: $marker"
+done
+# mapper kills must match by /proc exe link: -x never matches the
+# 17-char comm, and -f argv match suicides admin shells mentioning it.
+if grep -q 'pgrep .*evdev2jive-stock\|pkill .*evdev2jive-stock' "$GO_ROOT/runtime/launch.sh" 2>/dev/null; then
+	fail 'launch.sh matches mapper by name (use kill_mapper_tree exe scan)'
+else
+	ok 'launch.sh kills mapper by exe link only'
+fi
+grep -q 'vt-reset' "$GO_ROOT/runtime/restore.sh" 2>/dev/null \
+	&& ok 'restore.sh resets VT' \
+	|| fail 'restore.sh lacks vt-reset'
+grep -qF 'unset LD_LIBRARY_PATH LD_PRELOAD' "$GO_ROOT/runtime/restore.sh" 2>/dev/null \
+	&& ok 'restore.sh sanitizes loader env' \
+	|| fail 'restore.sh lacks loader sanitize'
 
 # ------------------------------------------------- 2. icon
 if need python3; then
@@ -184,7 +237,7 @@ if need python3 && need tar && need gzip && need sha256sum && need unzip; then
 	else
 		fail "fixture pack.sh: $(tail -2 "$TMP/pack1.out" | tr '\n' ';')"
 	fi
-	FZIP="$ZIP1/SqueezeboxGo-0.1.0-fixture.zip"
+	FZIP="$ZIP1/SqueezeboxGo-$PKGVER-fixture.zip"
 	if [ -f "$FZIP" ]; then
 		WANT='APPS/Imgs/SqueezeboxGo.png
 APPS/SqueezeboxGo.sh
@@ -232,11 +285,13 @@ APPS/SqueezeboxGo/payload.tar.gz'
 	else
 		skip 'kernel UAPI headers absent; ioctl constants unchecked'
 	fi
-	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py jive/bin/jive \
-				lib-fbcon/libSDL-1.2.so.0 \
+	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py fb-preset.py jive/bin/jive \
+				lib-fbcon/libSDL-1.2.so.0 lib-compat/sysv_shim.so \
+				input/evdev2jive-stock input/rg35xxh-stock.map \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \
-				jive/share/jive/applets/RG35XXHBaseSkin/RG35XXHBaseSkinMeta.lua; do
+				jive/share/jive/applets/RG35XXHBaseSkin/RG35XXHBaseSkinMeta.lua \
+				jive/share/jive/applets/RG35XXHLandscapeSkin/RG35XXHLandscapeSkinMeta.lua; do
 			if [ -e "$TMP/pay/$f" ]; then ok "payload has $f"; else fail "payload lacks $f"; fi
 		done
 		grep -q 'returnToFrontend' "$TMP/pay/jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua" \
@@ -247,7 +302,7 @@ APPS/SqueezeboxGo/payload.tar.gz'
 			|| fail 'ZIP VERSION mismatch'
 		# reproducibility: second build, byte-identical
 		if bash "$GO_ROOT/pack.sh" --fixture --output "$ZIP2" --epoch 1767225600 >"$TMP/pack2.out" 2>&1 \
-			&& cmp -s "$FZIP" "$ZIP2/SqueezeboxGo-0.1.0-fixture.zip"; then
+			&& cmp -s "$FZIP" "$ZIP2/SqueezeboxGo-$PKGVER-fixture.zip"; then
 			ok 'fixture ZIP reproducible (rebuild-twice identical)'
 		else
 			fail 'fixture ZIP NOT reproducible'
@@ -265,10 +320,13 @@ FBCON="${FBCON_LIB:-/tmp/sdl-fbcon/out/lib/libSDL-1.2.so.0.11.4}"
 if [ -f "$JAMMY" ] && [ -f "$FBCON" ] && need python3; then
 	if bash "$GO_ROOT/pack.sh" --output "$TMP/zipdev" --epoch 1767225600 >"$TMP/packdev.out" 2>&1; then
 		ok 'device pack.sh build exit 0'
-		DZIP="$TMP/zipdev/SqueezeboxGo-0.1.0-stockos-rg35xxh.zip"
+		DZIP="$TMP/zipdev/SqueezeboxGo-$PKGVER-stockos-rg35xxh.zip"
 		mkdir -p "$TMP/unzdev" && (cd "$TMP/unzdev" && unzip -q -o "$DZIP" 'APPS/SqueezeboxGo/payload.tar.gz')
 		mkdir -p "$TMP/paydev" && tar -xzf "$TMP/unzdev/APPS/SqueezeboxGo/payload.tar.gz" -C "$TMP/paydev" \
-			jive/bin/jive lib-fbcon/libSDL-1.2.so.0 2>/dev/null
+			jive/bin/jive jive/bin/jive_alsa jive/bin/lua lib-fbcon/libSDL-1.2.so.0 lib-compat/sysv_shim.so \
+			jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua \
+			jive/share/jive/applets/SetupAppletInstaller/SetupAppletInstallerApplet.lua \
+			jive/share/jive/applets/RG35XXHLandscapeSkin/RG35XXHLandscapeSkinApplet.lua 2>/dev/null
 		if need file; then
 			file "$TMP/paydev/jive/bin/jive" | grep -q 'ARM aarch64' \
 				&& ok 'device payload jive is aarch64' \
@@ -276,6 +334,26 @@ if [ -f "$JAMMY" ] && [ -f "$FBCON" ] && need python3; then
 		else
 			skip 'file(1) missing for ELF check'
 		fi
+		[ -f "$TMP/paydev/lib-compat/sysv_shim.so" ] \
+			&& ok 'device payload ships sysv_shim.so' \
+			|| fail 'device payload lacks sysv_shim.so'
+		for b in jive jive_alsa lua; do
+			[ -x "$TMP/paydev/jive/bin/$b" ] \
+				&& ok "device payload jive/bin/$b executable" \
+				|| fail "device payload jive/bin/$b not executable"
+		done
+		for marker in 'machine = "rg35xxh"' 'setDeviceType("rg35xxh"' \
+				'RG35XXHLandscapeSkin'; do
+			grep -qF "$marker" "$TMP/paydev/jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua" 2>/dev/null \
+				&& ok "device meta carries $marker" \
+				|| fail "device meta lacks $marker"
+		done
+		grep -q 'target = target or "rg35xxh"' "$TMP/paydev/jive/share/jive/applets/SetupAppletInstaller/SetupAppletInstallerApplet.lua" 2>/dev/null \
+			&& ok 'device query targets rg35xxh' \
+			|| fail 'device query lacks rg35xxh target'
+		grep -q 'setVideoMode(screenWidth, screenHeight, 32' "$TMP/paydev/jive/share/jive/applets/RG35XXHLandscapeSkin/RG35XXHLandscapeSkinApplet.lua" 2>/dev/null \
+			&& ok 'device skin runs 32bpp' \
+			|| fail 'device skin lacks 32bpp mode'
 	else
 		fail "device pack.sh: $(tail -2 "$TMP/packdev.out" | tr '\n' ';')"
 	fi
@@ -288,8 +366,8 @@ fi
 # hermetically: no cgroup escape, no frontend stop, RAM state cleaned
 # afterwards. (systemd/alsa/fb drill only warns — see E2E in
 # docs/test-results/go-app.md for the observed full-lifecycle runs.)
-if [ -f "$ZIP1/SqueezeboxGo-0.1.0-fixture.zip" ]; then
-	mkdir -p "$TMP/roms" && (cd "$TMP/roms" && unzip -q -o "$ZIP1/SqueezeboxGo-0.1.0-fixture.zip" 'APPS/*')
+if [ -f "$ZIP1/SqueezeboxGo-$PKGVER-fixture.zip" ]; then
+	mkdir -p "$TMP/roms" && (cd "$TMP/roms" && unzip -q -o "$ZIP1/SqueezeboxGo-$PKGVER-fixture.zip" 'APPS/*')
 	DRILL_ENV='SQUEEZEBOX_GO_NO_ESCAPE=1 SQUEEZEBOX_GO_NO_FRONTEND_STOP=1'
 	# fake-root install (entry guard requires a squeezebox-go leaf)
 	# shellcheck disable=SC2086
@@ -308,6 +386,42 @@ if [ -f "$ZIP1/SqueezeboxGo-0.1.0-fixture.zip" ]; then
 	grep -q 'skipping install' "$TMP/entry2.out" \
 		&& ok 'entry re-run skips install (idempotent)' \
 		|| fail "entry idempotence: $(cat "$TMP/entry2.out" | tr '\n' ';')"
+	# the stub asserts the boot env contract (HOME, SQUEEZEPLAY_HOME,
+	# seeded logconf) and exits 42; the launch log must show the clean
+	# Return-to-Anbernic path, not a crash/quit.
+	DRILL_LOG="$(ls -t /dev/shm/squeezebox-go/logs/launch-*.log /tmp/squeezebox-go/logs/launch-*.log 2>/dev/null | head -n 1)"
+	if [ -n "$DRILL_LOG" ] && grep -q 'Return to Anbernic (clean)' "$DRILL_LOG"; then
+		ok 'drill jive stub saw boot env, clean exit-42 path'
+	else
+		fail "drill clean-path: ${DRILL_LOG:-no launch log}"
+	fi
+	# App Center runs HOME-less: same drill with HOME unset must also
+	# take the clean path (regression: unset HOME segv).
+	# shellcheck disable=SC2086
+	env -u HOME $DRILL_ENV SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go" \
+		sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entry4.out" 2>&1 || true
+	DRILL_LOG2="$(ls -t /dev/shm/squeezebox-go/logs/launch-*.log /tmp/squeezebox-go/logs/launch-*.log 2>/dev/null | head -n 1)"
+	if [ -n "$DRILL_LOG2" ] && grep -q 'Return to Anbernic (clean)' "$DRILL_LOG2"; then
+		ok 'drill clean path with HOME unset'
+	else
+		fail "drill HOME-less: ${DRILL_LOG2:-no launch log}"
+	fi
+	# poisoned loader path (bad libexpat first, mirroring jive/lib on
+	# device): python helpers must still run sanitized — no loader
+	# errors in the launch log, and the vt prelude must execute.
+	mkdir -p "$TMP/poison" && printf 'poison' >"$TMP/poison/libexpat.so.1"
+	# shellcheck disable=SC2086
+	env $DRILL_ENV LD_LIBRARY_PATH="$TMP/poison${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+		SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go" \
+		sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entry5.out" 2>&1 || true
+	DRILL_LOG3="$(ls -t /dev/shm/squeezebox-go/logs/launch-*.log /tmp/squeezebox-go/logs/launch-*.log 2>/dev/null | head -n 1)"
+	if [ -n "$DRILL_LOG3" ] && grep -q 'error while loading shared libraries\|symbol lookup error' "$DRILL_LOG3"; then
+		fail 'drill poisoned path: helper hit loader error'
+	elif [ -n "$DRILL_LOG3" ] && grep -q 'vt-reset output\|vt-reset rc=' "$DRILL_LOG3"; then
+		ok 'drill helpers run sanitized under poisoned path'
+	else
+		fail "drill poisoned path: ${DRILL_LOG3:-no launch log}"
+	fi
 	# corrupt payload must be refused (fresh root forces reinstall path)
 	printf 'corrupt' >"$TMP/roms/APPS/SqueezeboxGo/payload.tar.gz"
 	rm -rf "$TMP/squeezebox-go2"
