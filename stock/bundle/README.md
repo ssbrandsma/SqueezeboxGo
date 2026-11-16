@@ -20,6 +20,7 @@ bundle/                  # this dir; install.sh copies it verbatim
 ├── restore.sh           # restart frontend and/or delete the bundle
 ├── lib-safety.sh        # shared plan/confirm/refusal helpers (sourced, not run)
 ├── jive-env.sh          # SDL/ALSA/Jive knobs (edit the INSTALLED copy)
+├── color-fill.py        # LIVE-COLOR-TEST: R/G/B fb0 fills + self-restore (human-watch session)
 ├── frontend-unit.txt.example  # template: which unit run-jive.sh may stop
 └── state/               # created at runtime (not in git)
     ├── stopped-unit     # unit run-jive.sh stopped (restore.sh reads this)

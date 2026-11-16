@@ -1,0 +1,26 @@
+Playing WAVE '/tmp/tone3s.wav' : Signed 16 bit Little Endian, Rate 44100 Hz, Stereo
+Plug PCM: Hardware PCM card 0 'audiocodec' device 0 subdevice 0
+Its setup is:
+  stream       : PLAYBACK
+  access       : RW_INTERLEAVED
+  format       : S16_LE
+  subformat    : STD
+  channels     : 2
+  rate         : 44100
+  exact rate   : 44100 (44100/1)
+  msbits       : 16
+  buffer_size  : 20480
+  period_size  : 4096
+  period_time  : 92879
+  tstamp_mode  : NONE
+  tstamp_type  : MONOTONIC
+  period_step  : 1
+  avail_min    : 4096
+  period_event : 0
+  start_threshold  : 20480
+  stop_threshold   : 20480
+  silence_threshold: 0
+  silence_size : 0
+  boundary     : 5764607523034234880
+  appl_ptr     : 0
+  hw_ptr       : 0

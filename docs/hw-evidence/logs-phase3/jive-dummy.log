@@ -1,0 +1,14 @@
+[0;33m20261116 12:52:53.616 INFO   squeezeplay - JiveMain.lua:266 SqueezePlay version 9.0.0 r541[0m
+[0;33m20261116 12:52:53.616 INFO   squeezeplay.ui.draw - jiveL_initSDL:239 initSDL[0m
+[0;33m20261116 12:52:53.617 INFO   squeezeplay.ui.draw - jiveL_initSDL:252 0,0 8 bits/pixel 1 bytes/pixel [R<<0 G<<0 B<<0][0m
+[0;33m20261116 12:52:53.617 INFO   squeezeplay.ui.draw - jiveL_initSDL:253 Hardware acceleration is not available[0m
+[0;33m20261116 12:52:53.617 INFO   squeezeplay.ui.draw - jiveL_initSDL:254 Window Manager is not available[0m
+[0;33m20261116 12:52:53.617 INFO   squeezeplay.ui.draw - jiveL_initSDL:257 Using 22 frames per second
+[0m
+[0;31m20261116 12:52:53.617 ERROR  squeezeplay.ui.draw - jive_tile_load_image:455 Can't find image jive/splash0x0.png
+[0m
+[0;33m20261116 12:52:53.620 INFO   squeezeplay.ui.draw - jive_surface_set_video_mode:860 Window Manager is not available[0m
+[0;33m20261116 12:52:53.620 INFO   squeezeplay.ui.draw - jive_surface_set_video_mode:861 Video Setup for fullscreen[0m
+[0;31m20261116 12:52:53.620 ERROR  squeezeplay.ui.draw - jive_surface_set_video_mode:901 SDL_SetVideoMode(0,0,8): Invalid width or height[0m
+[0;31m20261116 12:52:53.620 ERROR  squeezeplay.ui.draw - jiveL_initSDL:322 Video mode not supported: 0x0
+[0m
