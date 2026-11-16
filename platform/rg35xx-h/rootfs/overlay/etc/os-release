@@ -1,5 +1,5 @@
 NAME="Squeezebox RG35XX H"
 ID=squeezebox-rg35xxh
-VERSION_ID=0.2.0-exp2
-PRETTY_NAME="Squeezebox RG35XX H (0.2.0-exp2)"
+VERSION_ID=0.3.0-exp3
+PRETTY_NAME="Squeezebox RG35XX H (0.3.0-exp3)"
 HOME_URL="https://github.com/ralph-irving/squeezeplay"

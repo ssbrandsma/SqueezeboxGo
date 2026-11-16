@@ -92,6 +92,11 @@ if [ "$MODE" = "container" ]; then
 fi
 
 [ -n "$STAGING" ] || die "need --staging DIR"
+# Absolutize: the provenance step redirects into $PROV from inside a
+# subshell that cd's elsewhere, and debootstrap demands an absolute
+# --cache-dir; relative paths break both (seen in the 0.3.0 rebuild).
+STAGING="$(realpath -m "$STAGING")"
+[ -n "$CACHE" ] && CACHE="$(realpath -m "$CACHE")"
 [ -f "$INCLUDE" ] || die "missing include list $INCLUDE"
 command -v fakeroot >/dev/null 2>&1 || die "need fakeroot"
 command -v dpkg-deb >/dev/null 2>&1 || die "need dpkg-deb"
