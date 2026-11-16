@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, hw Phase 3 merged; human-gated proofs).
+Last updated: 2026-11-16 (Agent 0, SqueezeboxGo track launched).
 
 ## Completed
 
@@ -205,7 +205,23 @@ Last updated: 2026-11-16 (Agent 0, hw Phase 3 merged; human-gated proofs).
   back to true stock. `stock/bundle/color-fill.py` ready, NOT run.
 - Suites: bundle 45/45, selftest 27/27.
 
-## Current work (human-gated proofs)
+## Current work (SqueezeboxGo native app)
+
+- NEW distribution target (StockOS App Center), mainline firmware continues
+  in parallel. Mechanism verified from references: `Roms/APPS/<Name>.sh` +
+  `Roms/APPS/Imgs/<Name>.png` (**160x120 RGBA**) + optional payload dir;
+  TF slot selectable; scripts run as root; stdout lost (log to files);
+  Roms is VFAT (no symlinks/perms) → runtime lives on ext4, APPS entry
+  script is the launcher. Device is source of truth for mount paths.
+- Workflow `SqueezeboxGo App Build` (2 agents): GO-HW (device recon +
+  install + lifecycle test, owns `stock/` + evidence) and GO-APP (host:
+  icon, Jive Return-to-Anbernic action gated by `SQUEEZEBOX_GO=1`,
+  packaging, docs; owns `squeezebox-go/` + BSP applet).
+- Milestone: SqueezeboxGo in App Center → native Jive → Return to
+  Anbernic, no reboot, games/saves intact. Human-gated: icon/menu
+  visibility, button nav, audio ears, game-after-exit check.
+
+## Prior state (human-gated proofs)
 
 - SSH `rg35xxh` (muse, key auth) VERIFIED; kernel 4.9.170 aarch64.
   **sudo/su/pkexec all lost setuid** — no privilege path from SSH.
