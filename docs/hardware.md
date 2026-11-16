@@ -1,53 +1,82 @@
 # Hardware (RG35XX H, H700)
 
-Status levels: **identified** (seen on board / datasheet), **in-DTS**
-(present in mainline device tree), **HW-gated** (needs device probe).
-Distinguish SoC capability vs driver vs firmware vs hardware-verified
-in all claims.
+Status levels: **verified** (observed on device via UART root shell),
+**identified** (seen on board / datasheet), **in-DTS** (mainline device
+tree), **HW-gated** (still needs a probe). Distinguish SoC capability vs
+driver vs firmware vs hardware-verified in all claims.
 
-## Identified unit (user report 2026-11-16, PCB markings)
+## Identified unit (PCB markings + verified boot)
 
 - PCB revision: **RG35XX H V4.0**, date `2024-01-08`.
-- SoC: **Allwinner H700** (H616 class; U-Boot `MACH_SUN50I_H616` + ATF BL31).
-- PMIC: **AXP717** (matches U-Boot `CONFIG_AXP717_POWER` + kernel AXP717 nodes).
-- DRAM: Samsung `SEC 306 / K4F8E30 / 4HBMGCJ` → part
-  **K4F8E304HB-MGCJ**: **8 Gb LPDDR4 SDRAM** (not DDR3, not desktop DDR4,
-  not LPDDR4X), 256M x 32, 200FBGA, **1.1 V**, rated to 3200–3733 MT/s
-  (Samsung datasheet Rev 1.0 + distributor specs corroborated 2026-11-16).
-  Single die = **1024 MiB** total, matching the `~1 GB` assumption.
-- Our firmware runs this die at **672 MHz clock (1344 MT/s)** per the
-  pinned U-Boot defconfig — conservative vs the 3200+ rating.
+- SoC: **Allwinner H700** (H616 class), 4x Cortex-A53, AArch64 — verified
+  via booted OS.
+- DRAM: Samsung `SEC 306 / K4F8E30 / 4HBMGCJ` → **K4F8E304HB-MGCJ**: 8 Gb
+  **LPDDR4** SDRAM, 256M x 32, 1.1 V, rated 3200–3733 MT/s. **Verified
+  running at 672 MHz, 32-bit, single rank, 1 GiB** (stock boot).
+  Our SPL programs the same 672 MHz clock.
+- PMIC: chip marked **AXP717**; vendor bootloader/drivers identify it as
+  **AXP2202** (naming alias — same silicon generation). I2C bus 5,
+  address 0x34. Battery healthy: 84%, 3.99 V at inventory time.
+- Consequence: V4.0 takes the **ddr4 (LPDDR4) image**. No DDR3 unit sighted.
 
-Consequence: V4.0 units take the **ddr4 (LPDDR4) image**. The `ddr3`
-variant is retained for other board revisions *if they exist* — no DDR3
-unit has been sighted; its TPR tuning is unvalidated (see
-[bootloader DRAM verification](test-results/bootloader-dram-verification.md)).
+## Verified stock environment (root shell over UART)
 
-## Board (in-DTS + prior survey)
+- OS: **Ubuntu 22.04 LTS Jammy ARM64** (!). Kernel: vendor **4.9.170**.
+- UART: ttyS0, 115200 8N1. Four-pin header next to speaker + microSD slot.
+- DT model `sun50iw9`, compatible `allwinner,h616` + `arm,sun50iw9p1`
+  (BSP sun50iw9 = mainline H616/H700 class).
+- Wi-Fi module `8821cs` (vendor out-of-tree; ours: in-tree RTW88_8821CS).
+- GPU module `mali_kbase`; BT module `rtl_btlpm`.
+- Storage: stock GPT, first partition at sector 73728 (36 MiB):
+  1. Roms 2 GiB VFAT; 2. boot-resource 32 MiB VFAT; 3. env 16 MiB;
+  4. boot 64 MiB; 5. rootfs 7 GiB ext4 (`root=/dev/mmcblk0p5`, `init=/init`);
+  6. appfs 4 GiB ext4 @ /mnt/vendor; 7. UDISK ~1.3 GiB ext4 @ /mnt/data.
+- Stock bootloader uses an **Android-format boot image** (separate chain
+  from our SPL→FIT→boot.scr; no conflict — different SD cards).
+- **Never overwrite the working stock SD.** All our images go on a
+  SECOND card until explicitly authorized otherwise.
 
-- 3.5" IPS 640x480 4:3, no touch. Panel: `fog_fj035fhd05_v1`-class 640x480
-  RGB, PWM ch0 backlight (muOS sunxi.dts timing reference; mainline DTS
-  has no panel nodes — display is our OOT package).
-- Controls: D-pad, ABXY, Start/Select, L1/R1/L2/R2, 2 clickable sticks
-  (mainline: 4ch adc-joystick via gpio-mux+gpadc + gpio-keys).
-- Audio: internal sun4i-codec LINEOUT + hp-detect; speakers + 3.5 mm jack.
-- Net: RTL8821CS SDIO Wi-Fi (mmc1, PG15-19 pwrseq) + BT (uart1).
-  Driver: RTW88_8821CS; firmware: `firmware-realtek` in image.
-- Power: AXP717 (battery/ADC); USB-C charging + OTG/host; 2nd USB;
-  dual microSD.
-- GPU: Mali-G31 (Panfrost kernel driver on; Mesa userspace deferred).
+## Verified audio (ALSA)
 
-## UART debug (user-reported, pinout TBD)
+- Cards: 0 `audiocodec`, 1 `ahubdam`, 2 `ahubhdmi`.
+- Playback: `hw:CARD=audiocodec,DEV=0`, `plughw:...`, `hw:CARD=ahubhdmi`,
+  `playback_hp`, `playback_hdmi`, `bluealsa`.
+- Mixers: LINEOUT, OutputL/R Mixer DACL/DACR, SPK, digital volume,
+  lineout volume, tx hub mode.
+- **The internal PCM was occupied during inventory — identify the audio
+  owner (`fuser -v /dev/snd/*`) before any exclusive playback attempt.**
 
-- Four-pin UART debug connector next to the speaker and microSD slot.
-- Pinout and voltage level NOT yet identified — verify (continuity to
-  SoC UART TX/RX/GND, 3.3 V TTL expected) before connecting; never feed
-  5 V or RS-232 levels. Reference (unverified for V4.0):
-  steward-fu.github.io RG35XX H UART page.
-- Plan: capture a **known-good boot log on stock firmware first**, then
-  the same capture on our image. Checklist: boot0/BROM banner, DRAM
-  size + type print, PMU/rail lines, partition/boot-device lines, kernel
-  version + cmdline, login prompt. Diffs isolate our bugs from board facts.
+## Verified graphics (stock kernel)
+
+- `/dev/fb0` exists; `/dev/dri` does NOT. Framebuffer virtual_size
+  1280x1024 vs physical LCD 640x480 (scaling/orientation TBD — probe
+  `fbset`, vinfo stride/pixelformat before assuming).
+- Mali via `mali_kbase` kernel module; vendor stack is legacy fb.
+- **Our SDL2/KMSDRM stack cannot be assumed to work on the 4.9 kernel.**
+  Stock track uses SDL1.2 fbcon or vendor SDL libs (under investigation).
+
+## Verified input (discover by NAME, never hardcode eventN)
+
+- event0 `axp2202-pek` (power button), event1 `ANBERNIC-keys` (GPIO keys,
+  joystick, analog), event2 `dierct-keys-polled` (sic — vendor typo).
+- Numbers can shift: match `/dev/input/by-id/*` or `by-path/*`, then read
+  actual evdev codes before finalizing any map.
+
+## Verified PMIC runtime (read-only; do NOT retune without evidence)
+
+| Rail | Stock runtime | Our SPL setup | Note |
+|---|---|---|---|
+| DCDC1 | 1160 mV en | — (not touched) | leave alone |
+| DCDC2 | 940 mV en | `AXP_DCDC2_VOLT=940` | **exact match** |
+| DCDC3 | 1100 mV en | `AXP_DCDC3_VOLT=1100` | **exact match, LPDDR4 VDD2/VDDQ** |
+| DCDC4 | 1000 mV dis | — | leave alone |
+| ALDO1/3/4, BLDO2 | 1800 mV en | kernel regulators (mainline DTS) | compare, don't assume |
+| CLDO1/3/4 | 3300 mV en | kernel regulators (mainline DTS) | compare, don't assume |
+| CPUSLDO | 900 mV en | kernel (mainline DTS) | compare, don't assume |
+
+Runtime voltages ≠ boot sequencing requirements. Our SPL order (rails
+before DRAM training) is verified in source; rail→net mapping still
+wants the stock boot0 PMU print.
 
 ## LEDs (boot progress, both green, active-high)
 
@@ -71,6 +100,12 @@ Implementation: SPL (defconfig) → `boot.cmd` (`gpio set 267`, needs
 `CONFIG_CMD_GPIO` from `uboot-rg35xx-h-common-fragment.conf`) → DT
 `linux,default-trigger = "heartbeat"` (patch 0006) → `services/led.sh`
 stages (`trigger=timer`, needs `CONFIG_LEDS_TRIGGER_TIMER=y`). Kernel
-names: `green:power`, `green:status` under `/sys/class/leds/`.
+names: `green:power`, `green:status` under `/sys/class/leds`.
 Note: 0.2.0-exp2 predates this scheme (power LED only, no heartbeat —
 an 0.2.0 unit that boots fully shows power on + status off).
+
+## UART plan (access WORKS)
+
+Known-good stock boot log first (BROM/boot0 banner, DRAM print, PMU
+lines, partitions, kernel version/cmdline), then the same capture on our
+image; diff them. Save logs next to results (`boot-<variant>-<date>.txt`).
