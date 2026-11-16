@@ -110,6 +110,7 @@ static const struct code_name key_names[] = {
     CN(KEY_REFRESH), CN(KEY_FAVORITES), CN(KEY_SEARCH),
     /* gamepad / gpio-keys codes (BTN_* aliases where they exist) */
     CN(BTN_SOUTH), CN(BTN_EAST), CN(BTN_NORTH), CN(BTN_WEST),
+    CN(BTN_C), CN(BTN_Z), /* stock ANBERNIC-keys face extras */
     CN(BTN_TL), CN(BTN_TR), CN(BTN_TL2), CN(BTN_TR2),
     CN(BTN_SELECT), CN(BTN_START), CN(BTN_MODE),
     CN(BTN_THUMBL), CN(BTN_THUMBR),
@@ -286,8 +287,11 @@ static void parse_axis(struct cfg *c, char *args, int line)
     }
     if (!(have_c && have_p && have_r && have_n && have_s))
         die(line, "axis needs center/press/release/neg/pos");
-    if (m->release >= m->press || m->press <= 0)
-        die(line, "need 0 < release < press");
+    /* Digital hat axes (-1/0/+1, e.g. stock D-pad) need release == press
+       (press=1/release=1: fires at full deflection, clears at center).
+       Keep release < press (hysteresis band) for noisy analog axes. */
+    if (m->release > m->press || m->press <= 0 || m->release <= 0)
+        die(line, "need 0 < release <= press (strict < for analog)");
     c->n_axes++;
 }
 

@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, dmenu VT-wedged; reboot pending).
+Last updated: 2026-11-16 (Agent 0, stock input map done; live verify next).
 
 ## Completed
 
@@ -281,6 +281,11 @@ Last updated: 2026-11-16 (Agent 0, dmenu VT-wedged; reboot pending).
 - NEXT after reboot: deploy fixed vt-reset + launch.sh, rerun Jive with
   Video-line capture, finish stock input map (evtest decoded, needs L2
   hard-press + X/Y/click/mode disambiguation round).
+- INPUT DONE (host-side): evtest fully decoded → `ui/input/rg35xxh-stock.map`
+  (HAT dpad, face, shoulders, vol, sticks; E2 silent, js0 ignored);
+  evdev2jive extended (HAT thresholds, BTN_C/Z codes) + Jammy cross binary
+  (GLIBC 2.34); suite 15/15. Awaiting live verify round (grab-0 deploy +
+  owner presses X/Y/L2/R2/clicks/menu + stick dirs).
 - BLACK-SCREEN incident (owner-reported): unattended carousel cycled fb
   modes UNDERNEATH live dmenu (preflight guard did not exist yet) →
   dmenu's SDL mapping went stale, fb left all-zeros, dmenu idle.

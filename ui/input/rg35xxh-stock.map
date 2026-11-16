@@ -1,0 +1,65 @@
+# rg35xxh-stock.map — evdev2jive mapping for STOCK kernel event codes.
+#
+# Source: evtest capture on V4.0 BSP kernel 4.9.170 (ANBERNIC-keys,
+# event1; 2026-11-16 — see docs/hw-evidence/evtest-20261116/; E2
+# dierct-keys-polled was completely silent and is NOT mapped).
+# DIFFERS from rg35xxh.map (mainline codes): stock uses a HAT for the
+# D-pad, BTN_C/Z extras, BTN_TL2/TR2 triggers, and ABS_Z/RX/RY/RZ sticks
+# centered at 0 (NOT 2048!). Output codes follow the same Jive contract.
+#
+# Map format: key IN OUT tap|hold [long MS LONGKEY]
+#             axis ABS center C press P release R neg KEY pos KEY [flip]
+#
+# Confidence: HIGH dpad/A/B/L1/R1/R2/Select/Start/volumes/stick pairs.
+# MEDIUM (verify interactively): X=BTN_C, Y=BTN_NORTH, L3=BTN_WEST,
+# R3=BTN_Z, left={Z,RX} vs right={RY,RZ}, axis polarity (flip if inverted).
+# LOW: BTN_MODE(316, single mystery press -> Home).
+# UNMAPPED pending proof: BTN_TL2(L2?, never emitted — needs hard press),
+# KEY_ESC, KEY_GOTO.
+
+device ANBERNIC-keys
+
+grab 1
+tap_ms 80
+debounce_ms 12
+rep_delay_ms 500
+rep_period_ms 100
+
+# --- D-pad: digital HAT, standard polarity (verified) ---
+# press=release=1: fires at full deflection, clears at center (see NOTE
+# in evdev2jive.c — equality allowed ONLY for digital hat-like axes).
+axis ABS_HAT0X center 0 press 1 release 1 neg KEY_LEFT pos KEY_RIGHT
+axis ABS_HAT0Y center 0 press 1 release 1 neg KEY_UP pos KEY_DOWN
+
+# --- Face buttons (positional decode; verify X/Y interactively) ---
+key BTN_SOUTH KEY_ENTER tap
+key BTN_EAST KEY_END tap
+key BTN_C KEY_LEFTBRACE tap
+key BTN_NORTH KEY_F tap
+
+# --- Shoulders + triggers ---
+key BTN_TL KEY_Z tap
+key BTN_TR KEY_B tap
+key BTN_TL2 KEY_MINUS hold
+key BTN_TR2 KEY_EQUAL hold
+
+# --- System buttons ---
+key BTN_SELECT KEY_HOME tap
+key BTN_START KEY_SPACE tap
+key BTN_MODE KEY_HOME tap
+
+# --- Stick clicks (paired presses; verify L/R assignment live) ---
+key BTN_WEST KEY_ENTER tap
+key BTN_Z KEY_END tap
+
+# --- Physical volume keys (event1-routed, verified) ---
+key KEY_VOLUMEDOWN KEY_MINUS hold
+key KEY_VOLUMEUP KEY_EQUAL hold
+
+# --- Sticks: pairs firm, L/R + polarity medium (flip if inverted) ---
+# Left stick: vertical ABS_Z (up=-), horizontal ABS_RX (left=-).
+axis ABS_Z center 0 press 2500 release 1200 neg KEY_UP pos KEY_DOWN
+axis ABS_RX center 0 press 2500 release 1200 neg KEY_LEFT pos KEY_RIGHT
+# Right stick: vertical page scroll, horizontal prev/next track.
+axis ABS_RY center 0 press 2500 release 1200 neg KEY_PAGEUP pos KEY_PAGEDOWN
+axis ABS_RZ center 0 press 2500 release 1200 neg KEY_Z pos KEY_B
