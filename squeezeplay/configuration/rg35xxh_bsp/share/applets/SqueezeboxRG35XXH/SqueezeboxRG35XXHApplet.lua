@@ -17,8 +17,14 @@
 
 local pcall, type, tonumber, tostring, pairs = pcall, type, tonumber, tostring, pairs
 
--- board specific driver (uevent pump; keys intentionally not grabbed)
-local rg35xxh_bsp = require("rg35xxh_bsp")
+-- board specific driver (uevent pump; keys intentionally not grabbed).
+-- Optional at runtime: the App Center payload ships Lua only (no .so
+-- build yet), so a missing module degrades to "no hotplug events"
+-- instead of failing the whole applet (and its Return-to-Anbernic item).
+local _bspOk, rg35xxh_bsp = pcall(require, "rg35xxh_bsp")
+if not _bspOk then
+	rg35xxh_bsp = nil
+end
 
 local oo      = require("loop.simple")
 local os      = require("os")
@@ -41,6 +47,14 @@ local jiveMain      = jiveMain
 local appletManager = appletManager
 
 local settings = nil
+
+-- Distinctive process exit code: "user chose Return to Anbernic".
+-- Contract (squeezebox-go/README.md "Exit-code contract"): launch.sh maps
+-- 42 to the clean frontend-restore path. Any other exit restores too
+-- (launcher trap) but is logged as unexpected. Must match the launcher's
+-- SQUEEZEBOX_GO_EXIT_FRONTEND. Chosen away from 0/1/2/126/127/128+N and
+-- from jive.c's own exit(-1)=255 init-failure code.
+local EXIT_RETURN_TO_FRONTEND = 42
 
 
 -- Hack around global scope to allow bsp C code to call back into us
@@ -183,10 +197,15 @@ function init(self)
 	-- nil+err is a clean "no audio" state, not fatal (matches the
 	-- decode.c null/alsa/portaudio fallback chain semantics).
 	local ok, err = Decode:open(settings)
+	self._decodeOpen = ok and true or false
 	if not ok then
 		log:warn("Decode:open failed: ", err)
 	else
 		log:info("Decode:open ok")
+	end
+
+	if not _bspOk then
+		log:warn("rg35xxh_bsp C module absent: hotplug events disabled")
 	end
 
 	log:info("SqueezeboxRG35XXH init done")
@@ -399,6 +418,77 @@ function selectAudioDevice(self, pcm)
 	self:storeSettings()
 	-- TODO: live re-open (Decode:close + Decode:open) after Agent 3
 	-- confirms the single-holder handoff sequence.
+end
+
+
+-- ---------------------------------------------------------------------------
+-- SqueezeboxGo: Return to Anbernic (home-menu action, StockOS App Center)
+-- ---------------------------------------------------------------------------
+--
+-- Menu registration lives in the Meta file and is gated on
+-- SQUEEZEBOX_GO=1, so mainline firmware never sees this item (shared
+-- codebase, no fork). The sequence: save settings -> stop playback ->
+-- release the decode pipeline -> restore mixer/fb via the launcher's
+-- helper -> quit with EXIT_RETURN_TO_FRONTEND.
+--
+-- Every step is best-effort (pcall + log): even a partial cleanup must
+-- still end in os.exit(42), because the launcher restores the frontend
+-- on ANY exit via its trap. os.exit (rather than Framework:quit, which
+-- always yields exit 0 through JiveMain) is what carries the
+-- distinctive code; process teardown releases all fds/children.
+function returnToFrontend(self)
+	log:info("returnToFrontend: leaving Jive for the Anbernic frontend")
+
+	-- 1. persist our settings (brightness, ALSA device choice). Jive
+	-- offers no store-all API; other applets persist on their own
+	-- change paths, same as a normal quit.
+	local ok, err = pcall(function() self:storeSettings() end)
+	if not ok then
+		log:warn("returnToFrontend: storeSettings failed: ", err)
+	end
+
+	-- 2. stop playback: drop the server session (Quit-applet pattern),
+	-- then halt the local decode pipeline (Playback.lua pattern).
+	ok, err = pcall(function()
+		appletManager:callService("disconnectPlayer")
+	end)
+	if not ok then
+		log:warn("returnToFrontend: disconnectPlayer failed: ", err)
+	end
+	if self._decodeOpen then
+		ok, err = pcall(function() Decode:stop() end)
+		if not ok then
+			log:warn("returnToFrontend: Decode:stop failed: ", err)
+		end
+	end
+
+	-- 3. restore mixer + framebuffer mode through the launcher helper.
+	-- Belt and braces: launch.sh runs the same restore from its trap,
+	-- so a failure here is still recovered after we exit.
+	local restore = os.getenv("SQUEEZEBOX_GO_RESTORE")
+	if not restore then
+		local root = os.getenv("SQUEEZEBOX_GO_ROOT")
+		if root then
+			restore = root .. "/restore.sh"
+		end
+	end
+	if restore then
+		ok, err = pcall(function()
+			return os.execute(string.format("%q --from-jive", restore))
+		end)
+		-- err holds os.execute's status on success, the error on failure
+		log:info("returnToFrontend: restore helper rc=", err)
+	else
+		log:warn("returnToFrontend: no restore helper in env " ..
+			"(SQUEEZEBOX_GO_RESTORE/SQUEEZEBOX_GO_ROOT unset); " ..
+			"launcher trap still restores")
+	end
+
+	-- 4. quit with the distinctive code the launcher maps to
+	-- frontend-restore. Unconditional: we must never fall back into
+	-- the event loop with half-released devices.
+	log:info("returnToFrontend: exit ", EXIT_RETURN_TO_FRONTEND)
+	os.exit(EXIT_RETURN_TO_FRONTEND)
 end
 
 
