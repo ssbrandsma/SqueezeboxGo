@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, hotspot SSH live; stride smoking gun).
+Last updated: 2026-11-16 (Agent 0, VT-hang root-caused; vt-reset fix in).
 
 ## Completed
 
@@ -260,6 +260,17 @@ Last updated: 2026-11-16 (Agent 0, hotspot SSH live; stride smoking gun).
   preflight + pre-render; tests now 18/18). Log committed.
 - Awaiting owner GO for the watched carousel (dmenu stopped during run,
   restored after) + evtest/ears/game batch.
+- VT-HANG ROOT CAUSE (proven by kernel stack): Jive hung in
+  `__vt_event_wait <- vt_waitactive` — SDL fbcon switches to a fresh VT
+  (VT_OPENQRY) at video init; a previous SDL app killed without SDL_Quit
+  (our own timeout kills!) leaves KD_GRAPHICS + VT_LOCKSWITCH, wedging
+  every later SDL start. dmenu works because it owns boot-time state.
+  FIX: `squeezebox-go/runtime/vt-reset.py` prelude in launch.sh replays
+  SDL_Quit's LeaveGraphicsMode (KD_TEXT + UNLOCKSWITCH, never switches
+  VTs — chvt wedges this kernel). Suites: go 64/64, shellcheck PASS.
+  Next: deploy + rerun Jive (expect boot + Video lines), collect evtest
+  tail, then 640x480x32 end-to-end + skin/bpp fix from log facts.
+- Link flaky on hotspot (intermittent 255s); device alive, dmenu back.
 
 ## Prior state (human-gated proofs)
 
