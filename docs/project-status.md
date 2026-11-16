@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, VT-hang root-caused; vt-reset fix in).
+Last updated: 2026-11-16 (Agent 0, dmenu VT-wedged; reboot pending).
 
 ## Completed
 
@@ -270,7 +270,17 @@ Last updated: 2026-11-16 (Agent 0, VT-hang root-caused; vt-reset fix in).
   VTs — chvt wedges this kernel). Suites: go 64/64, shellcheck PASS.
   Next: deploy + rerun Jive (expect boot + Video lines), collect evtest
   tail, then 640x480x32 end-to-end + skin/bpp fix from log facts.
-- Link flaky on hotspot (intermittent 255s); device alive, dmenu back.
+- Link flaky on hotspot (intermittent 255s); dmesg shows RTL site-survey
+  noise (possible contributor, not proven).
+- dmenu itself now wedged in vt_waitactive (D-state, unkillable) after an
+  owner App Center launch + exit; screen black with full fb. chvt cannot
+  unstick it. ONLY recovery: reboot (needs owner approval — not yet asked
+  until now). All volatile logs rescued to /tmp/rescue.tgz first.
+- vt-reset.py had a wrong constant (0x5602=VT_SETMODE → EFAULT); fixed to
+  0x560C per UAPI headers + pinning test. Suites: go 65/65, shellcheck PASS.
+- NEXT after reboot: deploy fixed vt-reset + launch.sh, rerun Jive with
+  Video-line capture, finish stock input map (evtest decoded, needs L2
+  hard-press + X/Y/click/mode disambiguation round).
 - BLACK-SCREEN incident (owner-reported): unattended carousel cycled fb
   modes UNDERNEATH live dmenu (preflight guard did not exist yet) →
   dmenu's SDL mapping went stale, fb left all-zeros, dmenu idle.
