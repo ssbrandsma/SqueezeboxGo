@@ -1,0 +1,1 @@
+ps auxf 2>&1 | grep -i -E '[e]mulat|[s]ddm || echo 'no obvious frontend string in ps output'
