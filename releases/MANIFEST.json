@@ -1,34 +1,34 @@
 {
-  "$comment": "WP2 userland manifest (QA-verified on branch wp2u/qa). Shape follows MANIFEST.example.json; variant covers both DDR images. Images built on branch wp2u/image and live outside git in /tmp/sqz-userland/ (see report docs/test-results/wp2u-qa.md).",
+  "$comment": "v03 QA-verified on branch v03/qa (base 200c6e1). Shape follows MANIFEST.example.json; variant covers both DDR images. v03 delta vs 0.2.0-exp2: kernel DTB with DE33/TCON/panel (patches 0001-0005) + heartbeat LED trigger (0006), boot.scr 'gpio set 267', /usr/lib/squeezebox/led.sh. Images built on branch v03/image @ cbf23fc8196e6fbee7b71d4edd688ba0cedb837e and live outside git in /tmp/sqz-v03/ (see report docs/test-results/v03-qa.md).",
   "artifacts": [
     {
       "file": "squeezebox-rg35xxh-ddr3.img",
-      "sha256": "7a1fc07c1ef65b0abdadc6c90f11f9b1dc70dbc30767fd7dcc70adc193bdccd0",
+      "sha256": "82fd269a3baceeda5359c23f5b644383ed59755ba7652af85633f13c9730cb9d",
       "size_bytes": 2147483648
     },
     {
       "file": "squeezebox-rg35xxh-ddr3.img.xz",
-      "sha256": "32a8e60328fc599d1135683d9d2f94d59fdb77eafc2f947191d267a0bc620771",
-      "size_bytes": 164128224
+      "sha256": "1fbbc433e73403ec4380c2a14e63422eb3861101c643372626b19427179eb11a",
+      "size_bytes": 164121664
     },
     {
       "file": "squeezebox-rg35xxh-ddr4.img",
-      "sha256": "c388cbf16518ce026d75ea6ad08e8e7c5259c9e2c4c45cf245d3f07d4a55f5a1",
+      "sha256": "6c3247629b4e9d1973a8622b308cbc2aff9444af4376b44581637e334a326173",
       "size_bytes": 2147483648
     },
     {
       "file": "squeezebox-rg35xxh-ddr4.img.xz",
-      "sha256": "65d65c18392b52a78d67d23f7aa3c93d9d3a70fdc9b3cd7b4a8ef8f7010c37a5",
-      "size_bytes": 164128068
+      "sha256": "85938d0160294404e9ec390621f0ac5a3a415b58480b204055c8b45df2019665",
+      "size_bytes": 164120036
     }
   ],
-  "date_utc": "2026-11-15T22:55:00Z",
-  "git_commit": "d34314b007fa3b7e26e34fec808ce99510276f27",
+  "date_utc": "2026-11-16T10:48:37Z",
+  "git_commit": "200c6e1a780559671cf54d0a39b74b6a8788e820",
   "name": "squeezebox-rg35xx-h",
   "sbom": null,
-  "source_date_epoch": 1794780954,
+  "source_date_epoch": 1794823250,
   "sources": {
-    "$comment": "Pins from docs/upstream-references/upstream-manifest.md at git_commit above; userland measured from the image dpkg status (see docs/test-results/wp2u-dpkg-manifest.txt).",
+    "$comment": "Pins from docs/upstream-references/upstream-manifest.md (+ platform/rg35xx-h/kernel/pins.env) at git_commit above; userland measured from the image dpkg status (141 pkgs, same set as 0.2.0-exp2; see docs/test-results/v03-qa.md).",
     "arm-trusted-firmware": "v2.15.0 (da738d5e)",
     "librespot": "v0.8.0 (d36f9f19)",
     "linux": "v7.3.4 (8310b43a)",
@@ -40,10 +40,10 @@
   },
   "toolchain": "aarch64-linux-gnu (-march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay); userland debootstrap --foreign trixie minbase under fakeroot; see docs/build.md",
   "validation": {
-    "build_and_check": "docs/test-results/wp2u-qa.md \u2014 5 PASS + 1 NOT RUN (arch) + 1 FAIL (image/secrets false positive) per variant via IMAGE_UNDER_TEST, SDE=1794780954",
-    "check_image": "FAIL solely on stock-OpenSSH .rodata markers (false positive, proven in docs/test-results/wp2u-qa.md); GPT/FAT/SPL/boot-files/size all PASS both variants",
-    "uart_boot_log": "NOT RUN \u2014 no RG35XX H hardware (sole external blocker)"
+    "build_and_check": "docs/test-results/v03-qa.md — 6 PASS + 1 NOT RUN (arch) per variant via IMAGE_UNDER_TEST, SDE=1794823250",
+    "check_image": "PASS both variants, 0 problems (GPT/SPL/boot-files/size clean; no-secrets clean — gate now requires key material, wp2u FP fixed)",
+    "uart_boot_log": "NOT RUN — no RG35XX H hardware (sole external blocker)"
   },
   "variant": "ddr3+ddr4",
-  "version": "0.2.0-exp2"
+  "version": "0.3.0-exp3"
 }
