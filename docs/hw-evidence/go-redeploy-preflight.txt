@@ -1,0 +1,86 @@
+# go-redeploy pre-flight snapshot — 2026-11-16 (device ANBERNIC, live SSH)
+# Agent: HW go-redeploy, branch hw/go-redeploy. All commands via
+# `ssh -o BatchMode=yes -o ConnectTimeout=15 rg35xxh '...'`. No sleep hit.
+
+===== 0. SSH wake probe =====
+$ echo AWAKE; date; uptime
+AWAKE
+Mon Nov 16 15:09:55 CET 2026
+ 15:09:55 up  1:02,  1 user,  load average: 1.03, 1.05, 1.15
+
+===== 1. frontend state (dmenu NOT running — owner menu session live) =====
+$ pidof dmenu.bin; systemctl is-active launcher.service; sudo -n whoami
+(active)
+root
+# NOTE: pidof printed NOTHING (rc=1, confirmed next call) — dmenu.bin absent.
+
+$ ps aux | grep -i dmenu | grep -v grep; ...; systemctl status launcher.service | head -12
+root  4581  ...  /bin/bash /mnt/vendor/ctrl/dmenu_ln
+pidof_rc=1
+launcher.service: active (running) since Mon 2026-11-16 14:36:35 CET; 33min ago
+  CGroup: ... cexpert x3, launcher.sh, loadapp.sh, dmenu_ln (NO dmenu.bin)
+
+$ ls -la /tmp/.next; cat /tmp/.next; ...
+-rwxrwxrwx 1 root root 39 Nov 16 14:39 /tmp/.next
+"/mnt/mmc/Roms/APPS/SqueezeboxGo.sh"
+# => OWNER launched SqueezeboxGo from the App Center menu at 14:39.
+
+$ ps -ef --forest | grep -A6 -B2 -E "dmenu_ln|loadapp|Squeezebox|jive"
+root  4466  ...  \_ /bin/bash /mnt/vendor/ctrl/loadapp.sh
+root  4581  ...      \_ /bin/bash /mnt/vendor/ctrl/dmenu_ln
+root  4846  ...          \_ sh /tmp/.next
+root  4847  ...              \_ /bin/bash /mnt/mmc/Roms/APPS/SqueezeboxGo.sh
+root  4849  ...                  \_ ./jive     (0:08 CPU, running 31 min)
+$ ps aux | grep -E "jive|SqueezeboxGo" | grep -v grep  -> both present, rc=0
+
+$ who; w
+muse  pts/0  192.168.1.189  14:37  IDLE 32:50  htop
+# Owner has an interactive shell open (htop, idle 33 min). Their LCD
+# observation of the provisional build (14:39-15:1x) is queued as human-ask.
+
+===== 2. live menu-session jive boot (first EVER menu-path launch) =====
+$ head -40 /opt/squeezebox-go/logs/jive.log   (log tz UTC; device CET=UTC+1)
+semget: Function not implemented
+semctl: Function not implemented
+... SqueezePlay version 9.0.0 r541
+... jiveL_initSDL:252 640,480 32 bits/pixel 4 bytes/pixel [R<<16 G<<8 B<<0]
+... Hardware acceleration is available
+... Window Manager is not available
+... Using 22 frames per second
+... ERROR ... Can't find image jive/splash640x480.png   (known benign)
+... Splash jive/splash.png 480x272 Screen 640x480
+... Registering action: soft_reset with index: 1
+... locale parsing MY_MUSIC/Radio/Now Playing/... (normal boot)
+$ tail -5 jive.log -> semctl noise (known SYSVIPC=n); log 1626830 B total.
+
+===== 3. vinfo / disk / ALSA / prior install =====
+$ cat /sys/class/graphics/fb0/mode; ...; df; sudo -n fuser -v /dev/snd/pcmC0D0p; ...
+== vinfo ==
+(mode: empty; virtual_size:) 512,384   # stuck while old-build jive runs (known); NOT stock
+# (sysfs `mode` is always empty on this stock fb; `modes` lists U:512x384p-77 +
+# U:1280x1024p-59; ground truth = FBIOGET_VSCREENINFO ioctl, see install evidence)
+== df ==
+/dev/mmcblk0p5  6.9G  4.2G  2.4G  64% /            (/opt lives here)
+/dev/mmcblk0p1  2.0G  511M  1.5G  25% /mnt/mmc
+tmpfs           487M     0  487M   0% /dev/shm
+== ALSA holder ==
+(empty)                      # fuser shows NO holder: jive runs but holds no PCM
+                             # (consistent with decode_alsa shmget failure; ears pending)
+== prior install ==
+SqueezeboxGo runtime 0.1.0-go1 (GO-HW provisional install)
+date-utc: 2026-11-16
+jammy-tarball-sha256: 673ec5eec78ca5127d7202951d292b194f47bc22747c9a12a8f82069bcc02baa
+fbcon-libSDL-sha256: 3924a6254c1c4c9690b7d7f3905465b84f7dd134b372155909eca02d6f3f8d4a
+jive: 9.0.0 r541 (Jammy-compatible, GLIBC<=2.34)
+47M     /opt/squeezebox-go
+/mnt/mmc/Roms/APPS/Imgs/SqueezeboxGo.png: PNG image data, 240 x 180, 8-bit/color RGBA, non-interlaced
+8513a16dcb27afa018b930bb39bc8eac909fdbe1d08a3bf82ce11fc56c85f473  .../SqueezeboxGo.png  (PROVISIONAL art)
+-rwxrwxrwx 1 root root 758 Nov 16 14:34 /mnt/mmc/Roms/APPS/SqueezeboxGo.sh  (provisional entry)
+
+CONCLUSION: prior install intact; device NOT stock-idle (owner menu session
+running old build since 14:39). Redeploy proceeds: SIGTERM old jive via the
+documented SSH fallback (reversible; dmenu_ln restarts dmenu), then install
+final ZIP per squeezebox-go/INSTALL.md. stock/go/install-squeezebox-go.sh is
+NOT applicable: it installs the superseded provisional layout (old entry +
+provisional icon) and would REGRESS the final files — noted as stale-script
+follow-up for lead/GO-APP.

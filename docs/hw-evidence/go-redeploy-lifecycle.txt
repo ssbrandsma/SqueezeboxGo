@@ -1,0 +1,226 @@
+# go-redeploy lifecycle + headless forensics — 2026-11-16 (ANBERNIC, live SSH)
+# Agent: HW go-redeploy, branch hw/go-redeploy. Companion to
+# go-redeploy-preflight.txt + go-redeploy-install.txt.
+
+## 1. Lifecycle run 1: DOUBLE-RUN race (repro artifact, fully diagnosed)
+
+Repro of the menu path: byte-exact /tmp/.next (39 B, od-verified
+`"/mnt/mmc/Roms/APPS/SqueezeboxGo.sh"  \n`, chmod 777 — dmenu's own
+format) + `sh /tmp/.next` as root, launched while dmenu.bin was ALIVE.
+What SHOULD happen: entry → launch.sh → stop frontend → jive.
+What HAPPENED: TWO entry runs 4 s apart.
+
+Run A (15:13:56, mine): install path (upgrade multiline-VERSION →
+0.1.0, payload hash OK), cgroup escape → systemd scope, frontend
+was ACTIVE → stopped it, snapshot, jive 5720 ran 6 min healthy
+(idle, CPU advancing, stable fb frame, fonts open).
+
+Run B (15:14:00, from the DYING dmenu_ln): skip-install path,
+frontend already inactive → jive 5763 → **SEGFAULT (exit 139)** →
+cleanup → exit 0. Proof B came from dmenu_ln: B's
+LD_LIBRARY_PATH contains `:/usr/lib32:/usr/lib:/mnt/vendor/lib`
+(dmenu_ln's export; run A has payload paths only), and B's stdout
+is missing (dmenu_ln redirects `sh $ACT >/dev/null 2>&1`).
+
+Mechanism (high confidence): `systemctl stop` SIGTERMs dmenu while
+/tmp/.next exists → dmenu.bin exits 0 → dying dmenu_ln executes
+`sh $ACT` once (verbatim script logic confirmed) before the stop
+completes (sysv stop does not SIGKILL the cgroup — B's outer
+survived to log `scoped launch.sh exited 0`).
+Corroboration: B-outer timestamp == stop-completion time; B's
+scoped run found the frontend `inactive-or-missing`.
+
+Consequences (all from the SHARED /dev/shm/squeezebox-go state):
+- B's `: >jive.log` truncated A's boot lines (A's early log LOST).
+- B's cleanup deleted the frontend stamp (`was_active=inactive` →
+  `rm -f`), so A's later cleanup found `no frontend stamp` and did
+  NOT restart dmenu → device sat UI-less until manual
+  `systemctl start` (recovered, verified stock).
+- B's SEGV is a DUAL-JIVE contention artifact (fb0/PCM race with
+  A), NOT a payload defect: 7 solo runs since, zero SEGV.
+  (Cannot fully exclude flaky-boot SEGV; human menu-run is the
+  real-world confirmation — queued as WATCH item.)
+
+Product impact: NONE for the real menu path (dmenu is already dead
+there, so the race cannot trigger). SSH-direct rule, new:
+NEVER stop launcher.service while /tmp/.next exists — `rm -f` it
+first. Follow-up for GO-APP: entry/launch.sh could `rm -f
+/tmp/.next` before stopping the frontend (hardens SSH-direct runs;
+no-op in the real menu flow).
+
+$ cat /tmp/sbgo-menu-repro.out   (run A entry stdout)
+[sbgo-entry] upgrading runtime SqueezeboxGo runtime 0.1.0-go1 (...) -> 0.1.0 ...
+payload.tar.gz: OK
+[sbgo-entry] payload hash OK
+[sbgo-entry] runtime 0.1.0 installed
+[sbgo-entry] exec /opt/squeezebox-go/launch.sh
+$ cat .../launch-20261116-151356.log  (outer-A + scoped-A share one file)
+[launch] SqueezeboxGo 0.1.0 starting (root=/opt/squeezebox-go state=/dev/shm/squeezebox-go)
+[launch] cgroup escape available; re-exec under systemd-run --scope
+Running scope as unit: run-r99394644514846ef9950a9e90cba0e0c.scope
+[launch] SqueezeboxGo 0.1.0 starting (...)
+[launch] frontend launcher.service pre-state: active
+[launch] stopped launcher.service (stop only ...)
+[launch] mixer snapshot saved
+[launch] fb mode snapshot:
+[launch] fbset missing; sysfs snapshot only
+[launch] env: SQUEEZEBOX_GO=1 JIVE=/opt/squeezebox-go/jive/bin/jive
+[launch] env: SDL video=fbcon fbdev=/dev/fb0 audio=alsa/hw:CARD=audiocodec,DEV=0
+[launch] env: LD_LIBRARY_PATH=/opt/squeezebox-go/lib-fbcon:/opt/squeezebox-go/jive/lib
+[launch] starting jive (log: /dev/shm/squeezebox-go/logs/jive.log)
+... (after SIGTERM to jive:)
+[launch] jive exit 0 = UNEXPECTED (crash/quit/kill; restoring anyway)
+[launch] no frontend stamp; nothing to restart
+[launch] cleanup done (jive rc=0)
+[launch] launch.sh exiting 0 (stock state restored)
+[launch] scoped launch.sh exited 0
+NOTE: SIGTERM → jive term_handler → JIVE_EVENT_QUIT → exit 0
+(clean quit, not 143). launch.sh treats 0 as UNEXPECTED (correct —
+only 42 is the clean Return code).
+
+## 2. Lifecycle run 2: CLEAN single run (pre-stopped frontend)
+
+$ sudo -n rm -f /tmp/.next; sudo -n systemctl stop launcher.service; ...
+dmenu= svc=inactive            # no .next at stop → NO double run (race theory confirmed)
+$ printf '"..."  \n' | sudo -n tee /tmp/.next; sudo -n chmod 777 /tmp/.next
+$ sudo -n bash -c "sh /tmp/.next >/tmp/sbgo-run2.out 2>&1 &"; sleep 30
+dmenu= jive=6299
+$ cat /tmp/sbgo-run2.out
+[sbgo-entry] runtime 0.1.0 present at /opt/squeezebox-go; skipping install
+[sbgo-entry] exec /opt/squeezebox-go/launch.sh
+Idempotent second launch PROVEN (skip-install path).
+Run-2 launch log: escape → scope → frontend `inactive-or-missing`
+→ skip stop → snapshot → jive start (all nominal).
+jive 6299: alive 6+ min, idle CPU (~0.02 s/8 s), fonts open,
+stable fb frame, settings written. SIGTERM → exit 0 →
+UNEXPECTED branch → restore → `was not active ... not restarting`
+→ manual `systemctl start` → dmenu back (see §5).
+
+## 3. Installed-action probe ON DEVICE: PASS (A/D/B/C)
+
+Discovery: `jive <module>` require()s a Lua module as a STANDALONE
+script (12 ms, no boot — `jive --help` → module-not-found
+traceback). The GO-APP host harness (squeezebox-go/tests/
+test-jive-action.lua) was scp'd to /tmp/sbgo-probe/probe.lua,
+APPLET_DIR sed'd to the INSTALLED
+/opt/squeezebox-go/jive/share/jive/applets/SqueezeboxRG35XXH, and
+run under the device's embedded Lua 5.1 via `jive probe`.
+
+Gotcha (fixed in the DEVICE COPY only): jive pre-populates
+package.loaded, shadowing the harness's package.preload stubs
+(first run: 13/15, `Decode:stop` missing because the REAL
+squeezeplay.decode answered). Fix: nil out 14 module names from
+package.loaded before the stubs section. Follow-up for GO-APP:
+clear package.loaded in the repo harness too (no-op on host,
+robust under jive).
+
+$ cd /tmp/sbgo-probe && LD_LIBRARY_PATH=... SQUEEZEBOX_GO=1 \
+    SQUEEZEBOX_GO_RESTORE=/opt/squeezebox-go/restore.sh \
+    SQUEEZEBOX_GO_ROOT=/opt/squeezebox-go \
+    /opt/squeezebox-go/jive/bin/jive probe
+ok   A: exactly one home item
+ok   A: item id
+ok   A: item node is home
+ok   A: item weight 1009
+ok   A: item text token resolved
+ok   A: callback raised only via captured os.exit
+ok   A: exit code is 42
+ok   A: settings stored
+ok   A: disconnectPlayer called
+ok   A: restore helper executed
+ok   A: order store < disconnect < exec < exit
+ok   A: restore helper path used
+ok   A: --from-jive flag passed
+ok   A: Decode:stop called
+ok   A: order disconnect < decode-stop < exit
+PASS (A)
+Case D (SQUEEZEBOX_GO_TEST_DECODE_FAIL=1, $ROOT fallback):
+... ok D: Decode:stop skipped when open failed / exit 42 anyway ...
+PASS (A/D)
+Case B/C (SQUEEZEBOX_GO unset): no home item / applet loads /
+bsp tolerated ... PASS (B/C)
+
+This proves, against the INSTALLED files with the DEVICE Lua: the
+home item registers (id/node/weight/token) iff SQUEEZEBOX_GO=1,
+and its callback runs the exact Return sequence ending in
+os.exit(42) via the real restore.sh path.
+
+## 4. launch.sh exit-code contract ON DEVICE (real script, stub jive)
+
+Scratch runtime /tmp/sbgo42 (real launch.sh+restore.sh+VERSION,
+fake jive/bin/jive), frontend stamp backed up + restored around
+each run (shared $STATE!), run as root (first attempt as muse
+silently continued after `exec >>$LOG` permission failure —
+launch.sh degrades to stdout instead of dying; noted for GO-APP).
+
+$ printf '#!/bin/sh\nexit 42\n' | sudo tee .../jive; \
+    sudo SQUEEZEBOX_GO_NO_FRONTEND_STOP=1 /tmp/sbgo42/launch.sh
+launch42_rc=0
+[launch] jive exit 42 = Return to Anbernic (clean)
+[launch] frontend launcher.service was not active at launch; not restarting
+[launch] launch.sh exiting 0 (stock state restored)
+$ ... exit 0 ...
+launch0_rc=0
+[launch] jive exit 0 = UNEXPECTED (crash/quit/kill; restoring anyway)
+[launch] launch.sh exiting 0 (stock state restored)
+
+Contract table PROVEN on device: 42 → clean path, else →
+unexpected-but-restored, launcher exit = restore outcome.
+Remaining for exit-42 end-to-end: the physical button traversal
+(human session) — every link around it is now device-proven.
+
+## 5. Logger silence + input-deafness forensics (headless limits)
+
+Every headless jive run (old tree, new tree, ±overlay, ±stdbuf -oL,
+12 s–6 min) emits ZERO logger lines (only semget/semctl C-stderr).
+Same binary (sha 4649e37a both), same libs (recursive .so
+basename diff EMPTY), old-env replica also silent, old TREE also
+silent (3 lines/15 s). The owner's 33-min menu session WAS chatty
+(INFO/DEBUG with boot-second timestamps). Reconciliation: jive
+emits logger lines into a large block-buffered stdout; idle runs
+never fill it and the SIGTERM/quit path exits WITHOUT flushing
+(post-exit files gain nothing); the owner's button input produced
+the DEBUG volume that flushed the buffer mid-run. (stdbuf -oL did
+not help — jive likely re-setvbuf()s after libstdbuf's pre-main
+setup.) Consequence: headless runs can never show logger lines
+without input; launch.sh improvement proposal: run jive under
+`stdbuf -o0` when available (untested here) or document.
+
+sem-spam is BIMODAL across identical runs (~20/s vs ~0.2/s, both
+trees, ±overlay) — audio-path (SYSVIPC) race; flag for audio agent.
+First frame latency: no draw at 18 s (fb still stock pixels),
+drawn by ~22–44 s (hash 31a13b7e→bb1ac45a across the input window).
+
+uinput virtual AT keyboard (/dev/uinput present, root-only):
+created event3, injected ENTER/DOWNx3/ENTER/UP/ESC across two
+runs — fb hash NEVER moved on any tap (rerun: 3 identical hashes
+spanning the full pattern), jive survived all taps (earlier death
+was timeout-70 SIGTERM on a late sample, retracted with evidence).
+Verdict: headless jive is INPUT-DEAF — SDL1.2-fbcon reads keys via
+the VT (/dev/tty), unavailable without a controlling terminal, and
+ANBERNIC BTN_* codes (304+) carry no VT keysym anyway. Menu runs
+(dmenu_ln console ancestry) likely HAVE VT access — but the pad
+still cannot pass without the evdev2jive mapper (absent from this
+package, known limitation). PREDICTION for the human session: pad
+dead in jive; a USB keyboard (if available) should navigate —
+please try it (diagnostic: working USB-kbd + dead pad = mapper gap
+confirmed with a healthy SDL path).
+
+## 6. Stock-healthy checkpoints (this session)
+
+- After owner-session SIGTERM: dmenu 5458 back, PCM re-held,
+  vinfo 1280x1024x16 (self-heal #1).
+- After run-A teardown + manual start: dmenu 6147, PCM re-held
+  (pid in fuser), vinfo stock (self-heal #2).
+- After run-2 teardown + manual start: dmenu back, vinfo stock.
+- After input probe + manual start: dmenu 7829 came up in a STUCK
+  512x384x32 with no PCM — known phase-3 nondeterminism (dmenu's
+  own startup PUT flips the quirk; fresh instances often skip the
+  ALSA hold) — recovered via stop → valid-timings PUT (pixclock
+  9369, margins 224/32/32/4, sync 136/4, zeroed bitfields) →
+  start: dmenu 8188, vinfo stock, fb = 6de7493c… (phase-3's exact
+  stock pixels — pixel-perfect menu repaint).
+- Reboot (true boot path: PCM hold + VT settle) is queued as the
+  FINAL gate after all device work, evidence secured first.
+- VT note: active tty2 now; docs conflict on boot VT (tty1 per
+  hw-phase3 asterisk vs tty2 per hardware.md) — resolve at reboot.
