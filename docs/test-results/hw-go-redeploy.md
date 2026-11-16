@@ -152,9 +152,23 @@ without the dmenu timer!), WiFi drop, owner power-off, battery sag.
   ABRT landed): `Video mode` count, Splash/Skin/setVideoMode
   lines → dd1/dd5. Else re-run the flip-poll + ABRT (fixed sha
   compare: `cut -d' ' -f4`).
-- R-TRIAL: scp stock/bundle/display-trial.py (now on branch via
-  main merge) to device; `sudo python3 display-trial.py --hold 2
-  --rounds 1` UNATTENDED; commit log to display-debug/.
+- R-TRIAL (ON HOLD — 3 bugs found in review, flagged to lead, NOT
+  run): stock/bundle/display-trial.py as committed cannot run the
+  matrix on device: (1) put_var packs VAR_FMT "8I12I4I" (24 items)
+  against 36 VAR_NAMES → struct.error on EVERY PUT (uncaught —
+  only OSError is caught); PUT needs the full 40×u32 layout
+  (reference: vinfo-full.py put-stock, proven 3x on device);
+  (2) blit() calls mm.flush() → EINVAL OSError on fb0 mmap
+  (phase-3 quirk, uncaught in blit); (3) stride assumes packed
+  xres*bpp/8 while the driver reports line_length 2560 (use
+  FBIOGET_FSCREENINFO 0x4602, currently defined but unused).
+  As-is it would draw attempt 1, then traceback with a scary
+  (but harmless — nothing was PUT) RESTORE-FAILED line. AFTER
+  lead fixes: scp to device; `sudo python3 display-trial.py
+  --hold 2 --rounds 1` UNATTENDED (dmenu stopped first, .next
+  removed); commit log to display-debug/. Stopgap option: the
+  same PUT matrix via vinfo-full.py (correct layout) if the fix
+  is delayed.
 - R-GATE (last): secure /dev/shm logs to host (scp), commit,
   `sudo reboot`, re-verify (dmenu boot-hold? vinfo stock? VT
   tty1-vs-tty2? no strays?), append to this file, clean /tmp.
