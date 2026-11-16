@@ -1,0 +1,17 @@
+# frontend-unit.txt — which gaming-frontend unit run-jive.sh may stop.
+#
+# HOW TO FILL IN (do this once, from YOUR probe tarball):
+#   1. Open 90-frontend-hunt.txt: find the frontend process (emulation
+#      station, retroarch, kms frontend, ...).
+#   2. Open 50-processes-services.txt: find the systemd unit that owns it
+#      (`systemctl list-units --type=service --state=running`).
+#   3. Sanity-check: `systemctl status <name>` shows that process as
+#      Main PID, and `systemctl cat <name>` shows a frontend ExecStart
+#      (NOT getty, ssh, NetworkManager, or anything in /lib/systemd).
+#   4. Write the bare unit name on ONE line below (uncommented).
+#
+# run-jive.sh reads the first non-comment, non-blank line. CLI
+# --frontend-unit and $FRONTEND_UNIT override this file.
+#
+# EXAMPLE (almost certainly NOT your unit — replace it):
+# emulationstation.service
