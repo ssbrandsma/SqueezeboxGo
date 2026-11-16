@@ -307,6 +307,32 @@ reboot): `tone3s.wav`, `tonegen.py`, `aplay-phase3.log`,
 masks). Only persistent system change remains Phase 2's
 `muse += video,audio,input`.
 
+## Reboot normalization (PASS — true stock, all asterisks cleared)
+
+After evidence commit, `sudo -n reboot`; device back on SSH ~2 min
+later (up 1 min, load settling). Single-shot verification (beat the
+idle-sleep timer; no further device commands after):
+
+```text
+ALIVE, up 1 min; launcher.service active; dmenu=2443 (boot instance)
+dmenu fds: /dev/fb0 + /dev/tty2 (= active VT: boot dmenu takes tty2
+  and activates it; the tty3-taking was restart-path-only)
+card 0: Subdevices: 0/1; /dev/snd/pcmC0D0p: root 2443 F.... dmenu.bin
+  => ALSA HELD by boot dmenu (boot-path jingle/init; restart-path
+  dmenus simply never open it — mystery solved, no session damage)
+mixer digital 63 [100%]; vinfo xres=1280 yres=1024 bpp=16 (boot state)
+fb0 first-2.6MB sha = 6de7493c... (stock UI pixels, 4th reproduction)
+/tmp/.power_key gone (wiped; stock auto-sleep re-armed)
+~/squeezebox-dev staging intact (all Phase 1-3 files + logs persist)
+active VT = tty2 (IS the boot state — earlier tty1 readings were
+  post-boot drift; the wedged chvt-3 switch was reboot-cleared)
+```
+
+Device ends in TRUE stock state: frontend running, ALSA held,
+vinfo/mixer/pixels at boot values, SSH alive, only footprint =
+`~/squeezebox-dev` staging + `muse` groups (both documented PoC
+posture). No system writes ever made.
+
 ## Handoff — needs the human (unchanged + 1 new)
 
 1. **Red-fill watch** (eyes, ~2 min): run the coordinated
