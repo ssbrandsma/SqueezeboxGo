@@ -1,0 +1,89 @@
+--- upstream: ralph-irving/squeezeplay@758bc11
+
+--- DesktopJiveMeta.lua.bak	2026-11-16 18:52:30.734791940 +0100
++++ DesktopJiveMeta.lua	2026-11-16 18:50:47.830846188 +0100
+@@ -89,10 +89,17 @@
+ 	end
+ 
+ 	-- set mac address and uuid
++	-- RG35XXH platform identity (getMachine): was default "squeezeplay"
++	LocalPlayer:setDeviceType("rg35xxh", "Squeezebox RG35XX H")
++
++	-- set mac address and uuid
+ 	System:init({
+ 		macAddress = settings.mac,
+ 		uuid = settings.uuid,
++		machine = "rg35xxh",
+ 	})
++	-- NOTE: log:* from *Meta.lua is silent during boot (no wired logger
++	-- yet); identity is verified via the applet query + Udap instead.
+ 
+ 	System:setCapabilities({
+ 		["touch"] = 1,
+@@ -121,7 +128,7 @@
+ 	appletManager:addDefaultSetting("Playback", "enableAudio", 1)
+ 
+ 	if jiveMain:getDefaultSkin() == 'QVGAportraitSkin' then
+-		jiveMain:setDefaultSkin("WQVGAsmallSkin")
++		jiveMain:setDefaultSkin("RG35XXHLandscapeSkin")
+ 	end
+ 
+ 	Framework:addActionListener("soft_reset", self, _softResetAction, true)
+
+--- SetupAppletInstallerApplet.lua.bak	2026-11-16 18:52:31.278791677 +0100
++++ SetupAppletInstallerApplet.lua	2026-11-16 18:45:39.786976793 +0100
+@@ -89,6 +89,7 @@
+ 	-- query all non Squeezenetwork servers (will try SN later if no useful response from these)
+ 	self.waitingfor = 0
+ 	self.best = {}
++	self.triedBaby = false
+ 	self.sn = nil
+ 	for id, server in appletManager:callService("iterateSqueezeCenters") do
+ 		if server:isSqueezeNetwork() then
+@@ -116,8 +117,9 @@
+ end
+ 
+ 
+-function sendRequest(self, server)
+-	log:info("sending query to ", tostring(server))
++function sendRequest(self, server, target)
++	target = target or "rg35xxh"
++	log:info("sending query to ", tostring(server), " target:", target)
+ 	local opt = not self:getSettings()["_RECONLY"]
+ 	server:userRequest(
+ 		function(chunk, err)
+@@ -129,7 +131,7 @@
+ 		end,
+ 		nil,
+ 		{ "jiveapplets",
+-		  "target:" .. System:getMachine(), 
++		  "target:" .. target,
+ 		  "version:" .. self.version,
+ 		  opt and "optstr:other|user" or "optstr:none",
+ 	  }
+@@ -157,6 +159,25 @@
+ 		return
+ 	end
+ 
++	-- RG35XXH: no platform entries yet -> fall back to Radio (baby)
++	-- applets; most are pure Lua and run unmodified.
++	if (self.best.count == nil or self.best.count == 0) and not self.triedBaby then
++		log:info("no rg35xxh entries - falling back to baby target");
++		self.triedBaby = true
++		self.best = {}
++		for _id, _server in appletManager:callService("iterateSqueezeCenters") do
++			if not _server:isSqueezeNetwork() then
++				sendRequest(self, _server, "baby")
++				self.waitingfor = self.waitingfor + 1
++			end
++		end
++		if self.waitingfor > 0 then
++			self.timer:restart()
++			return
++		end
++		-- no non-SN servers at all: fall through to squeezenetwork logic
++	end
++
+ 	-- if we got no entries in all responses, try squeezenetwork if not already tried
+ 	if (self.best.count == nil or self.best.count == 0) and self.sn then
+ 		log:info("no entries - sending query to squeezenetwork");

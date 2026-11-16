@@ -1,6 +1,25 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, stock input map done; live verify next).
+Last updated: 2026-11-16 (live HW: Jive fullscreen + audio + rg35xxh identity on stock OS).
+
+## Live hardware session 2026-11-16 (RG35XX H V4.0, stock Ubuntu 22.04)
+
+- Native Jive 9.0.0 r541 fullscreen 640x480x32 on the LCD (SDL/fbcon);
+  fixed live: SDL 512x384 mode clobber (post-launch preset re-assert),
+  WQVGAsmallSkin -> RG35XXHLandscapeSkin (32bpp), skin art is faithful
+  Radio B&W per upstream reference screens.
+- Audio engine up: SysV-SHM LD_PRELOAD shim (`stock/compat/sysv_shim.c`)
+  for the SYSVIPC=n kernel; jive_alsa holds plughw:audiocodec RUNNING.
+- Platform identity `rg35xxh` accepted (ADR-0005): machine + player
+  type + applet query (baby fallback); HELO verified on live session.
+- Paired remote library "Squeezebox Bootstrap" (49.12.198.91); baby
+  applets list (Lua ones run; ARMv5 soft-float binaries cannot).
+- Stock frontend stopped (launcher.service); device runs Jive from
+  /home/muse/squeezebox-dev. Reboot returns stock menu (nothing
+  autostarts yet). Jive test runs carry a 900s timer.
+- Pending: user opens applet menu (verify rg35xxh query + fallback in
+  log); VT wedge (vt_waitactive) seen once after rapid kill/relaunch,
+  cleared with vt-reset.py — add prelude to runner before next cycle.
 
 ## Completed
 
