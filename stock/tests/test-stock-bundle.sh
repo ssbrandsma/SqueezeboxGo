@@ -134,6 +134,12 @@ if [ -n "$TARBALL" ]; then
 	else
 		fail 'probe has PCM-holder (fuser) block'
 	fi
+	if ! grep -q 'Unterminated quoted string' "$GOT/90-frontend-hunt.txt" 2>/dev/null \
+		&& grep -q 'no obvious frontend string in ps output' "$GOT/90-frontend-hunt.txt" 2>/dev/null; then
+		ok 'probe section 90 quoting intact (§90 regression)'
+	else
+		fail 'probe section 90 quoting intact (§90 regression)'
+	fi
 fi
 # Read-only outside OUT: only OUT may have changed under TMP minus our own dirs.
 if [ -z "$(find "$FIX" -newer "$TMP/probe-marker" 2>/dev/null)" ]; then

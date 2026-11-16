@@ -241,7 +241,7 @@ run 'full dpkg list' dpkg -l
 
 # ------------------------------------------------------ 90 frontend hunt
 sec_begin '90-frontend-hunt.txt' 'gaming-frontend identification (read-only)'
-run 'frontend-like processes' sh -c "ps auxf 2>&1 | grep -i -E '[e]mulat|[r]etro|[p]egasus|[a]ttract|[k]odi|[k]ms|[w]eston|[m]utter|[g]nome-shell|Xorg|X11|[g]ame|[f]rontend|[s]dl|[f]bterm|[k]mscon|[l]ightdm|[g]dm|[s]ddm || echo 'no obvious frontend string in ps output'"
+run 'frontend-like processes' sh -c "ps auxf 2>&1 | grep -i -E '[e]mulat|[r]etro|[p]egasus|[a]ttract|[k]odi|[k]ms|[w]eston|[m]utter|[g]nome-shell|Xorg|X11|[g]ame|[f]rontend|[s]dl|[f]bterm|[k]mscon|[l]ightdm|[g]dm|[s]ddm' || echo 'no obvious frontend string in ps output'"
 run 'display-manager units' sh -c 'systemctl list-units --all --no-pager 2>&1 | grep -i -E "[d]isplay|[d]m\.service|[g]etty|[a]utologin" || echo "no dm/getty match"'
 run 'graphical target wants' sh -c "ls -la '$ETC_ROOT/systemd/system/graphical.target.wants/' 2>&1"
 run 'multi-user target wants' sh -c "ls -la '$ETC_ROOT/systemd/system/multi-user.target.wants/' 2>&1"

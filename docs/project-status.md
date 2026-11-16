@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, hw Phase 1 merged; Phase 2 privileged).
+Last updated: 2026-11-16 (Agent 0, hw Phase 2 merged; fbcon SDL built).
 
 ## Completed
 
@@ -178,6 +178,19 @@ Last updated: 2026-11-16 (Agent 0, hw Phase 1 merged; Phase 2 privileged).
   rg35xxh-stock.dtb` (144320 B, sha 7915a303…) + decompiled 6652-line
   `.dts` (model sun50iw9, panel node confirmed).
 - sudo fix VERIFIED working (`sudo -n whoami` → root).
+
+## Completed (hw Phase 2, merged + Lead follow-ups)
+
+- Branch `hw/stock-poc2` merged (privileged probes, frontend stop/start dry
+  test, evtest handoff, sleep mapping). Device left stock-healthy.
+- stock-probe.sh §90 quoting bug FIXED (one char) + regression test proven
+  fail-before/pass-after; bundle suite now 45/45.
+- SDL 1.2 fbcon cross-build DONE (Lead, Jammy sysroot): aarch64, NEEDED
+  libc/m only, GLIBC ≤ 2.34, dummy+fbcon only, sha 3924a625…
+  (`docs/test-results/sdl-fbcon-build.md`). Shadows dummy libSDL via
+  LD_LIBRARY_PATH on device.
+- Open risk: fb0 writes proven writable, visibility UNPROVEN (DE layer
+  mismatch) — human red-fill look required before any video claim.
 
 ## Current work (SSH live, 2026-11-16)
 
