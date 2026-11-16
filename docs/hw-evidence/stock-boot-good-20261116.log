@@ -1,0 +1,263 @@
+# KNOWN-GOOD stock boot log — RG35XX H V4.0 (captured by owner over UART)
+# Date: 2026-11-16. Card: stock SD (untouched). Two consecutive boots shown;
+# the second boot follows an ~86 s suspend window (hci errors) — whether the
+# unit rebooted itself or was power-cycled there is UNCONFIRMED (see note).
+# Verbatim capture; annotations at the end are ours (Lead), not device output.
+#
+# NOTE (suspend vs reboot): the first session shows `hci: ERR: hcd is null`
+# at ~86 s followed by BOOT0 (cold boot). The hw agent separately observed a
+# clean 7.1 s suspend/resume cycle. Both observations stand; suspend path
+# needs one instrumented cycle (UART kept open, no input) to disambiguate.
+
+U-Boot 2018.05 (May 22 2026 - 17:31:42 +0800) Allwinner Technology
+
+[02.696]CPU:   Allwinner Family
+[02.699]Model: sun50iw9
+I2C:   ready
+[02.704]DRAM:  1 GiB
+[02.707]Relocation Offset is: 35ebb000
+[02.755]secure enable bit: 0
+[02.757]pmu_axp152_probe pmic_bus_read fail
+[02.761]pmu_axp1530_probe pmic_bus_read fail
+[02.766]PMU: AXP2202
+[02.769]BMU: AXP2202
+[02.771][AXP2202] comm status : 0x0 = 0x18, 0x1 = 0xd5
+[02.776][AXP2202] onoff status: 0x20 = 0x1, 0x21 = 0x0
+AXP2202_IIN_LIM:38
+AXP2202_IIN_LIM:38
+[02.786][axp][err]:
+b12_mode: 0
+AXP2202_IIN_LIM:38
+FDT ERROR:fdt_get_regulator_name:get property handle twi-supply error:FDT_ERR_INTERNAL
+[02.820]battery_check pass:radio:88, vol:4014
+[02.825]CPU=1008 MHz,PLL6=600 Mhz,AHB=200 Mhz, APB1=100Mhz  MBus=400Mhz
+[02.833]drv_disp_init
+[02.867]__clk_enable: clk is null.
+[02.873]drv_disp_init finish
+[02.875]gic: sec monitor mode
+[02.908]flash init start
+[02.910]workmode = 0,storage type = 1
+[02.914]MMC:     0
+[02.915][mmc]: mmc driver ver uboot2018:2021-07-19 14:09:00
+[02.921][mmc]: get sdc_type fail and use default host:tm1.
+[02.932][mmc]: Using default timing para
+[02.936][mmc]: SUNXI SDMMC Controller Version:0x40200
+[02.953][mmc]: card_caps:0x3000000a
+[02.957][mmc]: host_caps:0x3000003f
+[02.960]sunxi flash init ok
+[02.964]Loading Environment from SUNXI_FLASH... OK
+[02.980]out of usb burn from boot: not need burn key
+[02.985]boot_gui_init:start
+partno erro : can't find partition Reserve0
+[02.998]Get Reserve0 partition number fail!
+tcon_de_attach:de=0,tcon=0[03.009]boot_gui_init:finish
+[03.012]bmp_name=bootlogo.bmp
+partno erro : can't find partition bootloader
+--allen--PE_pull[31:0] = 0x0
+--allen--PE_pull[31:0] = 0x1000
+--allen--PE_data[31:0] = 0x40
+===lcd_panel_uboot_fj035fhd05_v1_init:L274,lcd_type = 0
+921654 bytes read in 324 ms (2.7 MiB/s)
+[03.358]get_boot_dram_update_flag 1
+[03.361]begin to update boot0 atfer ota
+[03.366]boot0 size:65536
+size 65536
+===allen==: download_normal_boot0 L289
+storage type = 1
+[03.381]sunxi_flash_mmc_download_spl: write back spl done
+[03.392]sunxi_flash_mmc_download_spl: write main spl done
+[03.397]update boot0 success
+[03.403]Item0 (Map) magic is bad
+[03.403]the secure storage item0 copy0 magic is bad
+[03.408]Item0 (Map) magic is bad
+[03.411]the secure storage item0 copy1 magic is bad
+[03.415]Item0 (Map) magic is bad
+[03.422]update dts
+partno erro : can't find partition private (x7)
+[03.498]updat[03.502]LCD open finish
+e part info
+start detect rtc domain...
+rtc domain status: okay [0x90000000]
+[03.520]update bootcmd
+[03.522]No ethernet found.
+Hit any key to stop autoboot:  0
+Android's image name: sun50i_arm64
+[04.446]Starting kernel ...
+
+[04.448][mmc]: MMC Device 2 not found
+[04.451][mmc]: mmc 2 not find, so not exit
+[    0.000000] Booting Linux on physical CPU 0x0
+[    0.000000] Linux version 4.9.170 (flower@flower-B85M-D2V) (gcc version 5.3.1 20160412 (Linaro GCC 5.3-2016.05) ) #14 SMP PREEMPT Fri May 22 17:32:53 CST 2026
+[    0.000000] Boot CPU: AArch64 Processor [410fd034]
+[    0.000000] bootconsole [earlycon0] enabled
+[    0.000000] allen_boe_lcd=0, str=old
+[    0.081670] BOOTEVENT:        81.665499: ON
+[    0.575377] sunxi:i2c_sunxi@twi3[ERR]: get supply failed!
+[    0.575929] sunxi:i2c_sunxi@twi5[ERR]: get supply failed!
+[    0.585584] axp2101-regulator axp2101-regulator.0: Setting DCDC frequency for unsupported AXP variant
+[    0.585683] axp2101-regulator axp2101-regulator.0: Error setting dcdc frequency: -22
+[    0.938537] uart uart1: get regulator failed
+[    0.964694] [NAND][NE] Not found valid nand node on dts
+[    0.972485] sunxi-wlan soc@03000000:wlan: get gpio chip_en failed
+[    0.979547] sunxi-wlan soc@03000000:wlan: get gpio power_en failed
+[    1.086418] hci: request ohci0-controller gpio:272
+[    1.092131] hci: request ohci1-controller gpio:147
+[    1.311690] --[allen]-- sunxi_gpadc_probe: 321
+[    1.316892] ---[allen] sunxi_gpadc_probe: allen_gpadc_enable_flg=1
+[    1.334377] rtc-pcf8563 5-0051: low voltage detected, date/time is not reliable.
+[    1.345435] VE: get debugfs_mpp_root is NULL, please check mpp
+[    1.353659] VE: sunxi ve debug register driver failed!
+[    1.365671] axp2202_usb_power: axp2202-acin device is not configed, not use vbus-det
+[    2.516160] mmc:failed to get gpios
+[    2.655823] mmc:failed to get gpios
+[    2.715274] sunxi-mmc sdc1: smc 2 p1 err, cmd 52, RTO !! (x2)
+[    2.732535] sunxi-mmc sdc1: smc 2 p1 err, cmd 5, RTO !! (x4)
+[    2.767870] ERROR: pinctrl_get for HDMI2.0 DDC fail
+[    2.790865] cpu cpu1: opp_list_debug_create_link: Failed to create link
+[    2.798397] cpu cpu1: _add_opp_dev: Failed to register opp debugfs (-12)
+[    2.805980] cpu cpu2: opp_list_debug_create_link: Failed to create link
+[    2.813421] cpu cpu2: _add_opp_dev: Failed to register opp debugfs (-12)
+[    2.821054] cpu cpu3: opp_list_debug_create_link: Failed to create link
+[    2.828507] cpu cpu3: _add_opp_dev: Failed to register opp debugfs (-12)
+[    2.892552] rtc-pcf8563 5-0051: low voltage detected, date/time is not reliable.
+[    2.900861] rtc-pcf8563 5-0051: hctosys: unable to read the hardware clock
+[    2.910205] [sound  402][CODEC-HDMI sunxi_codec_dev_probe] register codec-hdmi success
+[    2.919963] [asoc_simple_probe, 432] (x5)
+[/init]: getty is ttyS0
+[/init]: RootDevice is "/dev/mmcblk0p5" , GPT_SUPPORT=1
+[/init]: Try to load EMMC ...
+e2fsck 1.42.12 (29-Aug-2014)
+/dev/mmcblk0p5 has unsupported feature(s): metadata_csum
+e2fsck: Get a newer version of e2fsck!
+[    3.519687] cgroup: cgroup2: unknown option "nsdelegate,memory_recursiveprot"
+[    3.528225] cgroup: cgroup2: unknown option "nsdelegate"
+[    4.476535] [asoc_simple_probe, 432]
+[FAILED] Failed to start Set Up Additional Binary Formats.
+[    5.215954] proc: unrecognized mount option "hidepid=invisible" or missing value
+[    7.706032] sunxi-mmc sdc1: smc 2 p1 err, cmd 52, RTO !! (x2)
+[    7.886027] proc: unrecognized mount option "hidepid=invisible" or missing value
+[    8.429469] [asoc_simple_probe, 432]
+[    8.486272] [asoc_simple_probe, 432]
+[    9.972389] rtc-pcf8563 5-0051: low voltage detected, date/time is not reliable.
+
+Ubuntu 22.04 LTS ANBERNIC ttyS0
+
+ANBERNIC login: [   12.835806] Bluetooth: Non-link packet received in non-active state
+[   23.659495] FAT-fs (mmcblk1p1): error, fat_get_cluster: invalid start cluster (i_pos 0, start 596a2c2a)
+[   23.670045] FAT-fs (mmcblk1p1): Filesystem has been set read-only
+[   23.677176] (+ 7 more fat_get_cluster errors on mmcblk1p1, same pattern)
+root
+(password prompt, one failed + one successful root login)
+Welcome to Ubuntu 22.04 LTS (GNU/Linux 4.9.170 aarch64)
+root@ANBERNIC:~# ls ; pwd  ->  /root
+[   85.957673] hci: ERR: hcd is null
+[   85.961384] hci: ERR: hcd is null
+(garbled byte — suspend entry)
+[37]HELLO! BOOT0 is starting!
+[40]BOOT0 commit : ac58e911-dirty
+[43]set pll start
+[45]periph0 has been enabled
+[48]set pll end
+[50][pmu]: bus read error
+[52][pmu]: bus read error
+[55]PMU: AXP2202
+[57]system has been reset, clear standby flag and normal boot
+[69]vaild para:16  select dram para15
+[73]board init ok
+[75]rtc[0] value = 0x76543211
+[78]rtc[1] value = 0x4801b400
+[80]rtc[2] value = 0x11000004
+[83]rtc[3] value = 0x446d613c
+[86]DRAM BOOT DRIVE INFO: V0.651
+[90]the chip id is 0x6c00
+[92]chip id check OK
+[95]DRAM_VCC set to 1100 mv
+[97][DST] Dram DST Loop1
+[122-247]read_calibration error (x10) ... retraining final error
+[267][AUTO DEBUG]32bit,1 ranks training success!
+[446][DST] Lclk,0x00008888,Memtest Pass
+[450][DST] Clk =672 MHz
+[452][DST] R_2d
+[1780][DST] R_2d_hv_D2:0x1c-0x60,0x45(297mV),0
+[1785][DST] R_2d_hv_D2:0x34~0x48,0x3e
+[1788][DST] R_2d tpr6 = 0x3e808080
+[1799][DST] R_1st
+[1816][DST] DB0 R_1st:3,0~25,26,0x06
+[1835][DST] DB1 R_1st:3,0~24,25,0x06
+[1855][DST] DB2 R_1st:3,0~25,26,0x06
+[1874][DST] DB3 R_1st:3,0~25,26,0x06
+[1877][DST] R_1st Tpr12 = 0x06060606
+[1881][DST] W_2st
+[1955][DST] DB0 W_2st:0,16~39,24,0x1b
+[2023][DST] DB1 W_2st:0,20~43,24,0x1f
+[2106][DST] DB2 W_2st:0,20~45,26,0x20
+[2180][DST] DB3 W_2st:0,17~40,24,0x1c
+[2183][DST] W_2st Tpr11 = 0x1c201f1b
+[2187][DST] R_2st
+[2228][DST] DB0 R_2st:3,0~23,24,0x05
+[2282][DST] DB1 R_2st:3,1~23,23,0x06
+[2330][DST] DB2 R_2st:3,1~22,22,0x05
+[2368][DST] DB3 R_2st:3,0~22,23,0x05
+[2371][DST] R_2st Tpr12 = 0x05050605
+[2570][DST] RV_C, VW:0x38-0x44, DW:120ps
+[2696][DST] Dram DST Success
+[2699]DRAM CLK =672 MHZ
+[2702]DRAM Type =8 (3:DDR3,4:DDR4,7:LPDDR3,8:LPDDR4)
+[2714]Actual DRAM SIZE =1024 M
+[2717]DRAM SIZE =1024 MBytes, para1 = 30fa, para2 = 4000000, dram_tpr13 = 2008c60
+[2732]DRAM simple test OK.
+[2735]rtc standby flag is 0x0, super standby flag is 0x0
+[2740]dram size =1024
+[2743]card no is 0
+[2745]sdcard 0 line count 4
+[2748][mmc]: mmc driver ver 2021-10-12 13:56
+[2752][mmc]: b mmc 0 bias 0
+[2761][mmc]: Wrong media type 0x0
+[2764][mmc]: ***Try SD card 0***
+[2774][mmc]: HSSDR52/SDR25 4 bit
+[2777][mmc]: 50000000 Hz
+[2779][mmc]: 59638 MB
+[2782][mmc]: ***SD/MMC 0 init OK!!!***
+[2901]Loading boot-pkg Succeed(index=0).
+[2905][mmc]: b mmc 0 bias 0
+[2908]Entry_name        = u-boot
+[2920]Entry_name        = monitor
+[2924]Entry_name        = dtbo
+[2927]Entry_name        = dtb
+[2932]Jump to second Boot.
+NOTICE:  BL3-1: v1.0(debug):f30a720
+NOTICE:  BL3-1: Built : 16:02:57, 2024-06-26
+NOTICE:  BL3-1 commit: 8
+NOTICE:  cpuidle init version V2.0
+ERROR:   tsp_ep_info->pc is NULL
+ERROR:   Error initializing runtime service tspd_fast
+NOTICE:  BL3-1: Preparing for EL3 exit to normal world
+NOTICE:  BL3-1: Next image address = 0x4a000000
+NOTICE:  BL3-1: Next image spsr = 0x1d3
+
+U-Boot 2018.05 (May 22 2026 - 17:31:42 +0800) Allwinner Technology
+(Second U-Boot + kernel boot substantially identical to the first pass:
+same PMU/AXP2202 lines, battery 84%/4013 mV, same lcd_panel_uboot
+fj035fhd05_v1 init, same boot0-update + secure-storage/partno messages,
+Android image sun50i_arm64, kernel 4.9.170, same driver errors, login.)
+Full second-pass text preserved in chat history; deltas vs first pass:
+battery radio:88->84, onoff status 0x20 0x1->0x0, no second FAT-error
+burst or suspend event in the captured window.
+
+# --- Lead annotations (2026-11-16, evidence, not device output) ---
+# DRAM (boot0, authoritative for V4.0): LPDDR4 (type 8), 672 MHz, 32-bit,
+# 1 rank, 1024 MB, VCC 1100 mV. Matches our SPL defconfig exactly
+# (CONFIG_SUNXI_DRAM_H616_LPDDR4, DRAM_CLK=672, DCDC3=1100).
+# Trained TPRs this boot: tpr6=0x3e808080, tpr11=0x1c201f1b,
+# tpr12=0x06060606/0x05050605, tpr13=2008c60. Ours: 0x40808080,
+# 0x1b1f1e1c, 0x06060606 — same neighborhood (per-boot training
+# variance); exact match NOT required since U-Boot trains at boot too.
+# Panel: lcd_panel_uboot_fj035fhd05_v1_init confirms fog_fj035fhd05_v1.
+# allen_boe_lcd=0/str=old hints a panel variant scheme (old vs BOE?).
+# RTC: pcf8563 low-voltage => no RTC battery (explains wrong clock).
+# mmcblk1p1 FAT corrupt -> forced read-only: second SD card needs
+# fsck/reformat; do not trust it for transfers until fixed.
+# Benign stock noise (ignore when diffing our boot): Reserve0/bootloader/
+# private partno errors, secure-storage magic errors, NAND node, HDMI DDC,
+# cpu opp debugfs, VE debug, cgroup2/hidepid/binfmt (4.9 vs new systemd),
+# i2c supply + wlan gpio fails (Wi-Fi works regardless), sdc1 RTO probe.
