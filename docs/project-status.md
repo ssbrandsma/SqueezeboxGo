@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, SqueezeboxGo merged; icon+lint fixed).
+Last updated: 2026-11-16 (Agent 0, Jive VISIBLE on LCD (corrupted); display debug).
 
 ## Completed
 
@@ -226,6 +226,19 @@ Last updated: 2026-11-16 (Agent 0, SqueezeboxGo merged; icon+lint fixed).
   240x180 icon, FAT-safe). Suites: go 62/62, bundle 45/45, selftest 27/27.
 - Next: hw redeploy (final icon + Return action) → human observation
   batch (icon/menu/buttons/ears/game/evtest/live color/0.3.0 boot).
+- MILESTONE (owner-observed): native Jive language screen VISIBLE on the
+  physical LCD (corrupted: multicolour text artifacts, black regions,
+  right-edge vertical line, scanlines, wrong screen fill).
+- Prime suspects (code-read): Jive adopts fbcon current mode
+  (jive_framework.c: screen_w/h+bpp from SDL_GetVideoInfo, likely
+  1280x1024x16) while skin/LCD are 640x480 → pitch/geometry mismatch
+  explains stripes/line/black fill; 32-bit RGBA widget blits to 16-bit
+  screen with wrong masks would explain colour artifacts. No splash.png
+  ships in share/ (splash path likely skipped).
+- hw agent tasked (queued, same run): 7-item display probe (Jive video
+  log line, fbset+vinfo bitfields/offsets, SDL-vs-fb pitch probe,
+  DE layer state, Lyrion-splash renderer identification). No code
+  changes until measurements land.
 
 ## Prior state (human-gated proofs)
 
