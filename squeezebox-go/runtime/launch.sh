@@ -123,6 +123,11 @@ stop_frontend() {
 	log "frontend $UNIT pre-state: $WAS_ACTIVE"
 	printf '%s\nwas_active=%s\n' "$UNIT" "$WAS_ACTIVE" >"$STAMP_FILE"
 	if [ "$WAS_ACTIVE" = 'active' ]; then
+		# dmenu_ln runs `sh $ACT` from /tmp/.next when dmenu exits: a stale
+		# file here would double-launch us after the stop (proven race —
+		# see hw-go-redeploy.md). In the real APPS flow dmenu already
+		# consumed it, so removal is a no-op there.
+		rm -f /tmp/.next
 		if systemctl stop "$UNIT" 2>&1; then
 			log "stopped $UNIT (stop only — enables/masks untouched; reboot restores stock)"
 		else

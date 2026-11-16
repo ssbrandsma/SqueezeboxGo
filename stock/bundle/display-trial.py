@@ -37,13 +37,28 @@ FBIOGET_VSCREENINFO = 0x4600
 FBIOPUT_VSCREENINFO = 0x4601
 FBIOGET_FSCREENINFO = 0x4602
 
-# struct fb_var_screeninfo, 160 bytes (glibc asm layout, 32 fields)
-VAR_FMT = "8I12I4I"
-VAR_NAMES = ("xres,yres,xres_virtual,yres_virtual,xoffset,yoffset,bits_per_pixel,grayscale,"
-             "red.offset,red.length,red.msb_right,green.offset,green.length,green.msb_right,"
-             "blue.offset,blue.length,blue.msb_right,transp.offset,transp.length,transp.msb_right,"
-             "nonstd,activate,height,width,accel_flags,pixclock,left_margin,right_margin,"
-             "upper_margin,lower_margin,hsync_len,vsync_len,sync,vmode,rotate").split(",")
+# struct fb_var_screeninfo: 40 x u32 = 160 bytes, EXACT kernel UAPI order
+# (uapi/linux/fb.h). PUT must round-trip every field: packing a short
+# struct corrupts timings/margins the driver keeps in the tail.
+VAR_FMT = "<40I"
+VAR_NAMES = ("xres,yres,xres_virtual,yres_virtual,xoffset,yoffset,"
+             "bits_per_pixel,grayscale,"
+             "red.offset,red.length,red.msb_right,"
+             "green.offset,green.length,green.msb_right,"
+             "blue.offset,blue.length,blue.msb_right,"
+             "transp.offset,transp.length,transp.msb_right,"
+             "nonstd,activate,height,width,accel_flags,pixclock,"
+             "left_margin,right_margin,upper_margin,lower_margin,"
+             "hsync_len,vsync_len,sync,vmode,rotate,colorspace,"
+             "reserved0,reserved1,reserved2,reserved3").split(",")
+assert len(VAR_NAMES) == 40
+
+# struct fb_fix_screeninfo (64-bit): id[16], smem_start(Q),
+# smem_len/type/type_aux/visual(4I), xpan/ypan/ywrapstep(3H), 2 pad bytes,
+# line_length(I @48), ... — we only need smem_len + line_length.
+FIX_PREFIX_FMT = "<16sQ4I3H2xI"
+FIX_SMEM_LEN_IDX = 2  # index into unpacked tuple below
+FIX_LINE_LENGTH_IDX = 9
 
 ATTEMPTS = [
     # (number, xres, yres, bpp, vxres_or_None, note)
@@ -175,32 +190,51 @@ def write_png(path, cv):
                 + chunk(b"IDAT", comp) + chunk(b"IEND", b""))
 
 
+def unpack_var(buf):
+    assert len(buf) == 160, "var_screeninfo must be 160 bytes"
+    return dict(zip(VAR_NAMES, struct.unpack(VAR_FMT, buf)))
+
+
+def pack_var(v):
+    return struct.pack(VAR_FMT, *[v[k] for k in VAR_NAMES])
+
+
+def unpack_fix(buf):
+    vals = struct.unpack(FIX_PREFIX_FMT, buf[:struct.calcsize(FIX_PREFIX_FMT)])
+    return {"smem_len": vals[FIX_SMEM_LEN_IDX],
+            "line_length": vals[FIX_LINE_LENGTH_IDX]}
+
+
 def get_var(fb):
     with open(fb, "r+b") as f:
         buf = fcntl.ioctl(f.fileno(), FBIOGET_VSCREENINFO, bytes(160))
-    vals = struct.unpack(VAR_FMT, buf)
-    return dict(zip(VAR_NAMES, vals))
+    return unpack_var(buf)
+
+
+def get_fix(fb):
+    with open(fb, "r+b") as f:
+        buf = fcntl.ioctl(f.fileno(), FBIOGET_FSCREENINFO, bytes(128))
+    return unpack_fix(buf)
 
 
 def put_var(fb, v):
-    buf = struct.pack(VAR_FMT, *[v[k] for k in VAR_NAMES])
     with open(fb, "r+b") as f:
-        fcntl.ioctl(f.fileno(), FBIOPUT_VSCREENINFO, buf)
+        fcntl.ioctl(f.fileno(), FBIOPUT_VSCREENINFO, pack_var(v))
 
 
-def blit(fb, cv, xres, yres, stride):
-    nbytes = yres * stride
+def blit(fb, cv, xres, yres, stride, smem_len):
+    nbytes = min(yres * stride, smem_len)
     with open(fb, "r+b") as f:
-        mm = mmap.mmap(f.fileno(), nbytes)
-        src_B, dst_B = cv.bpp // 8, stride // xres
-        if cv.bpp == 16 and dst_B == 2 and cv.w == xres:
-            mm[:nbytes] = bytes(cv.px[:nbytes])
-        else:
-            # generic row copy honoring both pitches
-            for y in range(min(cv.h, yres)):
-                s = cv.px[y * cv.w * src_B:(y + 1) * cv.w * src_B]
-                mm[y * stride:y * stride + len(s)] = s
-        mm.flush()
+        mm = mmap.mmap(f.fileno(), smem_len)
+        src_B = cv.bpp // 8
+        roww = min(cv.w * src_B, stride)
+        for y in range(min(cv.h, yres)):
+            s = cv.px[y * cv.w * src_B:y * cv.w * src_B + roww]
+            mm[y * stride:y * stride + roww] = s
+        try:
+            mm.flush()
+        except OSError:
+            pass  # fb mappings reject msync (EINVAL); writes still land
         mm.close()
 
 
@@ -227,15 +261,16 @@ def main(argv):
     fh = open(args.log, "w")
     try:
         orig = get_var(args.fb)
-        log("stock vinfo: %dx%d/%dbpp virt=%dx%d off=%d,%d len=%s rotate=%s" % (
-            orig["xres"], orig["yres"], orig["bits_per_pixel"],
-            orig["xres_virtual"], orig["yres_virtual"],
-            orig["xoffset"], orig["yoffset"],
-            "?", orig["rotate"]), fh)
+        fix0 = get_fix(args.fb)
+        log("stock vinfo: %dx%d/%dbpp virt=%dx%d off=%d,%d "
+            "line_length=%d smem=%d rotate=%s" % (
+                orig["xres"], orig["yres"], orig["bits_per_pixel"],
+                orig["xres_virtual"], orig["yres_virtual"],
+                orig["xoffset"], orig["yoffset"],
+                fix0["line_length"], fix0["smem_len"], orig["rotate"]), fh)
         # save current pixels for restore
-        stride0 = orig["xres"] * (orig["bits_per_pixel"] // 8)
         with open(args.fb, "r+b") as f:
-            mm0 = mmap.mmap(f.fileno(), orig["yres"] * stride0)
+            mm0 = mmap.mmap(f.fileno(), fix0["smem_len"])
             saved = bytes(mm0[:])
             mm0.close()
         log("saved %d framebuffer bytes for restore" % len(saved), fh)
@@ -255,15 +290,18 @@ def main(argv):
                         log("PUT FAILED (%s); drawing at resulting mode" % e,
                             fh)
                 cur = get_var(args.fb)
-                log("active: %dx%d/%dbpp virt=%dx%d off=%d,%d" % (
-                    cur["xres"], cur["yres"], cur["bits_per_pixel"],
-                    cur["xres_virtual"], cur["yres_virtual"],
-                    cur["xoffset"], cur["yoffset"]), fh)
-                stride = cur["xres"] * (cur["bits_per_pixel"] // 8)
+                fix = get_fix(args.fb)
+                log("active: %dx%d/%dbpp virt=%dx%d off=%d,%d "
+                    "line_length=%d smem=%d" % (
+                        cur["xres"], cur["yres"], cur["bits_per_pixel"],
+                        cur["xres_virtual"], cur["yres_virtual"],
+                        cur["xoffset"], cur["yoffset"],
+                        fix["line_length"], fix["smem_len"]), fh)
                 cv = draw_pattern(num, cur["xres"], cur["yres"],
                                   cur["bits_per_pixel"],
                                   region_640=(num == 3 and cur["xres"] > 640))
-                blit(args.fb, cv, cur["xres"], cur["yres"], stride)
+                blit(args.fb, cv, cur["xres"], cur["yres"],
+                     fix["line_length"], fix["smem_len"])
                 log("showing #%d for %ds — OBSERVE LCD NOW" % (num, args.hold),
                     fh)
                 time.sleep(args.hold)

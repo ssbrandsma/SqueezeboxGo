@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, Jive VISIBLE on LCD (corrupted); display debug).
+Last updated: 2026-11-16 (Agent 0, redeploy merged; trial fixed; device dark).
 
 ## Completed
 
@@ -241,6 +241,19 @@ Last updated: 2026-11-16 (Agent 0, Jive VISIBLE on LCD (corrupted); display debu
   log line, fbset+vinfo bitfields/offsets, SDL-vs-fb pitch probe,
   DE layer state, Lyrion-splash renderer identification). No code
   changes until measurements land.
+- Redeploy merged (`hw/go-redeploy`): final ZIP installed on device
+  (icon 240x180, entry, payload verified), exit-42 chain device-proven
+  except physical traversal, DE gains 640x480 UI layer during Jive,
+  16-request negotiates 32-bit XRGB surface (key display datum).
+- display-trial.py FIXED after hw review found 3 real bugs (short
+  ioctl struct, unguarded flush, assumed stride): full 40-u32 layout
+  from kernel UAPI, fix-screeninfo stride, guarded flush; host tests
+  now 16/16 with struct round-trip coverage.
+- Retired stale `stock/go/install+uninstall` (superseded layout trap);
+  added `/tmp/.next` double-launch guard to `launch.sh`.
+- DEVICE DARK since ~15:58 (dmenu stopped at blackout): owner must
+  short-press power; then SSH re-probe + human observation batch
+  (GO carousel, evtest fingers, ears, game check, 0.3.0 boot).
 
 ## Prior state (human-gated proofs)
 

@@ -84,6 +84,43 @@ check("attempt-3 region border", g3(320, 1)[:3] == (255, 255, 255))
 _, _, g4 = read_png("%s/a/attempt-4.png" % tmp)
 check("attempt-4 32-bit red exact", g4(50, 450) == (255, 0, 0, 255))
 
+# ioctl struct layout (regression: full 160-byte var + fix offsets)
+import importlib.util
+import struct as _struct
+spec = importlib.util.spec_from_file_location(
+    "display_trial", os.path.join(HERE, "..", "bundle", "display-trial.py"))
+dt = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(dt)
+
+v = {k: 0 for k in dt.VAR_NAMES}
+v.update(xres=1280, yres=1024, bits_per_pixel=16, xoffset=7,
+         activate=3, pixclock=9369)
+v.update({"red.offset": 11, "red.length": 5, "green.offset": 5,
+          "green.length": 6, "blue.offset": 0, "blue.length": 5})
+buf = dt.pack_var(v)
+check("pack_var emits 160 bytes", len(buf) == 160)
+check("xres@0 yres@4 bpp@24",
+      _struct.unpack_from("<III", buf, 0)[0] == 1280
+      and _struct.unpack_from("<I", buf, 4)[0] == 1024
+      and _struct.unpack_from("<I", buf, 24)[0] == 16)
+check("red.offset@32 activate@84",
+      _struct.unpack_from("<I", buf, 32)[0] == 11
+      and _struct.unpack_from("<I", buf, 84)[0] == 3)
+rt = dt.unpack_var(buf)
+check("var round-trip stable",
+      rt["xres"] == 1280 and rt["green.length"] == 6
+      and rt["pixclock"] == 9369 and rt["reserved3"] == 0)
+
+fixbuf = (b"DISPDRVFB0\x00\x00\x00\x00\x00\x00"
+          + _struct.pack("<Q", 0x5F000000)
+          + _struct.pack("<4I", 0x280000, 0, 0, 3)
+          + _struct.pack("<3H", 1, 1, 0)
+          + b"\x00\x00"
+          + _struct.pack("<I", 2560))
+fix = dt.unpack_fix(fixbuf)
+check("fix parses smem_len + line_length@48",
+      fix == {"smem_len": 0x280000, "line_length": 2560}, repr(fix))
+
 # CLI contract
 r = subprocess.run([sys.executable, TRIAL, "--help"], capture_output=True)
 check("--help exits 0", r.returncode == 0)
