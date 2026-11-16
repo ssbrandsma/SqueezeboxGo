@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, 0.3.0-exp3 verified; awaiting HW boot).
+Last updated: 2026-11-16 (Agent 0, diagnostics merged; Jammy PoC binary ready).
 
 ## Completed
 
@@ -150,6 +150,21 @@ Last updated: 2026-11-16 (Agent 0, 0.3.0-exp3 verified; awaiting HW boot).
 - SBOM regenerated for 0.3.0 (dpkg 141/141 names+versions identical,
   measured from the 0.3.0 image via debugfs); MANIFEST sbom now points
   at releases/SBOM.json.
+
+## Completed (stock-track diagnostics, all merged)
+
+- Workflow `Squeezebox Stock Track Diagnostics` (completed), 4 branches merged:
+  - `diag/mainline-fault`: fault tree H0-H8 + UART banner guide + probes P0-P3.
+  - `diag/jammy-build`: Jammy sysroot recipe + REAL Jammy-compatible tarball
+    `/tmp/jammy-sp/squeezeplay/squeezeplay-aarch64-9.0.0.tgz` (23.5 MB,
+    sha 673ec5ee…02baa) — Lead-verified: ARM64, max GLIBC_2.34, 0 __isoc23.
+  - `diag/stock-av`: fbcon build doc, by-name input doc, audiocodec doc
+    (stock daemons are foreign ALSA holders — stop unit first, no force).
+  - `diag/stock-bundle`: `stock/` tree (probe, bundle, SSH docs) + 44/44 tests.
+- Verified here: bundle 44/44, selftest 27/27, shellcheck PASS (49 scripts).
+- Hardware agent briefed (queue): tarball path + hash, stock-probe.sh + bundle
+  now on main; priorities: probe run (unprivileged parts), DT walk, frontend
+  map; evtest/fb/snd writes + PoC launch blocked on the sudo fix.
 
 ## Current work (SSH live, 2026-11-16)
 
