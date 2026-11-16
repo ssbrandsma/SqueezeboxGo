@@ -151,11 +151,23 @@ Last updated: 2026-11-16 (Agent 0, 0.3.0-exp3 verified; awaiting HW boot).
   measured from the 0.3.0 image via debugfs); MANIFEST sbom now points
   at releases/SBOM.json.
 
-## Current work
+## Current work (SSH live, 2026-11-16)
 
-- Awaiting human hardware boot of 0.3.0 ddr4 (LPDDR4/V4.0): LED sequence
-  + UART log will prove the stage the old boot died at.
-- Still need from human: UART log + LED observations from the new image.
+- SSH `rg35xxh` (muse, key auth) VERIFIED; kernel 4.9.170 aarch64.
+  **sudo/su/pkexec all lost setuid** — no privilege path from SSH.
+  Muse lacks video/audio/input groups. DTB blob, fb0, snd, input all
+  need root. ONE-LINE FIX (UART root shell):
+  `chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo`
+  (+ optional `usermod -aG video,audio,input muse`).
+- Dedicated hardware agent spawned (branch `hw/stock-poc`, isolated
+  worktree): exclusive device owner. Phase 1 read-only inventory +
+  /proc/device-tree DT reconstruction + frontend/SDL/audio/input/sleep
+  probing; stops at the privilege wall with evidence.
+- Diagnostics workflow (4 agents) still running, untouched.
+- Stock PoC unblocked the moment sudo is fixed: Jammy rebuild (glibc
+  2.35) + reversible ~/squeezebox-dev deploy + frontend stop/launch.
+- Still need from human: (1) the sudo-fix line via UART, (2) UART log +
+  LED observations from a 0.3.0 ddr4 boot on the SECOND card.
 
 ## Blockers / external deps
 

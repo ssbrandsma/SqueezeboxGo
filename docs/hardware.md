@@ -48,6 +48,7 @@ driver vs firmware vs hardware-verified in all claims.
   `playback_hp`, `playback_hdmi`, `bluealsa`.
 - Mixers: LINEOUT, OutputL/R Mixer DACL/DACR, SPK, digital volume,
   lineout volume, tx hub mode.
+- Speaker amp: **SGM4865** (verified marking).
 - **The internal PCM was occupied during inventory — identify the audio
   owner (`fuser -v /dev/snd/*`) before any exclusive playback attempt.**
 
@@ -114,3 +115,15 @@ an 0.2.0 unit that boots fully shows power on + status off).
 Known-good stock boot log first (BROM/boot0 banner, DRAM print, PMU
 lines, partitions, kernel version/cmdline), then the same capture on our
 image; diff them. Save logs next to results (`boot-<variant>-<date>.txt`).
+
+## SSH access + sleep behavior (verified 2026-11-16)
+
+- SSH `rg35xxh` (muse, key auth) works. **sudo/su/pkexec lost setuid —
+  no privilege path from SSH** until the owner runs on the UART root
+  shell: `chown root:root /usr/bin/sudo && chmod 4755 /usr/bin/sudo`
+  (+ optional `usermod -aG video,audio,input muse`). Rootfs is NOT
+  nosuid; only fusermount3 retains setuid. No escalation attempts.
+- Stock suspends after ~80–85 s idle (`hci: ERR: hcd is null`, comms
+  silent until wake — verified, not a wiring fault). SSH keepalive does
+  NOT prevent it. Keep device commands short; treat timeouts as SLEEP
+  (retry once, then BLOCKED-on-wake), never as crash or failure.
