@@ -1,0 +1,74 @@
+=== mod tree ===
+/mnt/mod
+/mnt/mod/update
+/mnt/mod/update/update.sh
+/mnt/mod/update/mod
+/mnt/mod/update/mod/res
+/mnt/mod/update/mod/update.py
+/mnt/mod/update/mod/sdl2.zip
+/mnt/mod/update/mod/language.py
+/mnt/mod/update/mod/graphic.py
+/mnt/mod/update/mod/lang
+/mnt/mod/update/mod/__pycache__
+/mnt/mod/update/mod/input.py
+/mnt/mod/update/mod/main.py
+/mnt/mod/update/mod/data
+/mnt/mod/update/update.log
+/mnt/mod/ctrl
+/mnt/mod/ctrl/res
+/mnt/mod/ctrl/res/1
+/mnt/mod/ctrl/res/0
+/mnt/mod/ctrl/res/favorite.png
+/mnt/mod/ctrl/res/spy.png
+/mnt/mod/ctrl/res/history.png
+/mnt/mod/ctrl/res/tips-load-3.png
+/mnt/mod/ctrl/res/6
+/mnt/mod/ctrl/res/8
+/mnt/mod/ctrl/res/4
+/mnt/mod/ctrl/res/NOTHING.png
+/mnt/mod/ctrl/res/3
+/mnt/mod/ctrl/res/ing.mp4
+/mnt/mod/ctrl/res/unknown.png
+/mnt/mod/ctrl/res/7
+/mnt/mod/ctrl/res/9
+/mnt/mod/ctrl/res/5
+/mnt/mod/ctrl/res/tips-load-2.png
+/mnt/mod/ctrl/res/2
+/mnt/mod/ctrl/res/tips-load-0.png
+/mnt/mod/ctrl/volumeCtrl.dge
+/mnt/mod/ctrl/ndscheat
+/mnt/mod/ctrl/unzip
+/mnt/mod/ctrl/autostart
+
+=== fb.cfg ===
+-rw-r--r-- 1 root root 160 Apr 13  2022 /mnt/mod/ctrl/configs/fb.cfg
+0000000        640        480        640        960
+0000016          0        480         32          0
+0000032         16          8          0          8
+0000048          8          0          0          8
+0000064          0         24          8          0
+0000080          0        128         94        150
+0000096          0      41666         26         84
+0000112         10         34         20          4
+0000128          0          0          0          0
+*
+0000160
+
+=== system.cfg ===
+arcade.auto=0
+boot.logo=1
+global.bezel=1
+global.dark=0
+global.load=0
+global.samba=0
+global.shader=1
+global.spy=0
+global.ssh=0
+global.syncthing=0
+power.hdmi=1
+power.key=2
+power.lock=0
+ra.cfg=0
+ra.hotkey=0
+ra.mode=0
+varcade.vertical=1

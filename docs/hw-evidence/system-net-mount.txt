@@ -1,0 +1,105 @@
+=== ip link ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/ipip 0.0.0.0 brd 0.0.0.0
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/gre 0.0.0.0 brd 0.0.0.0
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN mode DEFAULT group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+5: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/ipip 0.0.0.0 brd 0.0.0.0
+6: ip6_vti0@NONE: <NOARP> mtu 1500 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/tunnel6 :: brd ::
+7: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/sit 0.0.0.0 brd 0.0.0.0
+8: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN mode DEFAULT group default qlen 1
+    link/tunnel6 :: brd ::
+9: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP mode DORMANT group default qlen 1000
+    link/ether 68:8f:c9:05:ff:9f brd ff:ff:ff:ff:ff:ff
+10: wlan1: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN mode DORMANT group default qlen 1000
+    link/ether 6a:8f:c9:05:ff:9f brd ff:ff:ff:ff:ff:ff
+
+=== ip addr ===
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: tunl0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1
+    link/ipip 0.0.0.0 brd 0.0.0.0
+3: gre0@NONE: <NOARP> mtu 1476 qdisc noop state DOWN group default qlen 1
+    link/gre 0.0.0.0 brd 0.0.0.0
+4: gretap0@NONE: <BROADCAST,MULTICAST> mtu 1462 qdisc noop state DOWN group default qlen 1000
+    link/ether 00:00:00:00:00:00 brd ff:ff:ff:ff:ff:ff
+5: ip_vti0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1
+    link/ipip 0.0.0.0 brd 0.0.0.0
+6: ip6_vti0@NONE: <NOARP> mtu 1500 qdisc noop state DOWN group default qlen 1
+    link/tunnel6 :: brd ::
+7: sit0@NONE: <NOARP> mtu 1480 qdisc noop state DOWN group default qlen 1
+    link/sit 0.0.0.0 brd 0.0.0.0
+8: ip6tnl0@NONE: <NOARP> mtu 1452 qdisc noop state DOWN group default qlen 1
+    link/tunnel6 :: brd ::
+9: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 68:8f:c9:05:ff:9f brd ff:ff:ff:ff:ff:ff
+    inet 192.168.1.117/24 brd 192.168.1.255 scope global dynamic noprefixroute wlan0
+       valid_lft 85961sec preferred_lft 85961sec
+    inet6 fd91:2ddb:561b:0:8d98:3e7f:2d5b:ed8d/64 scope global temporary dynamic 
+       valid_lft 6993sec preferred_lft 1593sec
+    inet6 fd91:2ddb:561b:0:1bad:1954:3c12:afac/64 scope global dynamic mngtmpaddr noprefixroute 
+       valid_lft 6993sec preferred_lft 1593sec
+    inet6 fe80::5d4:a40c:ae1c:60/64 scope link noprefixroute 
+       valid_lft forever preferred_lft forever
+10: wlan1: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN group default qlen 1000
+    link/ether 6a:8f:c9:05:ff:9f brd ff:ff:ff:ff:ff:ff
+
+=== mount ===
+none on /dev type devtmpfs (rw,relatime,size=462976k,nr_inodes=115744,mode=755)
+/dev/mmcblk0p5 on / type ext4 (rw,noatime,nodiratime,nobarrier,noauto_da_alloc,data=ordered)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+securityfs on /sys/kernel/security type securityfs (rw,nosuid,nodev,noexec,relatime)
+tmpfs on /dev/shm type tmpfs (rw,nosuid,nodev)
+devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)
+tmpfs on /run type tmpfs (rw,nosuid,nodev,size=199344k,nr_inodes=819200,mode=755)
+tmpfs on /run/lock type tmpfs (rw,nosuid,nodev,noexec,relatime,size=5120k)
+cgroup2 on /sys/fs/cgroup type cgroup2 (rw,nosuid,nodev,noexec,relatime)
+pstore on /sys/fs/pstore type pstore (rw,nosuid,nodev,noexec,relatime)
+bpf on /sys/fs/bpf type bpf (rw,nosuid,nodev,noexec,relatime)
+debugfs on /sys/kernel/debug type debugfs (rw,nosuid,nodev,noexec,relatime)
+ramfs on /run/credentials/systemd-sysusers.service type ramfs (ro,nosuid,nodev,noexec,relatime,mode=0700)
+fusectl on /sys/fs/fuse/connections type fusectl (rw,nosuid,nodev,noexec,relatime)
+configfs on /sys/kernel/config type configfs (rw,nosuid,nodev,noexec,relatime)
+/dev/mmcblk0p6 on /mnt/vendor type ext4 (rw,noatime,nodiratime,data=ordered)
+/dev/mmcblk0p7 on /mnt/data type ext4 (rw,noatime,nodiratime,data=ordered)
+/dev/mmcblk0p1 on /mnt/mmc type vfat (rw,noatime,nodiratime,fmask=0000,dmask=0000,allow_utime=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro)
+/dev/mmcblk1p1 on /mnt/sdcard type vfat (rw,noatime,uid=1000,gid=1000,fmask=0000,dmask=0000,allow_utime=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro)
+tmpfs on /run/user/0 type tmpfs (rw,nosuid,nodev,relatime,size=99672k,nr_inodes=24918,mode=700)
+tmpfs on /run/user/1000 type tmpfs (rw,nosuid,nodev,relatime,size=99672k,nr_inodes=24918,mode=700,uid=1000,gid=1000)
+
+=== df ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/mmcblk0p5  6.9G  3.9G  2.7G  60% /
+tmpfs           487M     0  487M   0% /dev/shm
+tmpfs           195M  1.4M  194M   1% /run
+tmpfs           5.0M  4.0K  5.0M   1% /run/lock
+/dev/mmcblk0p6  3.9G  2.3G  1.5G  62% /mnt/vendor
+/dev/mmcblk0p7  1.3G   48K  1.2G   1% /mnt/data
+/dev/mmcblk0p1  2.0G  511M  1.5G  25% /mnt/mmc
+/dev/mmcblk1p1  114G  108G  6.4G  95% /mnt/sdcard
+tmpfs            98M  8.0K   98M   1% /run/user/0
+tmpfs            98M   12K   98M   1% /run/user/1000
+
+=== lsblk ===
+NAME        MAJ:MIN RM   SIZE RO TYPE MOUNTPOINTS
+mmcblk0     179:0    0  58.2G  0 disk 
+|-mmcblk0p1 179:1    0     2G  0 part /mnt/mmc
+|-mmcblk0p2 179:2    0    32M  0 part 
+|-mmcblk0p3 179:3    0    16M  0 part 
+|-mmcblk0p4 179:4    0    64M  0 part 
+|-mmcblk0p5 179:5    0     7G  0 part /
+|-mmcblk0p6 179:6    0     4G  0 part /mnt/vendor
+`-mmcblk0p7 179:7    0   1.3G  0 part /mnt/data
+mmcblk1     179:16   0   117G  0 disk 
+`-mmcblk1p1 179:17   0 113.4G  0 part /mnt/sdcard

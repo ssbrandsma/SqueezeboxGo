@@ -1,0 +1,33 @@
+=== SDL1.2 bootstrap ===
+dummy
+fbcon
+=== SDL1.2 lower scan ===
+SDL dummy video driver
+dummy
+fbcon
+
+=== SDL2 bootstrap ===
+dummy
+windows
+=== SDL2 lower scan ===
+
+=== dmenu NEEDED (armhf readelf) ===
+ 0x00000001 (NEEDED)                     Shared library: [libSDL_image-1.2.so.0]
+ 0x00000001 (NEEDED)                     Shared library: [libSDL_ttf-2.0.so.0]
+ 0x00000001 (NEEDED)                     Shared library: [libfreetype.so.6]
+ 0x00000001 (NEEDED)                     Shared library: [libSDL-1.2.so.0]
+ 0x00000001 (NEEDED)                     Shared library: [libSDL_gfx.so.15]
+ 0x00000001 (NEEDED)                     Shared library: [libiconv.so.2]
+ 0x00000001 (NEEDED)                     Shared library: [libpng12.so.0]
+ 0x00000001 (NEEDED)                     Shared library: [libjpeg.so.9]
+ 0x00000001 (NEEDED)                     Shared library: [libm.so.6]
+ 0x00000001 (NEEDED)                     Shared library: [libz.so.1]
+ 0x00000001 (NEEDED)                     Shared library: [libpthread.so.0]
+ 0x00000001 (NEEDED)                     Shared library: [libc.so.6]
+
+=== follow-up: dpkg owns NEITHER ubuntu-dir SDL2 (both hand-built) ===
+dpkg-query: no path found matching pattern /lib/aarch64-linux-gnu/libSDL2-2.0.so.0.18.2
+dpkg-query: no path found matching pattern /lib/aarch64-linux-gnu/libSDL2-2.0.so.0.2800.5
+=== vendor SDL2 2.0.12 bootstraps: video=MALI+DUMMY, audio=ALSA+DISK+DUMMY ===
+ALSA_bootstrap, DISKAUDIO_bootstrap, DUMMYAUDIO_bootstrap, DUMMY_bootstrap, MALI_bootstrap
+MALI_* symbols: Create/DestroyWindow, GLES_CreateContext/LoadLibrary/MakeCurrent/SwapWindow, GetDisplayModes

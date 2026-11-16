@@ -1,0 +1,184 @@
+=== uname ===
+Linux ANBERNIC 4.9.170 #14 SMP PREEMPT Fri May 22 17:32:53 CST 2026 aarch64 aarch64 aarch64 GNU/Linux
+=== os-release ===
+PRETTY_NAME="Ubuntu 22.04 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04 (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+=== cmdline ===
+earlyprintk=sunxi-uart,0x05000000 initcall_debug=0 console=ttyS0,115200 loglevel=4 root=/dev/mmcblk0p5 rootwait quiet splash init=/init partitions=Roms@mmcblk0p1:boot-resource@mmcblk0p2:env@mmcblk0p3:boot@mmcblk0p4:rootfs@mmcblk0p5:appfs@mmcblk0p6:UDISK@mmcblk0p7 cma=64M snum=fc001070f440c7e20d2 mac_addr= wifi_mac= bt_mac= selinux=0 specialstr= gpt=1 androidboot.mode=normal androidboot.serialno=fc001070f440c7e20d2 androidboot.hardware=sun50iw9p1 boot_type=1 androidboot.boot_type=1 androidboot.secure_os_exist=0 gpt=1 uboot_message=2018.05(05/22/2026-17:31:42) disp_reserve=1228800,0x7bf23800 bootreason=unknow lcd_type=old 
+
+=== uptime ===
+ 19:49:14 up 21 min,  2 users,  load average: 2.39, 2.03, 1.43
+=== free ===
+               total        used        free      shared  buff/cache   available
+Mem:             973         293         309           1         370         663
+Swap:              0           0           0
+=== ps aux ===
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.6  1.0 166992 10504 ?        Ss   19:28   0:07 /init
+root           2  0.0  0.0      0     0 ?        S    19:28   0:00 [kthreadd]
+root           3  0.0  0.0      0     0 ?        S    19:28   0:00 [kworker/0:0]
+root           4  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/0:0H]
+root           6  0.0  0.0      0     0 ?        S    19:28   0:00 [ksoftirqd/0]
+root           7  0.1  0.0      0     0 ?        S    19:28   0:01 [rcu_preempt]
+root           8  0.0  0.0      0     0 ?        S    19:28   0:00 [rcu_sched]
+root           9  0.0  0.0      0     0 ?        S    19:28   0:00 [rcu_bh]
+root          10  0.0  0.0      0     0 ?        S    19:28   0:00 [migration/0]
+root          11  0.0  0.0      0     0 ?        S<   19:28   0:00 [lru-add-drain]
+root          12  0.0  0.0      0     0 ?        S    19:28   0:00 [cpuhp/0]
+root          13  0.0  0.0      0     0 ?        S    19:28   0:00 [cpuhp/1]
+root          14  0.0  0.0      0     0 ?        S    19:28   0:00 [migration/1]
+root          15  0.0  0.0      0     0 ?        S    19:28   0:00 [ksoftirqd/1]
+root          17  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/1:0H]
+root          18  0.0  0.0      0     0 ?        S    19:28   0:00 [cpuhp/2]
+root          19  0.0  0.0      0     0 ?        S    19:28   0:00 [migration/2]
+root          20  0.0  0.0      0     0 ?        S    19:28   0:00 [ksoftirqd/2]
+root          22  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/2:0H]
+root          23  0.0  0.0      0     0 ?        S    19:28   0:00 [cpuhp/3]
+root          24  0.0  0.0      0     0 ?        S    19:28   0:00 [migration/3]
+root          25  0.0  0.0      0     0 ?        S    19:28   0:00 [ksoftirqd/3]
+root          27  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/3:0H]
+root          28  0.0  0.0      0     0 ?        S    19:28   0:00 [kdevtmpfs]
+root          29  0.0  0.0      0     0 ?        S<   19:28   0:00 [netns]
+root         439  0.0  0.0      0     0 ?        S    19:28   0:00 [oom_reaper]
+root         440  0.0  0.0      0     0 ?        S<   19:28   0:00 [writeback]
+root         442  0.0  0.0      0     0 ?        S    19:28   0:00 [kcompactd0]
+root         443  0.0  0.0      0     0 ?        S<   19:28   0:00 [crypto]
+root         444  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         446  0.0  0.0      0     0 ?        S<   19:28   0:00 [kblockd]
+root         501  0.0  0.0      0     0 ?        S    19:28   0:00 [sys_user]
+root         504  0.0  0.0      0     0 ?        S<   19:28   0:00 [devfreq_wq]
+root         517  0.0  0.0      0     0 ?        S<   19:28   0:00 [cfg80211]
+root         529  0.0  0.0      0     0 ?        S    19:28   0:00 [kworker/0:2]
+root         530  0.0  0.0      0     0 ?        S    19:28   0:00 [irq/321-axp2202]
+root         716  0.0  0.0      0     0 ?        S    19:28   0:00 [kswapd0]
+root         717  0.0  0.0      0     0 ?        S<   19:28   0:00 [vmstat]
+root         782  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/u9:0]
+root         795  0.0  0.0      0     0 ?        S<   19:28   0:00 [SquashFS read w]
+root         875  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         876  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         877  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         878  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         879  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         880  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         881  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         882  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         883  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         884  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         885  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         886  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         887  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         888  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         889  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         890  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         924  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         927  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         930  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         933  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         936  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         939  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         942  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         945  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root         948  0.0  0.0      0     0 ?        S<   19:28   0:00 [memory_wq]
+root        1036  0.0  0.0      0     0 ?        S<   19:28   0:00 [dm_bufio_cache]
+root        1037  0.0  0.0      0     0 ?        S    19:28   0:00 [cfinteractive]
+root        1045  0.0  0.0      0     0 ?        S    19:28   0:00 [irq/294-sunxi-m]
+root        1048  0.0  0.0      0     0 ?        S    19:28   0:00 [irq/295-sunxi-m]
+root        1051  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root        1052  0.0  0.0      0     0 ?        S    19:28   0:00 [mmcqd/0]
+root        1062  0.0  0.0      0     0 ?        S    19:28   0:00 [irq/296-sunxi-m]
+root        1153  0.0  0.0      0     0 ?        S    19:28   0:00 [kpktgend_0]
+root        1157  0.0  0.0      0     0 ?        S    19:28   0:00 [kpktgend_1]
+root        1158  0.0  0.0      0     0 ?        S    19:28   0:00 [kpktgend_2]
+root        1159  0.0  0.0      0     0 ?        S    19:28   0:00 [kpktgend_3]
+root        1179  0.0  0.0      0     0 ?        S<   19:28   0:00 [ipv6_addrconf]
+root        1190  0.0  0.0      0     0 ?        S<   19:28   0:00 [krfcommd]
+root        1198  0.0  0.0      0     0 ?        S<   19:28   0:00 [hdcp22_workqueu]
+root        1205  0.0  0.0      0     0 ?        S    19:28   0:00 [kworker/3:2]
+root        1207  0.0  0.0      0     0 ?        D    19:28   0:00 [usb_pmu_scan]
+root        1216  0.1  0.0      0     0 ?        S    19:28   0:01 [kworker/1:2]
+root        1220  0.0  0.0      0     0 ?        S<   19:28   0:00 [bioset]
+root        1221  0.0  0.0      0     0 ?        S    19:28   0:00 [mmcqd/1]
+root        1259  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/3:1H]
+root        1262  0.0  0.0      0     0 ?        S    19:28   0:00 [jbd2/mmcblk0p5-]
+root        1263  0.0  0.0      0     0 ?        S<   19:28   0:00 [ext4-rsv-conver]
+root        1283  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/2:1H]
+root        1284  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/1:1H]
+root        1286  0.0  0.6  15172  6444 ?        S<s  19:28   0:00 /lib/systemd/systemd-journald
+root        1293  0.0  0.0      0     0 ?        S    19:28   0:00 [kauditd]
+root        1632  0.2  0.6  22612  6592 ?        Ss   19:28   0:02 /lib/systemd/systemd-udevd
+systemd+    2070  0.0  1.1  25040 11244 ?        Ss   19:28   0:00 /lib/systemd/systemd-resolved
+root        2079  0.0  0.1  12208  1100 ?        Ss   19:28   0:00 /usr/sbin/cron -f -P
+message+    2082  0.2  0.4   9136  4576 ?        Ss   19:28   0:03 @dbus-daemon --system --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+root        2093  0.0  1.7  37136 17420 ?        Ss   19:28   0:00 /usr/bin/python3 /usr/bin/networkd-dispatcher --run-startup-triggers
+syslog      2098  0.0  0.4 222040  4452 ?        Ssl  19:28   0:00 /usr/sbin/rsyslogd -n -iNONE
+root        2099  0.0  0.7  23952  7000 ?        Ss   19:28   0:00 /lib/systemd/systemd-logind
+root        2102  0.1  1.0  16580 10444 ?        Ss   19:28   0:01 /sbin/wpa_supplicant -u -s -O /run/wpa_supplicant
+root        2128  0.0  0.0      0     0 ?        S    19:28   0:00 [jbd2/mmcblk0p6-]
+root        2129  0.0  0.0      0     0 ?        S<   19:28   0:00 [ext4-rsv-conver]
+root        2130  0.0  0.1   2504  1048 ?        S    19:28   0:00 /mnt/vendor/bin/cexpert
+root        2131  0.0  0.1  12568  1460 ?        S    19:28   0:00 /bin/bash /etc/init.d/launcher.sh start
+root        2132  0.0  0.3  12700  3384 ?        S    19:28   0:00 /bin/bash /mnt/vendor/ctrl/loadapp.sh
+root        2156  0.0  0.0      0     0 ?        S    19:28   0:00 [jbd2/mmcblk0p7-]
+root        2157  0.0  0.0      0     0 ?        S<   19:28   0:00 [ext4-rsv-conver]
+root        2177  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/0:1H]
+root        2284  0.1  0.0      0     0 ?        S    19:28   0:01 [ksdioirqd/mmc2]
+root        2298  0.0  0.0      0     0 ?        S<   19:28   0:00 [kworker/u9:1]
+root        2299  0.0  0.0      0     0 ?        S<   19:28   0:00 [kbase_job_fault]
+root        2306  0.0  0.0  11280   760 tty1     Ss+  19:28   0:00 /sbin/agetty -o -p -- \u --noclear tty1 linux
+dnsmasq     2373  0.0  0.1  18452  1808 ?        S    19:28   0:00 /usr/sbin/dnsmasq -x /run/dnsmasq/dnsmasq.pid -u dnsmasq -7 /etc/dnsmasq.d,.dpkg-dist,.dpkg-old,.dpkg-new --local-service --trust-anchor=.,20326,8,2,e06d44b80b8f1d39a95c0b0d7c65d08458e880409bbc683457104237c7f8ec8d
+root        2385  0.3  1.8 266544 18236 ?        Ssl  19:28   0:04 /usr/sbin/NetworkManager --no-daemon
+root        2410  0.0  0.4   9828  4752 ?        Ss   19:28   0:00 /usr/libexec/bluetooth/bluetoothd
+root        2433  0.0  0.3  12568  3344 ?        S    19:28   0:00 /bin/bash /mnt/vendor/ctrl/dmenu_ln
+root        2434 47.6  8.1 147160 80876 ?        Rl   19:28   9:55 /mnt/vendor/bin/dmenu.bin
+root        2441  0.0  0.0   1652   664 ?        S    19:28   0:00 rtk_hciattach -n -s 115200 ttyS1 rtk_h5
+root        2444  0.0  0.0      0     0 ?        S<   19:28   0:00 [hci0]
+root        2445  0.0  0.0      0     0 ?        S<   19:28   0:00 [hci0]
+root        2457  0.0  0.8  15160  8360 ?        Ss   19:28   0:00 sshd: /usr/sbin/sshd -D [listener] 0 of 10-100 startups
+root        2480  0.0  0.8  17140  8956 ?        Ss   19:28   0:00 /lib/systemd/systemd --user
+root        2481  0.0  0.3 105512  3280 ?        S    19:28   0:00 (sd-pam)
+root        2585  0.0  0.0      0     0 ?        S    19:29   0:00 [kworker/u8:17]
+root        2596  0.0  0.0      0     0 ?        S    19:33   0:00 [kworker/2:3]
+root        2632  0.0  0.0      0     0 ?        S    19:34   0:00 [kworker/u8:30]
+root        2676  0.0  0.0      0     0 ?        S    19:36   0:00 [hdmi proc]
+root        2679  0.1  0.0      0     0 ?        S    19:36   0:01 [cec thread]
+root        2683  0.0  0.0      0     0 ?        S    19:36   0:00 [mali-simple-pow]
+root        2698  0.0  0.0      0     0 ?        S    19:37   0:00 [RTW_XMIT_THREAD]
+root        2699  0.1  0.0      0     0 ?        S    19:37   0:01 [RTW_RECV_THREAD]
+root        2700  0.1  0.0      0     0 ?        S    19:37   0:01 [RTW_CMD_THREAD]
+root        2701  0.0  0.0      0     0 ?        S    19:37   0:00 [RTWHALXT]
+root        2702  0.0  0.0      0     0 ?        S    19:37   0:00 [RTWHALXT]
+root        2919  0.0  0.4  18408  4444 ttyS0    Ss   19:40   0:00 /bin/login -p --
+root        2930  0.0  0.3  12832  3952 ttyS0    S    19:40   0:00 -bash
+root        3062  0.0  0.0      0     0 ?        S    19:41   0:00 [kworker/1:0]
+root        3104  0.0  0.0      0     0 ?        S    19:41   0:00 [kworker/2:0]
+root        3112  0.0  0.0      0     0 ?        S    19:41   0:00 [kworker/3:0]
+root        3321  0.2  0.0      0     0 ?        S    19:42   0:00 [kworker/1:1]
+root        3376  0.0  0.9  18372  9696 ?        Ss   19:43   0:00 sshd: muse [priv]
+muse        3387  0.1  0.9  17180  9028 ?        Ss   19:43   0:00 /lib/systemd/systemd --user
+muse        3388  0.0  0.3 171016  3392 ?        S    19:43   0:00 (sd-pam)
+muse        3403  0.0  0.6  18504  6444 ?        S    19:43   0:00 sshd: muse@pts/0
+muse        3405  0.0  0.3   8556  3636 ?        Ss   19:43   0:00 /usr/bin/dbus-daemon --session --address=systemd: --nofork --nopidfile --systemd-activation --syslog-only
+muse        3408  0.0  0.4  12948  4008 pts/0    Ss+  19:43   0:00 -bash
+muse        3418  0.4  2.8 592000 28372 ?        SNsl 19:43   0:01 /usr/libexec/tracker-miner-fs-3
+root        3702  0.0  0.0      0     0 ?        S    19:45   0:00 [kworker/0:1]
+root        3703  0.0  0.0      0     0 ?        S    19:45   0:00 [kworker/0:3]
+root        4003  0.0  0.0      0     0 ?        S    19:47   0:00 [kworker/3:1]
+root        4170  0.3  0.0      0     0 ?        S    19:47   0:00 [kworker/1:3]
+root        4340  0.0  0.0      0     0 ?        S    19:48   0:00 [kworker/u8:0]
+root        4401 24.0 10.4 119164 104512 ttyS0   S+   19:48   0:06 apt-get install htop
+_apt        4518  1.2  1.8  35860 18308 ttyS0    S+   19:48   0:00 /usr/lib/apt/methods/https
+root        4543  0.0  0.0      0     0 ?        S    19:49   0:00 [kworker/2:1]
+root        4575  0.0  0.4  22612  4388 ?        S    19:49   0:00 /lib/systemd/systemd-udevd
+root        4576  0.0  0.9  18116  9580 ?        Ss   19:49   0:00 sshd: muse [priv]
+muse        4586  0.0  0.6  18408  6436 ?        S    19:49   0:00 sshd: muse@notty
+muse        4587  0.0  0.1   6416  1632 ?        Rs   19:49   0:00 ps aux

@@ -1,0 +1,47 @@
+=== file dmenu ===
+/mnt/vendor/bin/dmenu.bin: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-armhf.so.3, for GNU/Linux 3.1.1, BuildID[sha1]=3eb13501590c1a047fb0eb9b5dc978b1be534fd6, stripped
+/mnt/vendor/bin/charg.dge: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-armhf.so.3, for GNU/Linux 3.1.1, BuildID[sha1]=b147c950e7aca4aa52525081e1455dcaf193ecc1, stripped
+
+=== libc ===
+ldd (Ubuntu GLIBC 2.35-0ubuntu3) 2.35
+Copyright (C) 2022 Free Software Foundation, Inc.
+
+=== kernel ===
+4.9.170
+Linux version 4.9.170 (flower@flower-B85M-D2V) (gcc version 5.3.1 20160412 (Linaro GCC 5.3-2016.05) ) #14 SMP PREEMPT Fri May 22 17:32:53 CST 2026
+
+=== sdl2-config ===
+2.0.12
+
+=== SDL1.2 video drivers ===
+DUMMY_AllocHWSurface
+DUMMY_Available
+DUMMY_CreateDevice
+DUMMY_DeleteDevice
+DUMMY_FreeHWSurface
+DUMMY_InitOSKeymap
+DUMMY_ListModes
+DUMMY_LockHWSurface
+DUMMY_PumpEvents
+DUMMY_SetColors
+...grep VIDDRV...
+SDL_VideoDriverName
+SDL_VIDEODRIVER
+SDL_VIDEODRIVER
+SDL_VideoDriverName
+
+=== vendor SDL2 video drivers ===
+Vulkan and OpenGL not supported on same window
+Vulkan loader library already loaded
+Vulkan support is either not configured in SDL or not available in current SDL video driver (%s) or platform
+dummy
+dummy1
+dummy10
+dummy11
+dummy2
+dummy3
+dummy4
+dummy5
+dummy6
+
+=== weston? ===
