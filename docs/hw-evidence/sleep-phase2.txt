@@ -1,0 +1,116 @@
+# Sleep path, Phase 2 evidence, 2026-11-16 (device ANBERNIC)
+
+## Call chain (all read-only inspected, nothing modified)
+
+dmenu.bin idle timer ("++++ timer to sleep", `enter_sleep_state`,
+`%s auto` strings in /mnt/vendor/bin/dmenu.bin)
+  -> /mnt/vendor/ctrl/pwr_new.sh auto
+    -> /mnt/mod/ctrl/pwr_new.sh auto   (community mod override, EXISTS)
+      -> sleep_down(): echo -n mem > /sys/power/state   (with lockfile guard)
+
+## /mnt/vendor/ctrl/pwr_new.sh (verbatim)
+
+```sh
+MOD_PWR_SH="/mnt/mod/ctrl/pwr_new.sh"
+AUTOSLEEP="$1"
+LOCKFILE=/tmp/.power_key
+delay_to_del() { sleep 0.3; rm $LOCKFILE; }
+if [ -f $MOD_PWR_SH ]; then
+	$MOD_PWR_SH $AUTOSLEEP
+else
+	if [ ! -f $LOCKFILE ]; then
+		touch $LOCKFILE; chmod 777 $LOCKFILE
+		echo -n mem > /sys/power/state
+		delay_to_del &
+	fi
+fi
+```
+
+## /mnt/mod/ctrl/pwr_new.sh (verbatim, "make by G.R.H", world-writable)
+
+sleep_down() honors the same /tmp/.power_key guard, then
+`echo -n mem > /sys/power/state`. Other branches POWEROFF the device
+(${operate}_down: retroarch QUIT + vibrate + sync + poweroff) — see full
+file in report; never invoke with operate paths except via real keys.
+
+```
+case $1 in
+    auto)   # dmenu idle path
+        if grep -q "power.hdmi=1" $SYS_SET && [[ $(cat .../hdmi/state) == "HDMI=1" ]]; then
+            exit 0                                  # HDMI connected: NO sleep
+        elif [[ $(cat .../hdmi/state) == "HDMI=1" ]]; then
+            sleep_down
+        elif grep -q "power.lock=1" $SYS_SET; then
+            ${operate}_down                         # lock=1: POWEROFF, not sleep
+        else # power.lock=0
+            sleep_down
+        fi ;;
+    *)      # power-key path (needs fingers; key=2 polls BTN_TL2 on event0-2)
+        ... power.key=1 -> ${operate}_down (poweroff); key=2 -> M+power=poweroff
+        else sleep_down ...
+esac
+```
+
+## Live config + state
+
+```text
+$ cat /mnt/mod/ctrl/configs/system.cfg | grep power
+power.hdmi=1 / power.key=2 / power.lock=0
+$ cat /sys/class/extcon/hdmi/state
+HDMI=0                        # -> auto path takes sleep_down (mem suspend)
+$ cat /sys/power/autosleep /sys/power/wake_lock
+cat: /sys/power/autosleep: No such file or directory
+                              # wake_lock exists, empty
+$ cat /sys/class/rtc/rtc0/wakealarm
+                              # empty: NO rtc wake armed
+$ sudo grep -rln "power/state" /mnt/vendor /mnt/mod /usr/local/bin /usr/local/sbin /etc
+/mnt/vendor/ctrl/pwr_new.sh
+/mnt/mod/ctrl/pwr_new.sh      # ONLY writers: no other suspend callers
+$ systemd-inhibit --list
+NetworkManager ... sleep ... delay     # delay-only; cannot block direct sysfs writes
+$ grep -v '^#' /etc/systemd/logind.conf | grep -v '^$'
+HandlePowerKey=ignore
+```
+
+## Suspend history (dmesg; device TZ = UTC+1, dmesg stamps UTC)
+
+```text
+[   86.31] PM: suspend exit ...        # cycle 1 (boot era)
+[  146.39] PM: suspend entry ...       # 86 s later -> ~85 s idle rule
+[  148.54] PM: suspend exit ...        # woken after ~31 wall-s
+[  232.23] PM: suspend entry ...       # 86 s later again
+[  233.85] Suspended for 7.123 seconds # (phase 1's 7.1 s cycle)
+[  234.41] PM: suspend exit ...
+uptime now 2400+ s: NO suspend since t=234 (~36+ min dormant)
+```
+
+## Wake source
+
+```text
+$ cat /sys/power/pm_wakeup_irq ; grep -E '^ *321:' /proc/interrupts
+321
+321: ... sunxi-8i-nmi ... axp2202_irq_chip     # PMIC IRQ (power button) via NMI
+```
+
+=> Wake = physical power button through the PMIC. No auto-wake exists.
+   Forcing a suspend without a human on standby strands the device:
+   NOT done (see hw-phase2.md for what was live-tested vs prepared).
+
+## dmenu idle config hunt
+
+- /mnt/data/dmenu/dmenu_attr.ini (140 B) is BINARY (contains "GlobeSpotter"),
+  not a readable timeout setting.
+- No text config anywhere mentions autosleep/idle (grep over
+  /mnt/vendor /mnt/data /mnt/mod hit only binaries + pwr_new.sh).
+- dmenu.bin strings: enter_sleep_state, %s:ready_sleep= %d,
+  /mnt/vendor/ctrl/pwr_new.sh, "%s auto", "++++ timer to sleep ".
+=> Timeout value is compiled-in or in binary state; caller + arg confirmed.
+
+## Reversible inhibit (PREPARED, code-path verified, not live-fired)
+
+Both pwr scripts skip suspend while /tmp/.power_key exists:
+  inhibit: sudo touch /tmp/.power_key && sudo chmod 777 /tmp/.power_key
+  restore: sudo rm -f /tmp/.power_key
+Live-fire needs the idle timer (dormant 36+ min) or a forced suspend
+(needs human wake standby). systemd-inhibit CANNOT block this path:
+direct sysfs write, no logind mediation (targets masked, key ignored).

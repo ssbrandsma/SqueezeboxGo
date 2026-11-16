@@ -1,0 +1,1 @@
+ps auxf 2>&1 | grep -i -E '[e]mulat|[r]etro|[p]egasus|[a]ttract|[k]odi|[k]ms|[w]eston|[m]utter|[g]nome-shell|Xorg|X11|[g]ame|[f]rontend|[s]dl|[f]bterm|[k]mscon|[l]ightdm|[g]dm|[s]ddm' || echo 'no obvious frontend string in ps output'
