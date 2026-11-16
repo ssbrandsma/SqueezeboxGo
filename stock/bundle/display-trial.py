@@ -29,6 +29,7 @@ import fcntl
 import mmap
 import os
 import struct
+import subprocess
 import sys
 import time
 import zlib
@@ -222,6 +223,49 @@ def put_var(fb, v):
         fcntl.ioctl(f.fileno(), FBIOPUT_VSCREENINFO, pack_var(v))
 
 
+def frontend_alive():
+    """True if dmenu.bin is running (it repaints fb constantly)."""
+    try:
+        r = subprocess.run(["pidof", "dmenu.bin"], capture_output=True)
+    except OSError:
+        return False
+    return r.returncode == 0 and bool(r.stdout.strip())
+
+
+def restore_stock(fb, orig, saved, fh):
+    """Restore stock mode + pixels. Tries the proven geometry-forced PUT
+    first (exact shape that succeeded 6/6 on device), then exact
+    round-trip. Returns True iff geometry matches afterwards."""
+    forced = dict(orig)
+    forced.update(xres=orig["xres"], yres=orig["yres"],
+                  bits_per_pixel=orig["bits_per_pixel"],
+                  xres_virtual=orig["xres"], yres_virtual=orig["yres"],
+                  xoffset=0, yoffset=0, activate=0)
+    for name, cand in (("geometry-forced", forced), ("exact", orig)):
+        try:
+            put_var(fb, cand)
+        except OSError as e:
+            log("restore PUT %s failed: %r" % (name, e), fh)
+            continue
+        cur = get_var(fb)
+        if (cur["xres"], cur["yres"], cur["bits_per_pixel"]) == (
+                orig["xres"], orig["yres"], orig["bits_per_pixel"]):
+            log("restore PUT %s ok" % name, fh)
+            break
+    else:
+        return False
+    fix = get_fix(fb)
+    with open(fb, "r+b") as f:
+        mm = mmap.mmap(f.fileno(), fix["smem_len"])
+        mm[:len(saved)] = saved
+        try:
+            mm.flush()
+        except OSError:
+            pass
+        mm.close()
+    return True
+
+
 def blit(fb, cv, xres, yres, stride, smem_len):
     nbytes = min(yres * stride, smem_len)
     with open(fb, "r+b") as f:
@@ -246,6 +290,8 @@ def main(argv):
     ap.add_argument("--log", default="/tmp/display-trial.log")
     ap.add_argument("--save-png", default=None,
                     help="render attempts to PNGs instead of fb (host check)")
+    ap.add_argument("--force", action="store_true",
+                    help="run even with dmenu alive (patterns get overpainted)")
     args = ap.parse_args(argv)
 
     if args.save_png:
@@ -257,6 +303,22 @@ def main(argv):
             write_png(p, cv)
             print("wrote %s (%dx%dx%d) %s" % (p, w, h, b, note))
         return 0
+
+    if not args.force and frontend_alive():
+        print("REFUSING: dmenu.bin is running and would overpaint every "
+              "pattern within milliseconds. Stop the frontend first "
+              "(systemctl stop launcher.service) or pass --force.",
+              file=sys.stderr)
+        return 3
+
+    # Pre-render every attempt up front: pure-python painting of a full
+    # 1280x1024 frame takes ~9 s; observers must see instant flips.
+    rendered = {}
+    for num, x, y, bpp, vx, note in ATTEMPTS:
+        w, h, b = x or 1280, y or 1024, bpp or 16
+        rendered[num] = draw_pattern(num, w, h, b,
+                                     region_640=(num == 3 and w > 640))
+    print("pre-rendered %d patterns" % len(rendered), flush=True)
 
     fh = open(args.log, "w")
     try:
@@ -297,9 +359,13 @@ def main(argv):
                         cur["xres_virtual"], cur["yres_virtual"],
                         cur["xoffset"], cur["yoffset"],
                         fix["line_length"], fix["smem_len"]), fh)
-                cv = draw_pattern(num, cur["xres"], cur["yres"],
-                                  cur["bits_per_pixel"],
-                                  region_640=(num == 3 and cur["xres"] > 640))
+                key = (cur["xres"], cur["yres"], cur["bits_per_pixel"])
+                cv = rendered.get(num)
+                if (cv.w, cv.h, cv.bpp) != (key[0], key[1], key[2]):
+                    log("mode differs from plan; redrawing pattern #%d "
+                        "live (slow path)" % num, fh)
+                    cv = draw_pattern(num, key[0], key[1], key[2],
+                                      region_640=(num == 3 and key[0] > 640))
                 blit(args.fb, cv, cur["xres"], cur["yres"],
                      fix["line_length"], fix["smem_len"])
                 log("showing #%d for %ds — OBSERVE LCD NOW" % (num, args.hold),
@@ -307,13 +373,9 @@ def main(argv):
                 time.sleep(args.hold)
     finally:
         try:
-            put_var(args.fb, orig)
-            with open(args.fb, "r+b") as f:
-                mm = mmap.mmap(f.fileno(), len(saved))
-                mm[:] = saved
-                mm.flush()
-                mm.close()
-            log("RESTORED stock mode + pixels", fh)
+            ok = restore_stock(args.fb, orig, saved, fh)
+            log("RESTORE %s" % ("OK" if ok else
+                                "FAILED — reboot restores stock"), fh)
         except Exception as e:  # noqa: BLE001 — restore must not raise
             log("RESTORE FAILED: %r — reboot restores stock" % e, fh)
         fh.close()

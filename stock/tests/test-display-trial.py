@@ -121,6 +121,24 @@ fix = dt.unpack_fix(fixbuf)
 check("fix parses smem_len + line_length@48",
       fix == {"smem_len": 0x280000, "line_length": 2560}, repr(fix))
 
+# dmenu preflight (fake pidof on PATH; no fb touched)
+fakebin = os.path.join(tmp, "fakebin")
+os.makedirs(fakebin)
+with open(os.path.join(fakebin, "pidof"), "w") as f:
+    f.write("#!/bin/sh\necho 4242\n")
+os.chmod(os.path.join(fakebin, "pidof"), 0o755)
+env = dict(os.environ, PATH=fakebin + ":" + os.environ["PATH"])
+r = subprocess.run([sys.executable, TRIAL, "--fb", "/nonexistent-fb"],
+                   capture_output=True, text=True, env=env)
+check("refuses when dmenu alive (rc=3)",
+      r.returncode == 3 and "REFUSING" in r.stderr)
+with open(os.path.join(fakebin, "pidof"), "w") as f:
+    f.write("#!/bin/sh\nexit 1\n")
+r = subprocess.run([sys.executable, TRIAL, "--fb", "/nonexistent-fb"],
+                   capture_output=True, text=True, env=env)
+check("passes preflight when dmenu dead (fails later on fb)",
+      r.returncode != 3 and "REFUSING" not in r.stderr)
+
 # CLI contract
 r = subprocess.run([sys.executable, TRIAL, "--help"], capture_output=True)
 check("--help exits 0", r.returncode == 0)

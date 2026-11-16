@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, redeploy merged; trial fixed; device dark).
+Last updated: 2026-11-16 (Agent 0, hotspot SSH live; stride smoking gun).
 
 ## Completed
 
@@ -251,9 +251,15 @@ Last updated: 2026-11-16 (Agent 0, redeploy merged; trial fixed; device dark).
   now 16/16 with struct round-trip coverage.
 - Retired stale `stock/go/install+uninstall` (superseded layout trap);
   added `/tmp/.next` double-launch guard to `launch.sh`.
-- DEVICE DARK since ~15:58 (dmenu stopped at blackout): owner must
-  short-press power; then SSH re-probe + human observation batch
-  (GO carousel, evtest fingers, ears, game check, 0.3.0 boot).
+- Network moved to phone hotspot (device .99); host key re-verified
+  (same ed25519). Device had rebooted (up 2 min, stock-healthy, dmenu
+  running, install 0.1.0 intact).
+- UNATTENDED carousel run: all 6 mode-sets ACCEPTED, **line_length is
+  ALWAYS 2560 even at 640x480** (stride smoking gun for Jive tearing),
+  restore-PUT failed EINVAL (fixed: geometry-forced retry + dmenu
+  preflight + pre-render; tests now 18/18). Log committed.
+- Awaiting owner GO for the watched carousel (dmenu stopped during run,
+  restored after) + evtest/ears/game batch.
 
 ## Prior state (human-gated proofs)
 

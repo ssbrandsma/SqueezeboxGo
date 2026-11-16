@@ -1,0 +1,21 @@
+[16:11:30] stock vinfo: 1280x1024/16bpp virt=1280x1024 off=0,0 line_length=2560 smem=7372800 rotate=0
+[16:11:30] saved 7372800 framebuffer bytes for restore
+[16:11:30] --- round 1/1 attempt 1: stock mode untouched (baseline) ---
+[16:11:30] active: 1280x1024/16bpp virt=1280x1024 off=0,0 line_length=2560 smem=7372800
+[16:11:39] showing #1 for 2s — OBSERVE LCD NOW
+[16:11:41] --- round 1/1 attempt 2: native LCD geometry RGB565 ---
+[16:11:41] active: 640x480/16bpp virt=640x480 off=0,0 line_length=2560 smem=7372800
+[16:11:43] showing #2 for 2s — OBSERVE LCD NOW
+[16:11:45] --- round 1/1 attempt 3: stock geometry, picture in top-left 640x480 ---
+[16:11:45] active: 1280x1024/16bpp virt=1280x1024 off=0,0 line_length=2560 smem=7372800
+[16:11:56] showing #3 for 2s — OBSERVE LCD NOW
+[16:11:58] --- round 1/1 attempt 4: native geometry XRGB8888 ---
+[16:11:58] active: 640x480/32bpp virt=640x480 off=0,0 line_length=2560 smem=7372800
+[16:12:01] showing #4 for 2s — OBSERVE LCD NOW
+[16:12:03] --- round 1/1 attempt 5: 640x480 window in 1280 virt (xoffset 0) ---
+[16:12:03] active: 640x480/16bpp virt=1280x480 off=0,0 line_length=2560 smem=7372800
+[16:12:05] showing #5 for 2s — OBSERVE LCD NOW
+[16:12:07] --- round 1/1 attempt 6: Jive sticky mode (informative) ---
+[16:12:07] active: 512x384/32bpp virt=512x384 off=0,0 line_length=2560 smem=7372800
+[16:12:08] showing #6 for 2s — OBSERVE LCD NOW
+[16:12:10] RESTORE FAILED: OSError(22, 'Invalid argument') — reboot restores stock
