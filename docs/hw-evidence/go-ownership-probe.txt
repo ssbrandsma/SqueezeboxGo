@@ -1,0 +1,43 @@
+# GO-HW task 2: display/audio/input ownership during app run — 2026-11-16
+# Method: trivial probe (/tmp/sbq-probe/probe.sh) in state A (dmenu alive)
+# vs state B (launcher.service stopped, dmenu exited = exact app-run state).
+# CONCLUSION: dmenu releases EVERYTHING by exiting. During app run fb0, the
+# ALSA PCM, and event1/2 are free; only systemd-logind keeps event0 (power).
+
+===== state A: dmenu 3245 alive (SSH direct, app NOT running yet) =====
+fuser /dev/snd/pcmC0D0p: root 3245 F.... dmenu.bin     # HELD
+fuser /dev/fb0:          root 3245 F...m dmenu.bin     # HELD (mmap)
+fuser event0: root 2117 F.... systemd-logind + root 3245 f.... dmenu.bin
+fuser event1: root 3245 f.... dmenu.bin                # HELD
+card0 pcm0p status: state SETUP, owner_pid 3245
+aplay -D hw:CARD=audiocodec,DEV=0 ... : "Device or resource busy"  # PROVEN busy
+fb vinfo: 1280x1024x16 (stock)
+evdev names (via /sys/class/input/*/device/name):
+  event0: axp2202-pek / event1: ANBERNIC-keys / event2: dierct-keys-polled
+muse groups: muse sudo audio video input (video/audio/input membership present)
+
+===== stop: systemctl stop launcher.service =====
+dmenu gone ~10s after stop-exit=0 (faster than phase-2's ~45s bound; same procedure).
+fuser after stop: ONLY `event0: root 2117 F.... systemd-logind` — snd, fb0,
+event1, event2 all FREE.
+
+===== state B: NO dmenu (= app-run state) =====
+card0 pcm0p status: closed
+aplay open: device OPENS (only a /dev/null-header read error from the probe's
+  dummy file arg — NOT "Device or resource busy"). Full 440 Hz playback in this
+  state was already proven in phase 3 (RUNNING, 0 XRUN).
+fb write/readback/restore (1280x1024x2 mmap): IDENTICAL
+fb vinfo still stock 1280x1024x16 (nothing touched it yet)
+
+===== restart: systemctl start launcher.service =====
+dmenu back pid=3921, holding pcmC0D0p again, launcher.service active.
+
+===== ownership rules for SqueezeboxGo (APPS path) =====
+1. Menu launch => dmenu has EXITED before our .sh starts: fb/snd/input free.
+2. SSH-direct test MUST stop launcher.service first to replicate the menu path
+   (else dmenu still holds the PCM and jive_alsa fights it).
+3. event0 stays logind-held in all states: never touch (power key, hands-off).
+4. No EVIOCGRAB conflicts observed; dmenu opens event fds WITHOUT exclusive grab
+   (lowercase f in fuser), so evtest can snoop concurrently if ever needed.
+5. Sleep: no suspend occurred during the stopped-frontend windows (dmesg clean),
+   supporting "stopping dmenu stops auto-suspend" (dmenu idle timer drives it).
