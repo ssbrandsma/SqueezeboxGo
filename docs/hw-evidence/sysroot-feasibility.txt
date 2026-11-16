@@ -1,0 +1,44 @@
+# Phase 2 — Jammy arm64 rootless sysroot feasibility (host-side, 2026-11-16)
+
+Recipe owner: diag/jammy-build, merged as build/toolchain/jammy-sysroot.sh.
+This is an INDEPENDENT feasibility re-run of its fetch+extract core only.
+No payload rebuild (forbidden for this agent; tarball already exists).
+
+## Host prerequisites used
+
+curl, dpkg-deb, sha256sum (all present). No aarch64 cross-gcc on this
+host, so the recipe's `--check` compile step was NOT re-run here
+(diag/jammy-build proved it; lead verified the tarball GLIBC<=2.34).
+
+## Exact commands
+
+rm -rf /tmp/hw-sysroot-check && mkdir -p /tmp/hw-sysroot-check/.debs
+cd /tmp/hw-sysroot-check/.debs
+B=http://ports.ubuntu.com/ubuntu-ports
+for f in \
+  pool/main/g/glibc/libc6_2.35-0ubuntu3.18_arm64.deb \
+  pool/main/g/glibc/libc6-dev_2.35-0ubuntu3.18_arm64.deb \
+  pool/main/l/linux/linux-libc-dev_5.15.0-203.213_arm64.deb \
+  pool/main/a/alsa-lib/libasound2_1.2.6.1-1ubuntu1.2_arm64.deb \
+  pool/main/a/alsa-lib/libasound2-dev_1.2.6.1-1ubuntu1.2_arm64.deb ; do
+  curl -sS --fail --max-time 120 -O $B/$f
+done
+sha256sum -c <pins-from-jammy-sysroot.sh>   # all 5 lines
+for d in .debs/*.deb; do dpkg-deb -x $d .; done
+
+## Result: FEASIBLE (all green)
+
+- Download: 5/5 OK from ports.ubuntu.com (total ~6 MB).
+- SHA256: 5/5 match the pins in build/toolchain/jammy-sysroot.sh
+  (jammy-updates 2026-11-16 set).
+- Extract contents verified:
+  - lib/aarch64-linux-gnu/libc.so.6 -> strings: "GNU C Library
+    (Ubuntu GLIBC 2.35-0ubuntu3.18) stable release version 2.35."
+  - usr/lib/aarch64-linux-gnu/libasound.so.2.0.0 present
+    (deb version 1.2.6.1-1ubuntu1.2)
+  - usr/lib/aarch64-linux-gnu/crt1.o present
+  - usr/include/alsa/asoundlib.h present
+
+Conclusion: any host with curl+dpkg-deb can assemble the Jammy arm64
+sysroot rootlessly in seconds. Use build/toolchain/jammy-sysroot.sh
+as the canonical path (it adds symlink fixes + compiler wrappers).
