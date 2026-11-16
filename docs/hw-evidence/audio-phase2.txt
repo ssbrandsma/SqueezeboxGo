@@ -1,0 +1,124 @@
+# Audio snapshot, Phase 2 (privileged), 2026-11-16, device ANBERNIC
+# Ran as muse (audio group) except fuser (sudo). dmenu.bin running throughout.
+
+===== $ aplay -l
+**** List of PLAYBACK Hardware Devices ****
+card 0: audiocodec [audiocodec], device 0: soc@03000000:codec_plat-sunxi-snd-codec sunxi-snd-codec-0 []
+  Subdevices: 0/1
+  Subdevice #0: subdevice #0
+card 2: ahubhdmi [ahubhdmi], device 0: ahub_plat-soc@03000000:hdmi_codec soc@03000000:hdmi_codec-0 []
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+
+===== $ aplay -L
+null
+    Discard all samples (playback) or generate zero samples (capture)
+bluealsa
+    Bluetooth Audio
+default
+playback_hp
+playback_hdmi
+hw:CARD=audiocodec,DEV=0
+    audiocodec,
+    Direct hardware device without any conversions
+plughw:CARD=audiocodec,DEV=0
+    audiocodec,
+    Hardware device with all software conversions
+sysdefault:CARD=audiocodec
+    audiocodec,
+    Default Audio Device
+dmix:CARD=audiocodec,DEV=0
+    audiocodec,
+    Direct sample mixing device
+hw:CARD=ahubhdmi,DEV=0
+    ahubhdmi,
+    Direct hardware device without any conversions
+plughw:CARD=ahubhdmi,DEV=0
+    ahubhdmi,
+    Hardware device with all software conversions
+sysdefault:CARD=ahubhdmi
+    ahubhdmi,
+    Default Audio Device
+dmix:CARD=ahubhdmi,DEV=0
+    ahubhdmi,
+    Direct sample mixing device
+
+===== $ amixer -c0 scontents
+Simple mixer control 'LINEOUT',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [on]
+Simple mixer control 'OutputL Mixer DACL',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [on]
+Simple mixer control 'OutputL Mixer DACR',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [off]
+Simple mixer control 'OutputR Mixer DACL',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [off]
+Simple mixer control 'OutputR Mixer DACR',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [on]
+Simple mixer control 'SPK',0
+  Capabilities: pswitch pswitch-joined
+  Playback channels: Mono
+  Mono: Playback [on]
+Simple mixer control 'digital volume',0
+  Capabilities: volume volume-joined
+  Playback channels: Mono
+  Capture channels: Mono
+  Limits: 0 - 63
+  Mono: 63 [100%]
+Simple mixer control 'tx hub mode',0
+  Capabilities: enum
+  Items: 'Off' 'On'
+  Item0: 'Off'
+
+===== $ cat /proc/asound/card0/pcm0p/sub0/status
+state: XRUN
+owner_pid   : 2461
+trigger_time: 1649360485.561263386
+tstamp      : 1794832137.544296603
+delay       : 0
+avail       : 4864
+avail_max   : 0
+-----
+hw_ptr      : 10240
+appl_ptr    : 9472
+
+===== $ cat /proc/asound/card0/pcm0p/sub0/hw_params
+access: RW_INTERLEAVED
+format: S16_LE
+subformat: STD
+channels: 2
+rate: 44100 (44100/1)
+period_size: 1024
+buffer_size: 4096
+
+===== $ cat /proc/asound/card0/pcm0p/sub0/sw_params
+tstamp_mode: ENABLE
+period_step: 1
+avail_min: 1
+start_threshold: 2048
+stop_threshold: 4096
+silence_threshold: 0
+silence_size: 0
+boundary: 1073741824
+
+===== $ sudo -n fuser -v /dev/snd/*
+                     USER        PID ACCESS COMMAND
+/dev/snd/pcmC0D0p:   root       2434 F.... dmenu.bin
+
+===== $ ps -T -p 2434 -o pid,tid,comm
+    PID     TID COMMAND
+   2434    2434 dmenu.bin
+   2434    2456 dmenu.bin
+   2434    2459 dmenu.bin
+   2434    2460 dmenu.bin
+   2434    2461 dmenu.bin
+   2434    2462 dmenu.bin
