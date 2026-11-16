@@ -18,9 +18,11 @@ import argparse
 import fcntl
 import sys
 
+# Verified against linux/vt.h + linux/kd.h UAPI (0x5602 would be VT_SETMODE
+# and EFAULTs — this exact mistake shipped once; the test below pins them).
 KDSETMODE = 0x4B3A
 KD_TEXT = 0x00
-VT_UNLOCKSWITCH = 0x5602
+VT_UNLOCKSWITCH = 0x560C
 
 
 def reset(tty="/dev/tty0", dry_run=False):

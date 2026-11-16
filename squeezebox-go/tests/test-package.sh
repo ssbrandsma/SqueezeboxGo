@@ -220,7 +220,19 @@ APPS/SqueezeboxGo/payload.tar.gz'
 			fail 'SHA256SUMS mismatch'
 		fi
 		mkdir -p "$TMP/pay" && tar -xzf "$TMP/unz/APPS/SqueezeboxGo/payload.tar.gz" -C "$TMP/pay"
-		for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py jive/bin/jive \
+		if [ -f /usr/include/linux/vt.h ] && [ -f /usr/include/linux/kd.h ]; then
+		if grep -q 'define VT_UNLOCKSWITCH 0x560C' /usr/include/linux/vt.h \
+			&& grep -q 'define KDSETMODE.*0x4B3A' /usr/include/linux/kd.h \
+			&& grep -q 'VT_UNLOCKSWITCH = 0x560C' "$GO_ROOT/runtime/vt-reset.py" \
+			&& grep -q 'KDSETMODE = 0x4B3A' "$GO_ROOT/runtime/vt-reset.py"; then
+			ok 'vt-reset ioctl constants match kernel UAPI'
+		else
+			fail 'vt-reset ioctl constants mismatch kernel UAPI'
+		fi
+	else
+		skip 'kernel UAPI headers absent; ioctl constants unchecked'
+	fi
+	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py jive/bin/jive \
 				lib-fbcon/libSDL-1.2.so.0 \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \
