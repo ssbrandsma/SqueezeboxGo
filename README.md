@@ -7,8 +7,16 @@ Goal: power on → Linux boot → Squeezebox splash → original Jive home menu,
 with LMS/SlimProto playback and LMS-independent standalone operation.
 Flashable microSD image; no hardware modification.
 
-Status: WP0 discovery complete, WP1 platform development in progress.
+Status: host-complete at 0.2.0-exp2 (bootable-to-userspace, HW-gated).
 See [project status](docs/project-status.md) and [architecture](docs/architecture.md).
+
+## Documentation
+
+- [Repo guide](docs/REPO-GUIDE.md) — taking over: map, workflows, glossary
+- [Build guide](docs/BUILD-GUIDE.md) — every binary, end to end
+- [External sources](docs/EXTERNAL-SOURCES.md) — repos, libraries, distros, licenses
+- [Platform survey](docs/PLATFORM-SURVEY.md) — why this Linux foundation
+- [Install](docs/INSTALL.md) / [Upgrade](docs/UPGRADE.md) / [Recovery](docs/RECOVERY.md) / [Known issues](docs/KNOWN_ISSUES.md)
 
 ## Layout
 
