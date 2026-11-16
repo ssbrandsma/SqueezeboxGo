@@ -1,0 +1,58 @@
+=== sleep/suspend units ===
+  getty-static.service                                                                    loaded    inactive dead      getty on tty2-tty6 if dbus and logind are not available
+  systemd-logind.service                                                                  loaded    active   running   User Login Management
+* upower.service                                                                          loaded    failed   failed    Daemon for power management
+
+=== masked? ===
+masked-runtime
+masked-runtime
+masked-runtime
+disabled
+static
+
+=== /sys/power ===
+total 0
+drwxr-xr-x  3 root root    0 Apr  7 19:50 .
+dr-xr-xr-x 12 root root    0 Apr  7 19:35 ..
+-rw-r--r--  1 root root 4096 Apr  7 19:50 pm_async
+-rw-r--r--  1 root root 4096 Apr  7 19:50 pm_freeze_timeout
+-rw-r--r--  1 root root 4096 Apr  7 19:50 pm_print_times
+-rw-r--r--  1 root root 4096 Apr  7 19:50 pm_test
+-r--r--r--  1 root root 4096 Apr  7 19:50 pm_wakeup_irq
+-rw-r--r--  1 root root 4096 Apr  7 19:36 state
+drwxr-xr-x  2 root root    0 Apr  7 19:50 sunxi_debug
+-rw-r--r--  1 root root 4096 Apr  7 19:50 wake_lock
+-rw-r--r--  1 root root 4096 Apr  7 19:50 wake_unlock
+-rw-r--r--  1 root root 4096 Apr  7 19:50 wakeup_count
+-- state:
+freeze mem
+-- mem_sleep:
+cat: /sys/power/mem_sleep: No such file or directory
+-- wakeup_count:
+109
+
+=== logind.conf ===
+[Login]
+HandlePowerKey=ignore
+
+=== dmesg suspend/sleep/hci ===
+[  232.604455] [ehci2-controller]: sunxi_ehci_hcd_suspend
+[  232.604497] [ohci1-controller]: sunxi_ohci_hcd_suspend
+[  232.604539] [ehci1-controller]: sunxi_ehci_hcd_suspend
+[  232.604573] hci: ERR: hcd is null
+[  232.608287] hci: ERR: hcd is null
+[  232.611998] udc is disable, need not enter to suspend
+[  232.612026] sw_uart_suspend()2052 - uart1 suspend
+[  232.612092] sw_uart_suspend()2052 - uart0 suspend
+[  232.612109] [cedar] standby suspend
+[  232.612163] MBUS_PMU 47fa000.mbus-controller: suspend okay
+[  233.374184] disp_suspend finish
+[  233.374298] PM: suspend of devices complete after 914.688 msecs
+[  233.376357] sunxi:i2c_sunxi@twi3[INFO]: suspend late
+[  233.376533] PM: late suspend of devices complete after 2.227 msecs
+[  233.378553] PM: noirq suspend of devices complete after 2.013 msecs
+[  233.803603] hci: ERR: hcd is null
+[  233.807359] hci: ERR: hcd is null
+[  233.857534] Suspended for 7.123 seconds
+[  234.405117] PM: Finishing wakeup.
+[  234.413788] PM: suspend exit 2022-04-07 19:36:35.406792331 UTC

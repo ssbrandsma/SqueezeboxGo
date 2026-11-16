@@ -1,0 +1,113 @@
+=== aplay -l ===
+aplay: device_list:274: no soundcards found...
+
+=== aplay -L ===
+null
+    Discard all samples (playback) or generate zero samples (capture)
+bluealsa
+    Bluetooth Audio
+default
+playback_hp
+playback_hdmi
+
+=== amixer scontrols ===
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1334:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5701:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib control.c:1528:(snd_ctl_open_noupdate) Invalid CTL default
+amixer: Mixer attach default error: No such file or directory
+
+=== /etc/asound.conf ===
+pcm.!default {
+	type hooks
+	slave.pcm "hw:audiocodec"
+	hooks.0 {
+	type ctl_elems
+	hook_args [
+		{
+			name "LINEOUT Switch"
+			preserve true
+			lock true
+			value 1
+		}
+		{
+			name "SPK Switch"
+			preserve true
+			lock true
+			value 1
+		}
+		{
+			name "OutputL Mixer DACL Switch"
+			preserve true
+			lock true
+			value 1
+		}
+		{
+            name "OutputR Mixer DACR Switch"
+            preserve true
+			lock true
+            value 1
+        }
+		{
+            name "digital volume"
+            preserve true
+			lock true
+            value 63
+        }
+	]
+	}
+}
+
+pcm.playback_hp {
+	type hooks
+	slave.pcm "hw:audiocodec"
+	hooks.0 {
+	type ctl_elems
+	hook_args [
+		{
+            name "LINEOUT Switch"
+            preserve true
+			lock true
+            value 1
+        }
+		{
+            name "OutputL Mixer DACL Switch"
+            preserve true
+			lock true
+            value 1
+        }
+		{
+            name "OutputR Mixer DACR Switch"
+            preserve true
+			lock true
+            value 1
+        }
+		{
+            name "digital volume"
+            preserve true
+			lock true
+            value 63
+        }
+	]
+	}
+}
+
+pcm.playback_hdmi {
+	type hw
+	card ahubhdmi
+}
+
+=== ~/.asoundrc ===
+cat: /home/muse/.asoundrc: No such file or directory
+
+=== /proc/asound/cards ===
+ 0 [audiocodec     ]: audiocodec - audiocodec
+                      audiocodec
+ 1 [ahubdam        ]: ahubdam - ahubdam
+                      ahubdam
+ 2 [ahubhdmi       ]: ahubhdmi - ahubhdmi
+                      ahubhdmi

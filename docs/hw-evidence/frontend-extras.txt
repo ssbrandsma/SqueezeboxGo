@@ -1,0 +1,22 @@
+=== vendor bin extras ===
+ls: cannot access '/mnt/vendor/bin/brightCtrl.bin': No such file or directory
+ls: cannot access '/mnt/vendor/muos1.ini': No such file or directory
+ls: cannot access '/mnt/vendor/muos2.ini': No such file or directory
+ls: cannot access '/tmp/vpRun.ini': No such file or directory
+ls: cannot access '/mnt/mmc/appfs.img': No such file or directory
+ls: cannot access '/mnt/mmc/gpio_keys_polled.ko': No such file or directory
+ls: cannot access '/mnt/mmc/gpio_keys_gpadc.ko': No such file or directory
+-rwxrwxrwx 1 muse muse 3876 Apr 15  2022 /mnt/mod/ctrl/autostart
+-rwxrwxrwx 1 muse muse 8313 Jun 13  2023 /mnt/vendor/bin/cexpert
+
+=== config.gz ===
+ls: cannot access '/boot/config*': No such file or directory
+-r--r--r-- 1 root root 24838 Apr  7 19:53 /proc/config.gz
+
+=== evtest ===
+evtest 1.33
+
+=== SDL 2.28 ver ===
+
+=== uptime ===
+ 19:53:06 up 24 min,  1 user,  load average: 2.31, 2.15, 1.61

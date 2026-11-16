@@ -1,0 +1,66 @@
+=== file ===
+bin/jive:      ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=eb84d941ec46d9af378349f04cd67b82cc8983c2, for GNU/Linux 3.7.0, stripped
+bin/jive_alsa: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=4023de59124b980cda4175592aadf29b800f9a7f, for GNU/Linux 3.7.0, stripped
+
+=== NEEDED ===
+ 0x0000000000000001 (NEEDED)             Shared library: [libtolua++.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libSDL_image-1.2.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libSDL_ttf-2.0.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libSDL_gfx.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libFLAC.so.8]
+ 0x0000000000000001 (NEEDED)             Shared library: [libmad.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libvorbisidec.so.1]
+ 0x0000000000000001 (NEEDED)             Shared library: [libfdk-aac.so.2]
+ 0x0000000000000001 (NEEDED)             Shared library: [liblua.so]
+ 0x0000000000000001 (NEEDED)             Shared library: [libm.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [libSDL-1.2.so.0]
+ 0x0000000000000001 (NEEDED)             Shared library: [libc.so.6]
+ 0x0000000000000001 (NEEDED)             Shared library: [ld-linux-aarch64.so.1]
+
+=== GLIBC max ===
+GLIBC_2.29
+GLIBC_2.33
+GLIBC_2.34
+=== isoc23? ===
+0
+
+=== ldd (resolves against stock libs?) ===
+	linux-vdso.so.1 (0x0000007f93f52000)
+	libtolua++.so => not found
+	libSDL_image-1.2.so.0 => not found
+	libSDL_ttf-2.0.so.0 => not found
+	libSDL_gfx.so.0 => not found
+	libFLAC.so.8 => /lib/aarch64-linux-gnu/libFLAC.so.8 (0x0000007f93b50000)
+	libmad.so.0 => not found
+	libvorbisidec.so.1 => not found
+	libfdk-aac.so.2 => not found
+	liblua.so => not found
+	libm.so.6 => /lib/aarch64-linux-gnu/libm.so.6 (0x0000007f93ab0000)
+	libSDL-1.2.so.0 => not found
+	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000007f93900000)
+	/lib/ld-linux-aarch64.so.1 (0x0000007f93f19000)
+	libogg.so.0 => /lib/aarch64-linux-gnu/libogg.so.0 (0x0000007f938e0000)
+=== ldd with bundle lib ===
+	linux-vdso.so.1 (0x0000007f7ef0a000)
+	libtolua++.so => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libtolua++.so (0x0000007f7eb30000)
+	libSDL_image-1.2.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libSDL_image-1.2.so.0 (0x0000007f7eaf0000)
+	libSDL_ttf-2.0.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libSDL_ttf-2.0.so.0 (0x0000007f7eac0000)
+	libSDL_gfx.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libSDL_gfx.so.0 (0x0000007f7ea90000)
+	libFLAC.so.8 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libFLAC.so.8 (0x0000007f7ea30000)
+	libmad.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libmad.so.0 (0x0000007f7e9f0000)
+	libvorbisidec.so.1 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libvorbisidec.so.1 (0x0000007f7e9b0000)
+	libfdk-aac.so.2 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libfdk-aac.so.2 (0x0000007f7e860000)
+	liblua.so => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/liblua.so (0x0000007f7e800000)
+	libm.so.6 => /lib/aarch64-linux-gnu/libm.so.6 (0x0000007f7e750000)
+	libSDL-1.2.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libSDL-1.2.so.0 (0x0000007f7e6d0000)
+	libc.so.6 => /lib/aarch64-linux-gnu/libc.so.6 (0x0000007f7e520000)
+	/lib/ld-linux-aarch64.so.1 (0x0000007f7eed1000)
+	libpng12.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libpng12.so.0 (0x0000007f7e4d0000)
+	libjpeg.so.9 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libjpeg.so.9 (0x0000007f7e460000)
+	libfreetype.so.6 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libfreetype.so.6 (0x0000007f7e3c0000)
+	libogg.so.0 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libogg.so.0 (0x0000007f7e390000)
+	libz.so.1 => /home/muse/squeezebox-dev/sp-stage/opt/squeezeplay/lib/libz.so.1 (0x0000007f7e350000)
+
+=== ldd jive_alsa ===
+	libasound.so.2 => /lib/aarch64-linux-gnu/libasound.so.2 (0x0000007f86e20000)
+(above: asound resolve check)

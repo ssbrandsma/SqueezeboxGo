@@ -1,0 +1,146 @@
+=== autostart ===
+#!/bin/bash
+# make by G.R.H
+
+G_CONF="/mnt/mod/ctrl/configs/system.cfg"
+
+# fb_screeninfo
+if [ ! -f "/mnt/mod/ctrl/configs/fb.cfg" ]; then
+    python3 - <<EOF
+import fcntl
+import os
+
+fb_fd = os.open("/dev/fb0", os.O_RDWR)
+try:
+    fb_info = bytearray(160)
+    fcntl.ioctl(fb_fd, 0x4600, fb_info)
+    fb_screeninfo = bytes(fb_info)
+    with open('/mnt/mod/ctrl/configs/fb.cfg', 'wb') as file:
+        file.write(fb_screeninfo)
+finally:
+    os.close(fb_fd)
+EOF
+fi
+
+# 增加功能
+[ ! -f /usr/bin/zip ] && cp /mnt/mod/ctrl/zip /usr/bin/zip && chomd 755 /usr/bin/zip
+[ ! -f /usr/bin/unzip ] && cp /mnt/mod/ctrl/unzip /usr/bin/unzip && chomd 755 /usr/bin/unzip
+[ ! -f /usr/bin/volumeCtrl.dge ] && cp /mnt/mod/ctrl/volumeCtrl.dge /usr/bin/volumeCtrl.dge && chomd 755 /usr/bin/volumeCtrl.dge
+
+# 自动更新
+for TF_PATH in mmc sdcard
+do
+    [ -f /mnt/${TF_PATH}/update.zip ] && unzip -oq /mnt/${TF_PATH}/update.zip -d /mnt/${TF_PATH}/ && rm -f /mnt/${TF_PATH}/update.zip
+    [ -f /mnt/${TF_PATH}/update/update.sh ] && /mnt/${TF_PATH}/update/update.sh
+done
+
+if [ -f /mnt/mod/update_me ] && [ -f /mnt/mod/update/update.sh ]; then
+    rm -f /mnt/mod/update_me
+    /mnt/mod/update/update.sh
+fi
+
+# 一键开机脚本
+[ -f "/mnt/mod/.last" ] && /mnt/mod/ctrl/lastgame
+
+# LED 控制
+[ -f /mnt/mod/ctrl/configs/led_boot.cfg ] && cat /mnt/mod/ctrl/configs/led_boot.cfg > /sys/class/power_supply/axp2202-battery/work_led
+
+# samba & ssh & syn
+[ -f /mnt/mod/ctrl/configs/server.flg ] && rm -f /mnt/mod/ctrl/configs/server.flg
+
+# 检测 retroarch.cfg 并修复
+(ls -l /lib/aarch64-linux-gnu/libfontconfig.so.1 | grep '1.12.0') && ln -sf /lib/aarch64-linux-gnu/libfontconfig.so.1.10.1 /lib/aarch64-linux-gnu/libfontconfig.so.1
+(ls -l /lib/arm-linux-gnueabihf/libfontconfig.so.1 | grep '1.12.0') && ln -sf /lib/arm-linux-gnueabihf/libfontconfig.so.1.10.1 /lib/arm-linux-gnueabihf/libfontconfig.so.1
+if [ ! -f "/.config/retroarch/retroarch.cfg" ] || ! grep -q "assets_directory =" /.config/retroarch/retroarch.cfg; then
+    LANG=$(head -n 1 /mnt/vendor/oem/language.ini)
+    RA_lang=(12 11 0 1 10 3 9 4 2 7)
+    PSP_lang=(zh_CN zh_TW en_US ja_JP ko_KR es_LA ru_RU de_DE fr_FR pt_BR)
+    /mnt/vendor/ctrl/setRA.sh rest
+    /mnt/vendor/ctrl/setRA.sh adv
+    if [[ $LANG -ge 0 && $LANG -lt ${#RA_lang[@]} ]]; then
+        /mnt/vendor/ctrl/setRA.sh language ${RA_lang[${LANG}]}
+        /mnt/vendor/ctrl/setPSP.sh language ${PSP_lang[${LANG}]}
+    fi
+fi
+
+# 处理 java 存档文件夹
+SOURCE_DIR="/mnt/vendor/deep/emuJava/jdk/bin"
+TARGET_DIR="/mnt/mmc/save/java"
+LINK_DIR="/mnt/vendor/deep/emuJava/jdk/bin"
+
+mkdir -p "$TARGET_DIR"
+
+for dir in rms config; do
+    if [ ! -d "$TARGET_DIR/$dir" ]; then
+        if [ -d "$SOURCE_DIR/$dir" ]; then
+            cp -rf "$SOURCE_DIR/$dir" "$TARGET_DIR/"
+        else
+            mkdir -p "$TARGET_DIR/$dir"
+        fi
+    fi
+    
+    if [ ! -L "$LINK_DIR/$dir" ]; then
+        rm -rf "$LINK_DIR/$dir" 2>/dev/null
+        ln -sf "$TARGET_DIR/$dir" "$LINK_DIR/$dir"
+    fi
+done
+
+if [ ! -f "$TARGET_DIR/keymap.cfg" ]; then
+    if [ -f "$SOURCE_DIR/keymap.cfg" ]; then
+        cp -f "$SOURCE_DIR/keymap.cfg" "$TARGET_DIR/keymap.cfg"
+        cp -f "$SOURCE_DIR/keymap.cfg" "$SOURCE_DIR/keymap.bak"
+    elif [ -f "$SOURCE_DIR/keymap.bak" ]; then
+        cp -f "$SOURCE_DIR/keymap.bak" "$TARGET_DIR/keymap.cfg"
+    else
+        touch "$TARGET_DIR/keymap.cfg"
+    fi
+fi
+
+if [ ! -L "$LINK_DIR/keymap.cfg" ]; then
+    rm -f "$LINK_DIR/keymap.cfg" 2>/dev/null
+    ln -sf "$TARGET_DIR/keymap.cfg" "$LINK_DIR/keymap.cfg"
+fi
+
+# 处理 pico8
+if [ ! -f "/mnt/mmc/EXE/pico-8/launch.sh" ]; then
+    mkdir -p /mnt/mmc/EXE/pico-8
+    cp -f /mnt/mod/ctrl/configs/pico8.sh /mnt/mmc/EXE/pico-8/launch.sh
+    cat << '__PICO8__' > "/mnt/mmc/EXE/pico-8/Put the Pico8 running file here.txt"
+The following files are required:
+pico8
+pico8.dat
+pico8_64
+pico8_dyn
+pico8_gpio
+__PICO8__
+fi
+
+exit 0
+
+=== cexpert file+strings ===
+/mnt/vendor/bin/cexpert: ELF 32-bit LSB executable, ARM, EABI5 version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-armhf.so.3, for GNU/Linux 3.1.1, BuildID[sha1]=fa4db7d207a9c356e71ce2d29576a08024ae6b4a, not stripped
+/lib/ld-linux-armhf.so.3
+libc.so.6
+socket
+puts
+abort
+getpid
+printf
+memset
+strstr
+__errno_location
+bind
+recv
+system
+close
+strcmp
+strerror
+__libc_start_main
+__gmon_start__
+GLIBC_2.4
+$0BF
+49F0F
+error getting socket %s
+bind failed! %s
+waiting receive ...
+state < 0

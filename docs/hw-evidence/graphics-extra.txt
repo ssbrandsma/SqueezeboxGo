@@ -1,0 +1,28 @@
+=== fb0 mode/rotate/blank/pan ===
+-- mode:
+-- rotate:
+0
+-- blank:
+-- pan:
+0,0
+-- physical_size:
+cat: /sys/class/graphics/fb0/physical_size: No such file or directory
+
+=== disp sysfs ===
+disp
+
+=== mali ===
+mali_kbase            512000  0
+ls: cannot access '/dev/ump*': No such file or directory
+ls: cannot access '/dev/gpu*': No such file or directory
+crw-rw-rw- 1 root root 10, 49 Apr  7 19:28 /dev/mali0
+-- xres:
+cat: /sys/class/disp/disp/attr/xres: Permission denied
+-- yres:
+cat: /sys/class/disp/disp/attr/yres: Permission denied
+-- sys:
+cat: /sys/class/disp/disp/attr/sys: Permission denied
+-- disp:
+cat: /sys/class/disp/disp/attr/disp: Permission denied
+-- boot_para:
+cat: /sys/class/disp/disp/attr/boot_para: Permission denied

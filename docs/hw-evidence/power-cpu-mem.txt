@@ -1,0 +1,67 @@
+=== power_supply ===
+axp2202-battery
+axp2202-usb
+
+capacity: 84
+voltage_now: 3940000
+current_now: cat: /sys/class/power_supply/axp2202-battery/current_now: No such file or directory
+status: Discharging
+health: Good
+boot_mode: 0
+work_led: const-charge-voltage: cat: /sys/class/power_supply/axp2202-battery/const-charge-voltage: No such file or directory
+max-charge-current: cat: /sys/class/power_supply/axp2202-battery/max-charge-current: No such file or directory
+
+=== cpuinfo (first 20) ===
+processor	: 0
+BogoMIPS	: 48.00
+Features	: fp asimd aes pmull sha1 sha2 crc32
+CPU implementer	: 0x41
+CPU architecture: 8
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 1
+BogoMIPS	: 48.00
+Features	: fp asimd aes pmull sha1 sha2 crc32
+CPU implementer	: 0x41
+CPU architecture: 8
+CPU variant	: 0x0
+CPU part	: 0xd03
+CPU revision	: 4
+
+processor	: 2
+BogoMIPS	: 48.00
+
+=== meminfo (first 8) ===
+MemTotal:         996720 kB
+MemFree:          423292 kB
+MemAvailable:     788244 kB
+Buffers:           29408 kB
+Cached:           321652 kB
+SwapCached:            0 kB
+Active:           306452 kB
+Inactive:         178692 kB
+
+=== regulators ===
+regulator.0
+regulator.1
+regulator.10
+regulator.11
+regulator.12
+regulator.13
+regulator.14
+regulator.15
+regulator.16
+regulator.17
+regulator.18
+regulator.19
+regulator.2
+regulator.20
+regulator.3
+regulator.4
+regulator.5
+regulator.6
+regulator.7
+regulator.8
+regulator.9

@@ -1,0 +1,21 @@
+regulator.0 name=regulator-dummy uv=cat: /sys/class/regulator/regulator.0/microvolts: No such file or directory state=cat: /sys/class/regulator/regulator.0/state: No such file or directory
+regulator.1 name=axp2202-dcdc1 uv=1160000 state=enabled
+regulator.10 name=axp2202-bldo2 uv=1800000 state=enabled
+regulator.11 name=axp2202-bldo3 uv=2800000 state=disabled
+regulator.12 name=axp2202-bldo4 uv=1200000 state=disabled
+regulator.13 name=axp2202-cldo1 uv=3300000 state=enabled
+regulator.14 name=axp2202-cldo2 uv=3300000 state=disabled
+regulator.15 name=axp2202-cldo3 uv=3300000 state=enabled
+regulator.16 name=axp2202-cldo4 uv=3300000 state=enabled
+regulator.17 name=axp2202-rtcldo uv=1800000 state=cat: /sys/class/regulator/regulator.17/state: No such file or directory
+regulator.18 name=axp2202-cpusldo uv=900000 state=enabled
+regulator.19 name=axp2202-vmid uv=cat: /sys/class/regulator/regulator.19/microvolts: No such file or directory state=enabled
+regulator.2 name=axp2202-dcdc2 uv=940000 state=enabled
+regulator.20 name=axp2202-drivevbus uv=cat: /sys/class/regulator/regulator.20/microvolts: No such file or directory state=disabled
+regulator.3 name=axp2202-dcdc3 uv=1100000 state=enabled
+regulator.4 name=axp2202-dcdc4 uv=1000000 state=disabled
+regulator.5 name=axp2202-aldo1 uv=1800000 state=enabled
+regulator.6 name=axp2202-aldo2 uv=1800000 state=disabled
+regulator.7 name=axp2202-aldo3 uv=1800000 state=enabled
+regulator.8 name=axp2202-aldo4 uv=1800000 state=enabled
+regulator.9 name=axp2202-bldo1 uv=1800000 state=disabled

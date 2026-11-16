@@ -1,0 +1,36 @@
+=== [1] gcc build ===
+hello.c: In function 'main':
+hello.c:2:66: warning: implicit declaration of function 'getpid' [-Wimplicit-function-declaration]
+    2 | int main(void){printf("hello from squeezebox-dev pid=%d\n", (int)getpid()); return 0;}
+      |                                                                  ^~~~~~
+build_exit=0
+hello: ELF 64-bit LSB pie executable, ARM aarch64, version 1 (SYSV), dynamically linked, interpreter /lib/ld-linux-aarch64.so.1, BuildID[sha1]=90672a3b16d4a60dc0401f4423aab5dca7053485, for GNU/Linux 3.7.0, not stripped
+=== [2] run ===
+hello from squeezebox-dev pid=6015
+run_exit=0
+=== [3] fb0 read ===
+0000000   h   e   a   d   :       c   a   n   n   o   t       o   p   e
+0000020   n       '   /   d   e   v   /   f   b   0   '       f   o   r
+fb_exit=0
+=== [4] snd read ===
+head: cannot open '/dev/snd/pcmC0D0p' for reading: Permission denied
+=== [5] input read ===
+head: cannot open '/dev/input/event1' for reading: Permission denied
+=== [6] groups ===
+muse sudo
+uid=1000(muse) gid=1000(muse) groups=1000(muse),27(sudo)
+=== [7] sudo ===
+-rwxr-xr-x 1 root root 215944 Feb 14 11:48 /usr/bin/sudo
+sudo: /usr/bin/sudo must be owned by uid 0 and have the setuid bit set
+sudo_exit=1
+
+=== [8] openprobe.c (open(O_RDONLY) errno capture), built+run on device ===
+/dev/fb0: FAIL errno=13 (Permission denied)
+/dev/snd/pcmC0D0p: FAIL errno=13 (Permission denied)
+/dev/snd/controlC0: FAIL errno=13 (Permission denied)
+/dev/input/event1: FAIL errno=13 (Permission denied)
+/dev/input/js0: OPEN-OK fd=3
+/dev/mali0: OPEN-OK fd=3
+/sys/firmware/fdt: FAIL errno=13 (Permission denied)
+/sys/class/disp/disp/attr/sys: FAIL errno=13 (Permission denied)
+probe_exit=0

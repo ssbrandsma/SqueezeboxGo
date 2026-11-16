@@ -1,0 +1,52 @@
+=== fuser -v /dev/snd/* ===
+fuser_exit=1
+
+total 0
+drwxr-xr-x  3 root root      200 Apr  7 19:28 .
+drwxr-xr-x 12 root root     3900 Apr  7 19:29 ..
+drwxr-xr-x  2 root root      100 Apr  7 19:28 by-path
+crw-rw----  1 root audio 116,  0 Apr  7 19:28 controlC0
+crw-rw----  1 root audio 116, 32 Apr  7 19:28 controlC1
+crw-rw----  1 root audio 116, 64 Apr  7 19:28 controlC2
+crw-rw----  1 root audio 116, 16 Apr  7 19:28 pcmC0D0p
+crw-rw----  1 root audio 116, 80 Apr  7 19:28 pcmC2D0p
+crw-rw----  1 root audio 116,  1 Apr  7 19:28 seq
+crw-rw----  1 root audio 116, 33 Apr  7 19:28 timer
+
+=== amixer contents (first 60) ===
+ALSA lib confmisc.c:855:(parse_card) cannot find card '0'
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_card_inum returned error: No such file or directory
+ALSA lib confmisc.c:422:(snd_func_concat) error evaluating strings
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_concat returned error: No such file or directory
+ALSA lib confmisc.c:1334:(snd_func_refer) error evaluating name
+ALSA lib conf.c:5178:(_snd_config_evaluate) function snd_func_refer returned error: No such file or directory
+ALSA lib conf.c:5701:(snd_config_expand) Evaluate error: No such file or directory
+ALSA lib control.c:1528:(snd_ctl_open_noupdate) Invalid CTL default
+amixer: Control default open error: No such file or directory
+=== re-check pcm0p status ===
+state: XRUN
+owner_pid   : 2461
+trigger_time: 1649360485.561263386
+tstamp      : 1649361010.180937844
+delay       : 0
+avail       : 4864
+avail_max   : 0
+-----
+hw_ptr      : 10240
+appl_ptr    : 9472
+
+=== dmenu family ===
+UID          PID    PPID  C STIME TTY          TIME CMD
+root        2433    2132  0 19:28 ?        00:00:00 /bin/bash /mnt/vendor/ctrl/dmenu_ln
+root        2434    2433 48 19:28 ?        00:10:29 /mnt/vendor/bin/dmenu.bin
+
+=== dmenu fds (alsa?) ===
+ls: cannot open directory '/proc/2434/fd': Permission denied
+total 0
+dr-xr-xr-x 8 root root 0 Apr  7 19:50 .
+dr-xr-xr-x 9 root root 0 Apr  7 19:28 ..
+dr-xr-xr-x 7 root root 0 Apr  7 19:50 2434
+dr-xr-xr-x 7 root root 0 Apr  7 19:50 2456
+dr-xr-xr-x 7 root root 0 Apr  7 19:50 2459
+dr-xr-xr-x 7 root root 0 Apr  7 19:50 2460
+dr-xr-xr-x 7 root root 0 Apr  7 19:50 2461

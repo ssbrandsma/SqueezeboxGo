@@ -1,0 +1,28 @@
+=== /proc/fb ===
+0 
+
+=== fbset ===
+bash: line 1: fbset: command not found
+
+=== sysfs fb0 ===
+-- virtual_size:
+1280,1024
+-- bits_per_pixel:
+16
+-- stride:
+2560
+-- modes:
+U:1280x1024p-59
+U:640x480p-59
+-- name:
+
+-- state:
+0
+
+=== ls fb/dri ===
+ls: cannot access '/dev/dri': No such file or directory
+crw-rw---- 1 root video 29, 0 Apr  7 19:28 /dev/fb0
+
+=== backlight ===
+ls: cannot access '/sys/class/backlight/': No such file or directory
+cat: '/sys/class/backlight/*/brightness': No such file or directory

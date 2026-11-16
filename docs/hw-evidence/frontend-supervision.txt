@@ -1,0 +1,60 @@
+=== ls /mnt/vendor/ctrl/ ===
+total 88
+drwxrwxrwx  2 muse   muse    4096 May 18  2026 .
+drwxrwxrwx 12 root   root    4096 May 27  2026 ..
+-rwxrwxrwx  1 muse   muse     996 Nov 28  2023 cpu_setting.sh
+-rwxrwxrwx  1 muse   muse    1423 Apr 15  2022 dmenu_ln
+-rwxrwxrwx  1 muse   muse     208 Dec  7  2023 forceOS.sh
+-rwxrwxrwx  1 muse   muse    4923 Nov 14  2025 loadapp.sh
+-rwxrwxrwx  1 muse   muse    1155 Nov 14  2025 mmc.sh
+-rwxrwxrwx  1 muse   muse    1857 Nov 14  2025 mmc_new.sh
+-rwxrwxrwx  1 muse   muse     912 May 16  2023 moto.sh
+-rwxrwxrwx  1 muse   muse      37 Aug 22  2023 ntpd.sh
+-rwxrwxrwx  1 muse   muse     333 Apr 28  2024 pwr_new.sh
+-rwxrwxrwx  1 muse   muse     887 Nov 14  2025 setBluetooth.sh
+-rwxr--r--  1 nobody nogroup 1366 Aug 12  2024 setFlycast.sh
+-rwxr--r--  1 nobody nogroup  894 Dec 19  2024 setHostapd.sh
+-rwxrwxrwx  1 muse   muse     192 Mar 16  2024 setMusic.sh
+-rwxrwxrwx  1 muse   muse    2156 Apr 15  2022 setNDS.sh
+-rwxrwxrwx  1 muse   muse     455 Mar 29  2024 setPSP.sh
+-rwxrwxrwx  1 muse   muse    3870 Apr 15  2022 setRA.sh
+-rwxr--r--  1 nobody nogroup   35 Feb 11  2025 setSSH.sh
+-rwxr--r--  1 nobody nogroup 1178 Aug 10  2024 setSaturn.sh
+-rwxrwxrwx  1 muse   muse    1569 May  6  2023 udisk.sh
+
+=== ls /etc/init.d/ ===
+total 92
+drwxr-xr-x   2 root root 4096 Apr 13  2022 .
+drwxr-xr-x 103 root root 4096 Apr  7 19:40 ..
+-rwxr-xr-x   1 root root 5574 Jan 12 15:13 alsa-utils
+-rwxr-xr-x   1 root root 3740 Feb 23 09:48 apparmor
+-rwxr-xr-x   1 root root 1232 Nov 22 16:39 console-setup.sh
+-rwxr-xr-x   1 root root 3062 Mar 17  2021 cron
+-rwxr-xr-x   1 root root 3152 Jun 28  2021 dbus
+-rwxr-xr-x   1 root root 9672 Feb 14  2024 dnsmasq
+-rwxr-xr-x   1 root root 1978 Apr  4 13:04 hostapd
+-rwxr-xr-x   1 root root 1749 Jun 13  2024 hwclock.sh
+-rwxr-xr-x   1 root root 1479 Jul 24  2021 keyboard-setup.sh
+-rwxr-xr-x   1 root root 2044 Jan  8  2021 kmod
+-rwxr--r--   1 root root 1146 Dec  5  2025 launcher.sh
+-rwxr-xr-x   1 root root  959 Feb 25 11:32 procps
+-rwxr-xr-x   1 root root 4060 Feb 25 23:30 ssh
+-rwxr-xr-x   1 root root 6871 Mar  8 13:53 udev
+-rwxr-xr-x   1 root root 2083 Sep 19  2021 ufw
+-rwxr-xr-x   1 root root 1306 Feb 21 01:49 uuidd
+-rwxr-xr-x   1 root root 2762 Oct 19 09:04 x11-common
+
+=== launcher-related systemd ===
+  dev-disk-by\x2dlabel-appfs.device                                                       loaded    active   plugged   /dev/disk/by-label/appfs
+  dev-disk-by\x2dpartlabel-appfs.device                                                   loaded    active   plugged   /dev/disk/by-partlabel/appfs
+  dev-disk-by\x2duuid-5e276d9e\x2d32fc\x2d4758\x2db649\x2d88e4762c3fb7.device             loaded    active   plugged   /dev/disk/by-uuid/5e276d9e-32fc-4758-b649-88e4762c3fb7
+  apparmor.service                                                                        loaded    inactive dead      Load AppArmor profiles
+  launcher.service                                                                        loaded    active   running   launcher.service
+  systemd-sysctl.service                                                                  loaded    active   exited    Apply Kernel Variables
+* upower.service                                                                          loaded    failed   failed    Daemon for power management
+
+=== dmenu procs ===
+root        2131  0.0  0.1  12568  1460 ?        S    19:28   0:00 /bin/bash /etc/init.d/launcher.sh start
+root        2132  0.0  0.3  12700  3384 ?        S    19:28   0:00 /bin/bash /mnt/vendor/ctrl/loadapp.sh
+root        2433  0.0  0.3  12568  3344 ?        S    19:28   0:00 /bin/bash /mnt/vendor/ctrl/dmenu_ln
+root        2434 47.7  8.1 147160 80876 ?        Sl   19:28  10:07 /mnt/vendor/bin/dmenu.bin

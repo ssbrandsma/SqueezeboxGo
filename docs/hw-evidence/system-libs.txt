@@ -1,0 +1,50 @@
+=== dpkg sdl/alsa/mali/mpp ===
+ii  alsa-topology-conf                     1.2.5.1-2                               all          ALSA topology configuration files
+ii  alsa-ucm-conf                          1.2.6.3-1ubuntu1                        all          ALSA Use Case Manager configuration files
+ii  alsa-utils                             1.2.6-1ubuntu1                          arm64        Utilities for configuring and using ALSA
+ii  gpg                                    2.2.27-3ubuntu2                         arm64        GNU Privacy Guard -- minimalist public key operations
+ii  libasound2:arm64                       1.2.6.1-1ubuntu1                        arm64        shared library for ALSA applications
+ii  libasound2:armhf                       1.2.6.1-1ubuntu1                        armhf        shared library for ALSA applications
+ii  libasound2-data                        1.2.6.1-1ubuntu1                        all          Configuration files and profiles for ALSA drivers
+ii  libasound2-dev:arm64                   1.2.6.1-1ubuntu1                        arm64        shared library for ALSA applications -- development files
+ii  libasound2-dev:armhf                   1.2.6.1-1ubuntu1                        armhf        shared library for ALSA applications -- development files
+ii  libatopology2:arm64                    1.2.6.1-1ubuntu1                        arm64        shared library for handling ALSA topology definitions
+ii  libmnl0:arm64                          1.0.4-3build2                           arm64        minimalistic Netlink communication library
+ii  libpulse-mainloop-glib0:arm64          1:15.99.1+dfsg1-1ubuntu1                arm64        PulseAudio client libraries (glib support)
+ii  libpulse0:arm64                        1:15.99.1+dfsg1-1ubuntu1                arm64        PulseAudio client libraries
+ii  libpulsedsp:arm64                      1:15.99.1+dfsg1-1ubuntu1                arm64        PulseAudio OSS pre-load library
+ii  libsdl2-2.0-0:arm64                    2.0.20+dfsg-2ubuntu1.22.04.1            arm64        Simple DirectMedia Layer
+ii  libtry-tiny-perl                       0.31-1                                  all          module providing minimalistic try/catch
+ii  systemd-timesyncd                      249.11-0ubuntu3                         arm64        minimalistic service to synchronize local time with NTP servers
+
+=== ldconfig SDL/EGL/GLES/mali/asound ===
+	libwayland-egl.so.1 (libc6,AArch64) => /lib/aarch64-linux-gnu/libwayland-egl.so.1
+	libwayland-egl.so.1 (libc6,hard-float) => /lib/arm-linux-gnueabihf/libwayland-egl.so.1
+	libwayland-egl.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libwayland-egl.so
+	libvdpau.so.1 (libc6,AArch64) => /lib/aarch64-linux-gnu/libvdpau.so.1
+	libmali.so.0 (libc6,AArch64) => /lib/libmali.so.0
+	libmali.so (libc6,AArch64) => /lib/libmali.so
+	libasound.so.2 (libc6,AArch64) => /lib/aarch64-linux-gnu/libasound.so.2
+	libasound.so.2 (libc6,hard-float) => /lib/arm-linux-gnueabihf/libasound.so.2
+	libasound.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libasound.so
+	libasound.so (libc6,hard-float) => /lib/arm-linux-gnueabihf/libasound.so
+	libSDL2_ttf-2.0.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2_ttf-2.0.so.0
+	libSDL2_ttf-2.0.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2_ttf-2.0.so
+	libSDL2_net-2.0.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2_net-2.0.so.0
+	libSDL2_mixer-2.0.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2_mixer-2.0.so.0
+	libSDL2_image-2.0.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2_image-2.0.so.0
+	libSDL2-2.0.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libSDL2-2.0.so.0
+	libSDL2-2.0.so.0 (libc6,AArch64) => /lib/libSDL2-2.0.so.0
+	libGLESv2.so.2 (libc6,AArch64) => /lib/aarch64-linux-gnu/libGLESv2.so.2
+	libGLESv2.so.2 (libc6,AArch64) => /lib/libGLESv2.so.2
+	libGLESv2.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libGLESv2.so
+	libGLESv2.so (libc6,AArch64) => /lib/libGLESv2.so
+	libGLESv1_CM.so.1 (libc6,AArch64) => /lib/aarch64-linux-gnu/libGLESv1_CM.so.1
+	libGLESv1_CM.so.1 (libc6,AArch64) => /lib/libGLESv1_CM.so.1
+	libGLESv1_CM.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libGLESv1_CM.so
+	libGLESv1_CM.so (libc6,AArch64) => /lib/libGLESv1_CM.so
+	libEGL_mesa.so.0 (libc6,AArch64) => /lib/aarch64-linux-gnu/libEGL_mesa.so.0
+	libEGL.so.1 (libc6,AArch64) => /lib/aarch64-linux-gnu/libEGL.so.1
+	libEGL.so.1 (libc6,AArch64) => /lib/libEGL.so.1
+	libEGL.so (libc6,AArch64) => /lib/aarch64-linux-gnu/libEGL.so
+	libEGL.so (libc6,AArch64) => /lib/libEGL.so
