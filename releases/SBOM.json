@@ -1,32 +1,32 @@
 {
-  "$comment": "SBOM DRAFT (squeezebox-sbom-draft/1) for 0.2.0-exp2. Covers the exact images recorded in releases/MANIFEST.json. dpkg packages are measured from the image (debugfs); source pins are the repo pins those images were built from; toolchain section marks specified-vs-actual honestly (0.2.0-exp2 was built on HOST tooling, not the pinned containers). Not SPDX/CycloneDX yet (see limitations).",
+  "$comment": "SBOM DRAFT (squeezebox-sbom-draft/1) for 0.3.0-exp3. Covers the exact images recorded in releases/MANIFEST.json. dpkg packages re-verified from the 0.3.0 ddr4 image via debugfs (141/141 names+versions identical to 0.2.0); source pins are the repo pins those images were built from; toolchain section marks specified-vs-actual honestly (0.3.0-exp3 was built on HOST tooling, not the pinned containers). Not SPDX/CycloneDX yet (see limitations).",
   "sbomFormat": "squeezebox-sbom-draft/1",
   "name": "squeezebox-rg35xx-h",
-  "version": "0.2.0-exp2",
-  "image_git_commit": "d34314b007fa3b7e26e34fec808ce99510276f27",
-  "sbom_generated_from_commit": "cd587659b3510b730cc458037645487d6db864ff",
-  "sbom_generated_from_branch": "wp3/release",
-  "date_utc": "2026-11-15T23:00:30Z",
+  "version": "0.3.0-exp3",
+  "image_git_commit": "200c6e1a780559671cf54d0a39b74b6a8788e820",
+  "sbom_generated_from_commit": "86a5cba9c55d3a478c1d986c2f156383389533d1",
+  "sbom_generated_from_branch": "main (lead regen after v03 merge)",
+  "date_utc": "2026-11-16T10:55:40Z",
   "artifacts": [
     {
       "file": "squeezebox-rg35xxh-ddr3.img",
-      "sha256": "7a1fc07c1ef65b0abdadc6c90f11f9b1dc70dbc30767fd7dcc70adc193bdccd0",
+      "sha256": "82fd269a3baceeda5359c23f5b644383ed59755ba7652af85633f13c9730cb9d",
       "size_bytes": 2147483648
     },
     {
       "file": "squeezebox-rg35xxh-ddr3.img.xz",
-      "sha256": "32a8e60328fc599d1135683d9d2f94d59fdb77eafc2f947191d267a0bc620771",
-      "size_bytes": 164128224
+      "sha256": "1fbbc433e73403ec4380c2a14e63422eb3861101c643372626b19427179eb11a",
+      "size_bytes": 164121664
     },
     {
       "file": "squeezebox-rg35xxh-ddr4.img",
-      "sha256": "c388cbf16518ce026d75ea6ad08e8e7c5259c9e2c4c45cf245d3f07d4a55f5a1",
+      "sha256": "6c3247629b4e9d1973a8622b308cbc2aff9444af4376b44581637e334a326173",
       "size_bytes": 2147483648
     },
     {
       "file": "squeezebox-rg35xxh-ddr4.img.xz",
-      "sha256": "65d65c18392b52a78d67d23f7aa3c93d9d3a70fdc9b3cd7b4a8ef8f7010c37a5",
-      "size_bytes": 164128068
+      "sha256": "85938d0160294404e9ec390621f0ac5a3a415b58480b204055c8b45df2019665",
+      "size_bytes": 164120036
     }
   ],
   "sources": [
@@ -34,17 +34,17 @@
       "name": "linux (stable)",
       "repo": "https://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git",
       "pin": "v7.3.4 (8310b43a724c54668eeaa6860234078a7886915a)",
-      "role": "kernel Image + RG35XX-H DTB + 1676 modules",
+      "role": "kernel Image + RG35XX-H DTB + 1675 modules (OOT series 0001-0006: display + LED heartbeat)",
       "shipped_in_image": true,
-      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/wp2-platform.md"
+      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/v03-image.md (DTB fc345c3f, 32473B)"
     },
     {
       "name": "u-boot",
       "repo": "https://github.com/u-boot/u-boot.git",
       "pin": "v2026.10 (5508406582f6f7120dce0c4b3059819a41788db2)",
-      "role": "anbernic_rg35xx_h700_defconfig; SPL+fit per DDR variant",
+      "role": "anbernic_rg35xx_h700_defconfig + common fragment (CONFIG_CMD_GPIO); SPL+fit per DDR variant",
       "shipped_in_image": true,
-      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/wp2-platform.md"
+      "evidence": "platform/rg35xx-h/kernel/pins.env, docs/test-results/v03-image.md"
     },
     {
       "name": "arm-trusted-firmware",
@@ -84,12 +84,12 @@
       "pin": "suite trixie; libc6 2.41-12+deb13u4; 141 pkgs (see userland.packages); Release sig verified",
       "role": "base userland: glibc + systemd + apt + ALSA/wifi/ssh",
       "shipped_in_image": true,
-      "evidence": "docs/decisions/0004-base-userland.md, docs/test-results/wp2u-image.md, docs/test-results/wp2u-dpkg-manifest.txt"
+      "evidence": "docs/decisions/0004-base-userland.md, docs/test-results/wp2u-image.md, docs/test-results/wp2u-dpkg-manifest.txt; 141/141 re-verified from 0.3.0 ddr4 via debugfs"
     },
     {
       "name": "repo-authored payload",
       "repo": "(this repo, image_git_commit above)",
-      "pin": "evdev2jive + drm_splash + rg35xxh_bsp + skin + services + asound.conf",
+      "pin": "evdev2jive + drm_splash + rg35xxh_bsp + skin + services (incl. led.sh) + asound.conf + boot.scr gpio marker",
       "role": "input/splash/BSP/UI/services/ALSA config layered by stage-payload.sh + mkrootfs.sh",
       "shipped_in_image": true,
       "evidence": "build/image/stage-payload.sh, platform/rg35xx-h/rootfs/mkrootfs.sh"
@@ -141,8 +141,8 @@
     "staging_script": "platform/rg35xx-h/rootfs/stage-userland.sh",
     "package_count": 141,
     "dpkg_status": "all 'install ok unpacked' (rootless 2nd stage; first-boot dpkg --configure -a runs on device)",
-    "manifest_source": "docs/test-results/wp2u-dpkg-manifest.txt (debugfs rdump of /var/lib/dpkg/status from the ddr3 image)",
-    "release_verification": "Release signature VERIFIED with trixie keyring at stage time (see docs/test-results/wp2u-image.md); suite NOT snapshot-pinned (future work, ADR-0004)",
+    "manifest_source": "141/141 names+versions re-verified from 0.3.0-exp3 ddr4 /var/lib/dpkg/status via debugfs; list identical to docs/test-results/wp2u-dpkg-manifest.txt",
+    "release_verification": "Release signature VERIFIED with trixie keyring at stage time (see docs/test-results/v03-image.md); suite NOT snapshot-pinned (future work, ADR-0004)",
     "packages": [
       {
         "name": "adduser",
@@ -852,7 +852,7 @@
     ]
   },
   "toolchain": {
-    "provenance_note": "0.2.0-exp2 was built with HOST tooling (no docker daemon on the build host). The pinned containers below are the SPECIFIED contract, not what produced these images. Reproducibility impact is recorded honestly under actual.repro_limits.",
+    "provenance_note": "0.3.0-exp3 was built with HOST tooling (no docker daemon on the build host; see docs/test-results/v03-image.md). The pinned containers below are the SPECIFIED contract, not what produced these images. Reproducibility impact is recorded honestly under actual.repro_limits.",
     "specified": {
       "payload_container": {
         "dockerfile": "build/toolchain/Dockerfile",
@@ -864,35 +864,36 @@
           "libc6-dev-arm64-cross": "2.39-0ubuntu8cross1",
           "libasound2-dev:arm64": "1.2.11-1ubuntu0.3"
         },
-        "used_for_0_2_0_exp2": false
+        "used_for_0_3_0_exp3": false
       },
       "image_container": {
         "dockerfile": "build/docker/Dockerfile",
         "base": "debian:bookworm-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc (pinned)",
         "apt_versions": "FLOATING within bookworm (no version pins in Dockerfile)",
-        "used_for_0_2_0_exp2": false
+        "used_for_0_3_0_exp3": false
       }
     },
     "actual": {
-      "host": "DESKTOP-OVMHVD2, Ubuntu 24.04 x86_64 (WSL2), no root, no docker",
+      "host": "Ubuntu 24.04 x86_64, 12 cores, no root, no docker (host-only env, see v03-image.md)",
       "cross_toolchain": "gcc-aarch64-linux-gnu 13.3.0, binutils 2.42, bison 3.8.2",
       "image_tools": "mtools 4.0.43, dosfstools 4.2, mke2fs 1.47.0, fakeroot",
       "userland_tools": "host debootstrap + qemu-user-static extracted to /tmp (see docs/test-results/wp2u-image.md)",
       "sysroot": "rootless /tmp/wp2sys (Ubuntu noble .debs extracted)",
-      "source_date_epoch_build": 1794334272,
-      "source_date_epoch_release": 1794780954,
+      "source_date_epoch_build": 1794823250,
+      "source_date_epoch_release": 1794823250,
       "repro_limits": [
-        "mke2fs 1.47.0 < 1.47.1: ext4 wrapper varies run-to-run (assembler warns); payload bytes proven identical (11834/11834 SHA match)",
+        "mke2fs 1.47.0 < 1.47.1: ext4 wrapper varies run-to-run (assembler warns); payload bytes proven identical (11837/11837 debugfs dump match)",
         "container e2fsprogs >= 1.47.1 TODO stands (build/docker/Dockerfile)",
-        "13 noble closure libs still staged (trixie migration future)"
+        "noble-sysroot closure libs still staged for payload DT_NEEDED gaps (19/19 hostpaths present; same mechanism as 0.2.0)"
       ],
-      "evidence": "docs/test-results/wp2-platform.md, docs/test-results/wp2int-image.md, docs/test-results/wp2u-image.md"
+      "evidence": "docs/test-results/v03-image.md, docs/test-results/v03-qa.md"
     },
     "target": "aarch64-linux-gnu, -march=armv8-a+crc -mtune=cortex-a53, glibc, PREFIX=/opt/squeezeplay"
   },
   "validation": {
-    "check_image": "PASS both variants after Lead secrets-heuristic fix (PEM hits require key material); see docs/test-results/wp2u-merge-gates.md",
-    "gates": "6 PASS + arch NOT RUN (docs/test-results/wp2u-merge-gates.md); selftest 27/27",
+    "check_image": "PASS both variants, 0 problems (GPT/SPL/boot-files/size clean; no-secrets clean); re-run by Lead on merged tree",
+    "gates": "6 PASS + arch NOT RUN per variant (docs/test-results/v03-qa.md); selftest 27/27; led tests 11/11 (re-run by Lead)",
+    "led_panel": "in-image DTB 32473B fc345c3f: heartbeat + rg35xx-plus-panel + pwm-backlight + spi-gpio (Lead carve); boot.scr contains gpio set 267; led.sh in-image == repo (debugfs, Lead)",
     "hardware": "NOT RUN \u2014 no RG35XX H (sole external blocker); H1-H18 + first-boot dpkg-configure unproven"
   },
   "limitations": [
@@ -900,6 +901,6 @@
     "Debian suite not snapshot-pinned: dpkg versions are the honest record, not a rebuild lock (ADR-0004 future work).",
     "SDL2 tarball SHA recorded short (5f5993c5...a5165) as in wp2int-image.md \u2014 full hash lives in the build log only.",
     "Host-built images: byte-reproducible rebuild requires the container TODOs above.",
-    "releases/MANIFEST.json keeps sbom:null as the historical 0.2.0-exp2 record; this SBOM.json is the draft that a future manifest points at."
+    "releases/MANIFEST.json points sbom at this file for 0.3.0-exp3; 0.2.0-exp2 record kept its sbom:null historical entry."
   ]
 }

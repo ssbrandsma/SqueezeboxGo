@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, LED scheme implemented; 0.3.0 rebuild next).
+Last updated: 2026-11-16 (Agent 0, 0.3.0-exp3 verified; awaiting HW boot).
 
 ## Completed
 
@@ -134,12 +134,28 @@ Last updated: 2026-11-16 (Agent 0, LED scheme implemented; 0.3.0 rebuild next).
   DTB compile + boot.scr build ride the 0.3.0 rebuild (dtc/mkimage
   absent on host — stated, not faked).
 
+## Completed (0.3.0-exp3, panel + LED image)
+
+- Workflow `Squeezebox 0.3.0 Panel+LED Rebuild` (completed), both merged:
+  - `v03/image`: series 0001-0006, DTB 32473B with heartbeat + panel
+    nodes, U-Boot both variants with CMD_GPIO, led.sh 0755 in image,
+    boot.scr with gpio marker, both 2 GiB `.img` in /tmp/sqz-v03.
+  - `v03/qa`: E2E re-verify (FDT-parsed DTB, BOOT.SCR strings, led.sh
+    hash, variant diff, xz round-trip), MANIFEST.json 0.3.0-exp3.
+- Lead independent verification (all observed): ddr4 SHA OK; `gpio set
+  267` in FAT boot script at the right position; DTB carved from FAT =
+  32473B fc345c3f with heartbeat/panel/pwm-backlight/led-1/spi-gpio;
+  in-image led.sh == repo (debugfs); 1675 .ko incl. rtw88_8821cs;
+  check_image PASS; led tests 11/11; selftest 27/27.
+- SBOM regenerated for 0.3.0 (dpkg 141/141 names+versions identical,
+  measured from the 0.3.0 image via debugfs); MANIFEST sbom now points
+  at releases/SBOM.json.
+
 ## Current work
 
-- 0.3.0 rebuild workflow: kernel+DTB (OOT incl. 0006) + U-Boot (CMD_GPIO)
-  + payload (led.sh) + QA verify → bootable image WITH panel + LEDs.
-- Still need from human: UART log of the failing boot (proves the stage)
-  + which image was flashed (ddr3/ddr4, which release).
+- Awaiting human hardware boot of 0.3.0 ddr4 (LPDDR4/V4.0): LED sequence
+  + UART log will prove the stage the old boot died at.
+- Still need from human: UART log + LED observations from the new image.
 
 ## Blockers / external deps
 

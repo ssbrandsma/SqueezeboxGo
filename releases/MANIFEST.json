@@ -25,7 +25,7 @@
   "date_utc": "2026-11-16T10:48:37Z",
   "git_commit": "200c6e1a780559671cf54d0a39b74b6a8788e820",
   "name": "squeezebox-rg35xx-h",
-  "sbom": null,
+  "sbom": "releases/SBOM.json",
   "source_date_epoch": 1794823250,
   "sources": {
     "$comment": "Pins from docs/upstream-references/upstream-manifest.md (+ platform/rg35xx-h/kernel/pins.env) at git_commit above; userland measured from the image dpkg status (141 pkgs, same set as 0.2.0-exp2; see docs/test-results/v03-qa.md).",
