@@ -10,9 +10,13 @@ Preconditions:
 - Image validated by the host gate:
   `python3 tests/check_image.py /path/to/squeezebox-rg35xx-h-<variant>.img`
   must print `PASS` (GPT layout, SPL, boot files, DTB, no-secrets, size).
-- Know your unit's DRAM variant (DDR3 vs DDR4); flash the matching
-  image. Unit DRAM-ID method: TBD on hardware — if unsure, try DDR4
-  first, then DDR3, and record which booted.
+- Know your unit's DRAM variant: V4.0 = LPDDR4 → DDR4 image; other
+  revisions unknown (no software ID yet) — try DDR4 first, then DDR3,
+  and record which booted.
+- **Capture a known-good boot log on stock firmware FIRST** (same UART
+  setup you will use for our image): BROM/boot0 banner, DRAM size+type
+  print, PMU/rail lines, boot-device lines, kernel version + cmdline.
+  Save it — diffing stock vs ours isolates our bugs from board facts.
 - microSD card >= 4 GB, USB-C cable, 3.5 mm headphones (for audio).
 
 Safety:

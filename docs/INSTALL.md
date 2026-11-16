@@ -40,17 +40,17 @@ python3 tests/check_image.py squeezebox-rg35xxh-<variant>.img
 # must print PASS (see docs/test-results/HW_TEST_PLAN.md preconditions)
 ```
 
-## 2. Pick DDR3 vs DDR4
+## 2. Pick DDR3 vs DDR4 (= LPDDR4)
 
-Units shipped with either DRAM type and there is no software ID method
-yet. The two images differ **only** in the SPL blob (DRAM timings) at
-raw sector 16; partitions are identical
+"DDR4" here means **LPDDR4** (mobile DRAM, Samsung K4F8E304HB class) —
+not desktop DDR4. The two images differ **only** in the SPL blob (DRAM
+init) at raw sector 16; partitions are identical
 (see [build/image/partitions.txt](../build/image/partitions.txt)).
 
-- If you know your unit's DRAM, flash the matching image.
-- If unsure: flash **DDR4 first**. No SPL output on UART means wrong
-  variant (or a bad flash) — re-flash with the other one and record
-  which booted.
+- RG35XX H **V4.0** (2024-01-08): identified LPDDR4 → flash **DDR4**.
+- Other revisions / unknown: there is no software ID method yet — flash
+  **DDR4 first**. No SPL output on UART means wrong variant (or a bad
+  flash) — re-flash with DDR3 and record which booted.
 
 ## 3. Flash
 

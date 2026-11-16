@@ -39,10 +39,19 @@ Full pins + URLs: [`kernel/pins.env`](kernel/pins.env). Fetch:
 
 ## DRAM variants
 
-Units ship with DDR3 or LPDDR4. `build-uboot.sh` builds both from one
-defconfig (`ddr4` as-is; `ddr3` via `kernel/config/uboot-rg35xx-h-ddr3-fragment.conf`
+Naming: `ddr4` = **LPDDR4** (U-Boot DRAM-class naming), **not** desktop DDR4.
+`build-uboot.sh` builds both from one defconfig (`ddr4` as-is, verified
+LPDDR4 init incl. AXP717 rails — see
+[`docs/test-results/bootloader-dram-verification.md`](../../docs/test-results/bootloader-dram-verification.md);
+`ddr3` via `kernel/config/uboot-rg35xx-h-ddr3-fragment.conf`
 switching to `SUNXI_DRAM_H616_DDR3_1333`). Images differ ONLY in the SPL blob
-at sector 16. DDR3 TPR tuning + unit ID method are WP2 hardware gates.
+at sector 16.
+
+Identified hardware (2026-11-16): RG35XX H **V4.0** carries Samsung
+K4F8E304HB-MGCJ = 8 Gb LPDDR4 → flash the **ddr4 image**. No DDR3 unit has
+been sighted; the ddr3 image is unvalidated (TPR unconfirmed) and must not
+be called bootable without a DDR3 boot log. Full manifest:
+[`docs/hardware.md`](../../docs/hardware.md).
 
 ## GPT layout (sunxi-aware)
 

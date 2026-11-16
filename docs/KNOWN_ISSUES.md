@@ -32,9 +32,10 @@ evidence or the tracking doc. File new hardware findings per
    web key provisioning exists yet (planned with Agent 5). Without UART
    hardware you cannot get into a fresh unit — see
    [INSTALL.md](INSTALL.md#6-ssh-access).
-5. **DRAM variant is trial-and-error.** No unit ID method: flash DDR4,
-   and if there is no SPL output, re-flash DDR3
-   ([INSTALL.md](INSTALL.md#2-pick-ddr3-vs-ddr4)).
+5. **DRAM variant is trial-and-error (except V4.0).** V4.0 is
+   identified LPDDR4 → flash DDR4. Other revisions: no unit ID method,
+   flash DDR4 first, re-flash DDR3 if no SPL output
+   ([INSTALL.md](INSTALL.md#2-pick-ddr3-vs-ddr4--lpddr4)).
 6. **No OTA, no failsafe partition.** Upgrade and recovery both mean
    re-flashing the whole 2 GiB card ([UPGRADE.md](UPGRADE.md),
    [RECOVERY.md](RECOVERY.md)). Back up first; there is no undo.
