@@ -1,0 +1,76 @@
+# GO-HW task 1: APPS discovery recon — 2026-11-16 (device ANBERNIC, live SSH)
+# CORRECTION to reference mechanism: icons are 240x180 RGBA (NOT 160x120).
+
+===== mounts (TF1 rw, TF2 ro-remounted) =====
+/dev/mmcblk0p1 on /mnt/mmc type vfat (rw,...)            # TF1 (internal OS+games card)
+/dev/mmcblk1p1 on /mnt/sdcard type vfat (ro,...errors=remount-ro)  # TF2 (user games card, went ro)
+NOTE: TF2 currently read-only (kernel remounted after an error). All APPS
+work targets TF1 only. Never write TF2 until it is fsck/remounted by owner.
+
+===== APPS locations =====
+TF1: /mnt/mmc/Roms/APPS        # POPULATED (6 apps) — the live APPS dir
+TF2: /mnt/sdcard/ROMS/APPS     # EXISTS but EMPTY (note: on-disk name is ROMS, all-caps;
+                               #  dmenu strings say /mnt/sdcard/Roms/APPS — vfat is case-insensitive so both resolve)
+dmenu.bin strings reference BOTH /mnt/mmc/Roms/APPS and /mnt/sdcard/Roms/APPS.
+mod `sw` script hardcodes APPS_DIR=/mnt/mmc/Roms/APPS (TF1 only for apps).
+
+===== TF1 APPS contents =====
+Bezel_Custom_Manager.sh  Clock.sh  Image_Browser.sh  Modified_System_Settings.sh
+Modified_System_Tools.sh  Tiny_Scraper.sh
+Imgs/  bezels_m/  clock/  img_browser/  mod_set/  mod_tools/  res/  tiny_scraper/
+
+===== launcher script pattern (all 6 identical modulo progdir; Clock.sh verbatim) =====
+#!/bin/bash
+progdir="$(cd $(dirname "$0") || exit; pwd)"/clock
+export PYSDL2_DLL_PATH="/usr/lib"
+program="python3 ${progdir}/main.py"
+log_file="${progdir}/log.txt"
+[ -f /mnt/mod/ctrl/volumeCtrl.dge ] && /mnt/mod/ctrl/volumeCtrl.dge &
+$program > "$log_file" 2>&1
+kill -9 $(pidof volumeCtrl.dge)
+# Modified_System_Tools.sh additionally handles random.cfg -> random.sh, exit 0.
+
+===== execution mechanism (dmenu EXITS before app runs) =====
+Chain: launcher.service -> launcher.sh -> loadapp.sh -> dmenu_ln -> dmenu.bin (ALL root).
+/mnt/vendor/ctrl/dmenu_ln (verbatim, key function):
+  ACT="/tmp/.next"; CMD="/mnt/vendor/bin/dmenu.bin"
+  app_scheduling(): if $CMD >/dev/null 2>&1; then
+      if [ -f "$ACT" ]; then sh $ACT >/dev/null 2>&1; ... fi
+    else sleep 30; fi
+  # loadapp.sh loops `while [ -f $RunBin ]; do $RunBin; done` so when the app
+  # script finishes, dmenu_ln returns and dmenu.bin RESTARTS (frontend return, no reboot).
+- dmenu writes its next action to /tmp/.next (strings: `chmod 777 /tmp/.next`,
+  `cd %s`, `"%s"  "%s"  `), then EXITS 0; the wrapper runs `sh /tmp/.next`.
+- APPS .sh files are executed directly (see /mnt/mod/ctrl/apps: `/mnt/mmc/Roms/APPS/$file`).
+- stdout of BOTH dmenu and app goes to /dev/null (confirmed in wrapper) -> log to files.
+- Env provided: LD_LIBRARY_PATH=/usr/lib32:/usr/lib:/mnt/vendor/lib (dmenu_ln),
+  plus each script's own exports. CWD: undefined (scripts use progdir idiom).
+- dmenu pause/exit/restore: dmenu does NOT pause — it TERMINATES. No in-memory
+  state survives; "restore" = fresh dmenu process re-scanning dirs at startup.
+- Icon refresh: NOT needed. dmenu scans APPS + Imgs at each start (proven by the
+  `sw` language-rename flow which renames .sh/.png pairs while dmenu is dead).
+  New <Name>.sh + Imgs/<Name>.png appear on next menu entry automatically.
+- Whoami: scripts run as ROOT (whole chain uid 0; .sh files root-owned 777 on VFAT).
+
+===== icons (device is truth: 240x180, NOT 160x120) =====
+file(1) + IHDR decode on all 6 stock icons:
+  Bezel_Custom_Manager.png 240x180 8-bit/color RGBA
+  Clock.png                240x180 8-bit/color RGBA
+  Image_Browser.png        240x180 8-bit/color RGBA
+  Modified_System_Settings.png 240x180 8-bit/color RGBA
+  Modified_System_Tools.png    240x180 8-bit/color RGBA
+  Tiny_Scraper.png         240x180 8-bit/color RGBA
+=> GO-APP icon spec must be 240x180 RGBA (reference doc 160x120 is wrong).
+
+===== payload dirs =====
+Python+PySDL2 apps (app.py/graphic.py/input.py/lang/main.py/sdl2.zip + log.txt).
+`res/img.mp4` sits beside apps (shared asset). Payload naming is free-form
+(<Name>.sh maps to its dir only via the progdir line inside the script).
+
+===== misc (from /mnt/mod/ctrl/sw + RA_launch.sh) =====
+- `sw` renames APPS .sh/.png pairs per language (9 lang groups); our
+  "SqueezeboxGo" name collides with none of them (checked all 9 groups).
+- `sw` also touches game dirs on BOTH /mnt/mmc/Roms and /mnt/sdcard/Roms.
+- RA_launch.sh: emulator path ($1 core, $2 rom, $3 autoload), logs to
+  /mnt/mod/ctrl/configs/RA_launch.log. Untouched by GO install.
+- board.ini: RG35xxH / language.ini: 2 (en_US).

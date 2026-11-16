@@ -1,0 +1,48 @@
+# GO-HW task 3: SqueezeboxGo install record — 2026-11-16
+# Status: INSTALLED (runtime + APPS entry + PROVISIONAL icon).
+# Pending GO-APP: final 240x180 icon art + Return-to-Anbernic Jive action.
+
+===== SHA verification (host AND device, no rebuild needed) =====
+host /tmp/jammy-sp/squeezeplay/squeezeplay-aarch64-9.0.0.tgz
+  673ec5eec78ca5127d7202951d292b194f47bc22747c9a12a8f82069bcc02baa  MATCH (673ec5ee)
+device ~/squeezebox-dev/squeezeplay-aarch64-9.0.0.tgz -> same hash MATCH
+host /tmp/sdl-fbcon/out/lib/libSDL-1.2.so.0.11.4
+  3924a6254c1c4c9690b7d7f3905465b84f7dd134b372155909eca02d6f3f8d4a  MATCH (3924a625)
+device copies (libSDL-fbcon.so.0.11.4, fbcon-lib symlink, /opt install) -> same MATCH
+
+===== ext4 runtime: /opt/squeezebox-go (46 MB, root:root) =====
+/opt/squeezebox-go/
+  app/      # Jammy squeezeplay tree (bin/jive 9.0.0 r541 aarch64 + lib + share)
+  libexec/  # libSDL-1.2.so.0.11.4 fbcon build (LD_LIBRARY_PATH shadow, FIRST)
+  logs/     # jive.log per-run (stdout is lost in the APPS path)
+  home/     # HOME for jive (no ~/.jive litter)
+  VERSION   # shas + date (see below)
+ldd app/bin/jive: libSDL-1.2.so.0 => /opt/squeezebox-go/libexec/... (shadow wins),
+  all other libs resolve inside app/lib or system libc/m — zero "not found".
+Install method: cp -a from phase-3 staging (~/squeezebox-dev/sp-stage +
+  fbcon-lib symlink dereferenced with cp -aL after a first dangling-link miss).
+Why /opt (not $HOME, not /mnt/data): FHS-correct, ext4, root-owned like the
+  rest of the app chain, 2.5 GB free; /mnt/data is stock save-data territory.
+
+===== APPS entry: /mnt/mmc/Roms/APPS/SqueezeboxGo.sh (758 B, 777, root) =====
+#!/bin/bash
+# (see device file; summary below — full text in stock/go/install script)
+RUNTIME="/opt/squeezebox-go"; LOG_FILE="$RUNTIME/logs/jive.log"
+export HOME="$RUNTIME/home" SQUEEZEBOX_GO=1
+export LD_LIBRARY_PATH="$RUNTIME/libexec:$RUNTIME/app/lib"
+export SDL_VIDEODRIVER=fbcon SDL_FBDEV=/dev/fb0 SDL_AUDIODRIVER=alsa
+cd "$RUNTIME/app/bin"
+[ -f /mnt/mod/ctrl/volumeCtrl.dge ] && /mnt/mod/ctrl/volumeCtrl.dge &
+./jive >"$LOG_FILE" 2>&1; rc=$?
+kill -9 $(pidof volumeCtrl.dge) 2>/dev/null; exit $rc
+bash -n: SYNTAX_OK. chmod on VFAT fails harmlessly (all files 777 by mount).
+
+===== icon: /mnt/mmc/Roms/APPS/Imgs/SqueezeboxGo.png (618 B, PROVISIONAL) =====
+file: PNG image data, 240x180, 8-bit/color RGBA, non-interlaced (matches stock).
+Content: dark-blue field + light border, generated on-device (python3+zlib).
+GO-APP: overwrite with final art (same path/name); no dmenu refresh needed.
+
+===== stock files touched: NONE (additive-only install) =====
+Added: /opt/squeezebox-go/*, 1 APPS .sh, 1 icon .png.
+Modified: nothing under /mnt/vendor, /mnt/mod, /mnt/mmc system areas, or TF2.
+TF2 left alone entirely (it is ro-mounted; games/saves intact).
