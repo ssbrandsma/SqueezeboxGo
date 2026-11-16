@@ -58,6 +58,16 @@ driver vs firmware vs hardware-verified in all claims.
   1280x1024 vs physical LCD 640x480 (scaling/orientation TBD — probe
   `fbset`, vinfo stride/pixelformat before assuming).
 - Mali via `mali_kbase` kernel module; vendor stack is legacy fb.
+- fb0 measured: 1280x1024x16, stride 2560, SINGLE-buffer
+  (yres_virtual==yres, no pan room); full-frame write/readback/restore
+  byte-identical; `msync` on the mapping returns EINVAL (harmless —
+  writes land). Jive/fbcon drew a stable 2.5k-color frame (hash
+  observed). Visibility on the LCD still needs human eyes (DE scans a
+  640x480 layer; red-fill look pending).
+- Caution: skin-driven `setVideoMode(480,272)` + SDL zeroed-timings PUT
+  leaves vinfo stuck at 512x384x32 — a valid-timings PUT restores
+  1280x1024x16 (proven 2x). Never `chvt` on stock (VT_WAITACTIVE
+  wedges); active VT tty2 IS the boot state.
 - Stock DT (`lcd_driver_name`) and U-Boot log confirm panel
   **`fog_fj035fhd05_v1`** 640x480 (our OOT nv3052c binding must be
   confirmed against this exact panel on HW).

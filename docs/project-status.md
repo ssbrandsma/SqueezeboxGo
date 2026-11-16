@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, hw Phase 2 merged; fbcon SDL built).
+Last updated: 2026-11-16 (Agent 0, hw Phase 3 merged; human-gated proofs).
 
 ## Completed
 
@@ -192,7 +192,20 @@ Last updated: 2026-11-16 (Agent 0, hw Phase 2 merged; fbcon SDL built).
 - Open risk: fb0 writes proven writable, visibility UNPROVEN (DE layer
   mismatch) — human red-fill look required before any video claim.
 
-## Current work (SSH live, 2026-11-16)
+## Completed (hw Phase 3, headless PoC PASS)
+
+- Branch `hw/stock-poc3` merged (15 files): fbcon lib deployed + verified
+  (ldd shadow first), fb full-frame write/readback/restore byte-identical,
+  audio chain (440 Hz, RUNNING, 0 XRUN, mixer restored), **headless Jive
+  main loop reached** (fbcon, 60 s watchdog heartbeat, drawn frame stable,
+  clean SIGTERM; dummy control fails exactly as expected).
+- Findings: CONFIG_SYSVIPC=n (noisy-harmless SEM/SHM fails; jive_alsa SHM
+  needs audio-agent follow-up), vinfo stickiness + restore (proven 2x),
+  never-chvt warning, boot-path ALSA hold explained, device reboot-verified
+  back to true stock. `stock/bundle/color-fill.py` ready, NOT run.
+- Suites: bundle 45/45, selftest 27/27.
+
+## Current work (human-gated proofs)
 
 - SSH `rg35xxh` (muse, key auth) VERIFIED; kernel 4.9.170 aarch64.
   **sudo/su/pkexec all lost setuid** — no privilege path from SSH.
