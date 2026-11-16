@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, SqueezeboxGo merged; icon+lint fixed).
+Last updated: 2026-11-16 (Agent 0, Jive VISIBLE on LCD (corrupted); display debug).
 
 ## Completed
 
@@ -226,6 +226,21 @@ Last updated: 2026-11-16 (Agent 0, SqueezeboxGo merged; icon+lint fixed).
   240x180 icon, FAT-safe). Suites: go 62/62, bundle 45/45, selftest 27/27.
 - Next: hw redeploy (final icon + Return action) → human observation
   batch (icon/menu/buttons/ears/game/evtest/live color/0.3.0 boot).
+- MILESTONE (owner-observed): native Jive language screen VISIBLE on the
+  physical LCD (corrupted: multicolour text artifacts, black regions,
+  right-edge vertical line, scanlines, wrong screen fill).
+- Refined (owner: splash correct, menus torn): splash.png (480x272 Lyrion
+  logo) blits once right after the INITIAL SetVideoMode and shows
+  correctly → scanout, format and blit path are GOOD at that mode.
+  Corruption must start at the skin's setVideoMode call (mode switch or
+  layout/surface mismatch after it). Prime suspect now: skin-requested
+  size vs fbcon-negotiated surface (pitch/geometry), NOT the blitter.
+  hw agent tasked with Video-mode log lines + skin identity + fb state
+  at splash vs menu phase + SDL probe + DE state. Fix follows data.
+- hw agent tasked (queued, same run): 7-item display probe (Jive video
+  log line, fbset+vinfo bitfields/offsets, SDL-vs-fb pitch probe,
+  DE layer state, Lyrion-splash renderer identification). No code
+  changes until measurements land.
 
 ## Prior state (human-gated proofs)
 

@@ -1,0 +1,285 @@
+#!/usr/bin/env python3
+"""display-trial.py — numbered framebuffer visibility carousel (stock PoC).
+
+Shows numbered full-screen test patterns so a human watcher can report
+WHICH geometry/format the LCD actually displays. Each attempt sets a
+framebuffer mode, draws a big seven-segment number plus orientation
+markers, holds it, and logs the before/after mode. Stock mode is
+restored (and verified) at the end.
+
+Attempts (edit ATTEMPTS to change the matrix):
+  1: current mode untouched (baseline — is fb0 even scanned out?)
+  2: 640x480x16
+  3: 1280x1024x16, picture drawn only in top-left 640x480 (crop test)
+  4: 640x480x32 (XRGB8888)
+  5: 640x480x16 with virtual 1280x1024 (xres != vxres)
+  6: 512x384x32 (the sticky mode Jive fell into — informative)
+
+Usage (on device, as root):
+    python3 display-trial.py [--fb /dev/fb0] [--hold 8] [--rounds 3]
+Host verification (no fb needed):
+    python3 display-trial.py --save-png /tmp/trial-pngs
+
+A mode-set failure never aborts the carousel: the attempt is drawn at
+whatever geometry resulted, and the mismatch is logged. Requires root
+only for FBIOPUT/mmap on a real fb; --save-png runs anywhere.
+"""
+import argparse
+import fcntl
+import mmap
+import os
+import struct
+import sys
+import time
+import zlib
+
+FBIOGET_VSCREENINFO = 0x4600
+FBIOPUT_VSCREENINFO = 0x4601
+FBIOGET_FSCREENINFO = 0x4602
+
+# struct fb_var_screeninfo, 160 bytes (glibc asm layout, 32 fields)
+VAR_FMT = "8I12I4I"
+VAR_NAMES = ("xres,yres,xres_virtual,yres_virtual,xoffset,yoffset,bits_per_pixel,grayscale,"
+             "red.offset,red.length,red.msb_right,green.offset,green.length,green.msb_right,"
+             "blue.offset,blue.length,blue.msb_right,transp.offset,transp.length,transp.msb_right,"
+             "nonstd,activate,height,width,accel_flags,pixclock,left_margin,right_margin,"
+             "upper_margin,lower_margin,hsync_len,vsync_len,sync,vmode,rotate").split(",")
+
+ATTEMPTS = [
+    # (number, xres, yres, bpp, vxres_or_None, note)
+    (1, None, None, None, None, "stock mode untouched (baseline)"),
+    (2, 640, 480, 16, None, "native LCD geometry RGB565"),
+    (3, 1280, 1024, 16, None, "stock geometry, picture in top-left 640x480"),
+    (4, 640, 480, 32, None, "native geometry XRGB8888"),
+    (5, 640, 480, 16, 1280, "640x480 window in 1280 virt (xoffset 0)"),
+    (6, 512, 384, 32, None, "Jive sticky mode (informative)"),
+]
+
+SEGMENTS = {  # seven-seg: a=top b=tr c=br d=bot e=bl f=tl g=mid
+    "0": "abcdef", "1": "bc", "2": "abged", "3": "abgcd", "4": "fgbc",
+    "5": "afgcd", "6": "afedcg", "7": "abc", "8": "abcdefg", "9": "abfgcd",
+}
+
+
+def log(msg, fh):
+    line = "[%s] %s" % (time.strftime("%H:%M:%S"), msg)
+    print(line, flush=True)
+    if fh:
+        fh.write(line + "\n")
+
+
+class Canvas:
+    def __init__(self, w, h, bpp):
+        assert bpp in (16, 32)
+        self.w, self.h, self.bpp = w, h, bpp
+        self.px = bytearray(w * h * (bpp // 8))
+
+    def put(self, x, y, r, g, b):
+        if not (0 <= x < self.w and 0 <= y < self.h):
+            return
+        if self.bpp == 16:
+            v = ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3)
+            struct.pack_into("<H", self.px, (y * self.w + x) * 2, v)
+        else:
+            i = (y * self.w + x) * 4
+            self.px[i:i + 4] = bytes((b, g, r, 0))
+
+    def rect(self, x0, y0, x1, y1, c):
+        for y in range(max(0, y0), min(self.h, y1)):
+            for x in range(max(0, x0), min(self.w, x1)):
+                self.put(x, y, *c)
+
+    def digit(self, ch, cx, cy, h, c):
+        w, t = h // 2, max(2, h // 12)
+        x0, y0 = cx - w // 2, cy - h // 2
+        segs = {
+            "a": (x0, y0, x0 + w, y0 + t),
+            "b": (x0 + w - t, y0, x0 + w, y0 + h // 2),
+            "c": (x0 + w - t, y0 + h // 2, x0 + w, y0 + h),
+            "d": (x0, y0 + h - t, x0 + w, y0 + h),
+            "e": (x0, y0 + h // 2, x0 + t, y0 + h),
+            "f": (x0, y0, x0 + t, y0 + h // 2),
+            "g": (x0, y0 + h // 2 - t // 2, x0 + w, y0 + h // 2 + t // 2),
+        }
+        for s in SEGMENTS[ch]:
+            self.rect(*segs[s], c)
+
+    def tri_up(self, cx, y0, half, h, c):
+        for i in range(h):
+            wrow = int(half * (1 - i / h))
+            self.rect(cx - wrow, y0 + i, cx + wrow, y0 + i + 1, c)
+
+
+def draw_pattern(num, w, h, bpp, region_640=False):
+    cv = Canvas(w, h, bpp)
+    cv.rect(0, 0, w, h, (10, 12, 24))
+    if region_640:
+        cv.rect(0, 0, 640, 480, (10, 12, 24))
+        cv.rect(0, 0, 640, 3, (255, 255, 255))
+        cv.rect(0, 477, 640, 480, (255, 255, 255))
+        cv.rect(0, 0, 3, 480, (255, 255, 255))
+        cv.rect(637, 0, 640, 480, (255, 255, 255))
+        dw, dh, ox = 640, 480, 0
+    else:
+        b = 3
+        cv.rect(0, 0, w, b, (255, 255, 255))
+        cv.rect(0, h - b, w, h, (255, 255, 255))
+        cv.rect(0, 0, b, h, (255, 255, 255))
+        cv.rect(w - b, 0, w, h, (255, 255, 255))
+        dw, dh, ox = w, h, 0
+    # grid dots every 64 px (stride/offset tell-tale)
+    for gy in range(32, dh, 64):
+        for gx in range(32, dw, 64):
+            cv.rect(ox + gx - 1, gy - 1, ox + gx + 1, gy + 1, (90, 90, 110))
+    # color bars along the bottom of the draw area
+    bars = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 255),
+            (255, 255, 0), (0, 255, 255)]
+    bw = dw // len(bars)
+    for i, c in enumerate(bars):
+        cv.rect(ox + i * bw, dh - 40, ox + (i + 1) * bw, dh - 16, c)
+    # orientation: amber triangle top-center, magenta square bottom-right
+    cv.tri_up(ox + dw // 2, 8, 18, 30, (255, 170, 0))
+    cv.rect(ox + dw - 34, dh - 70, ox + dw - 10, dh - 46, (255, 0, 255))
+    # the big number
+    cv.digit(str(num), ox + dw // 2, dh // 2 - 10, min(150, dh // 3),
+             (255, 255, 255))
+    return cv
+
+
+def write_png(path, cv):
+    def chunk(typ, data):
+        out = struct.pack(">I", len(data)) + typ + data
+        return out + struct.pack(">I", zlib.crc32(typ + data) & 0xFFFFFFFF)
+
+    raw = bytearray()
+    B = cv.bpp // 8
+    for y in range(cv.h):
+        raw.append(0)
+        row = cv.px[y * cv.w * B:(y + 1) * cv.w * B]
+        if cv.bpp == 16:
+            out = bytearray()
+            for i in range(0, len(row), 2):
+                v = struct.unpack_from("<H", row, i)[0]
+                out += bytes((((v >> 11) & 31) * 255 // 31,
+                               ((v >> 5) & 63) * 255 // 63,
+                               (v & 31) * 255 // 31, 255))
+            raw += out
+        else:
+            for i in range(0, len(row), 4):
+                b, g, r, _ = row[i:i + 4]
+                raw += bytes((r, g, b, 255))
+    comp = zlib.compress(bytes(raw), 9)
+    ihdr = struct.pack(">IIBBBBB", cv.w, cv.h, 8, 6, 0, 0, 0)
+    with open(path, "wb") as f:
+        f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", ihdr)
+                + chunk(b"IDAT", comp) + chunk(b"IEND", b""))
+
+
+def get_var(fb):
+    with open(fb, "r+b") as f:
+        buf = fcntl.ioctl(f.fileno(), FBIOGET_VSCREENINFO, bytes(160))
+    vals = struct.unpack(VAR_FMT, buf)
+    return dict(zip(VAR_NAMES, vals))
+
+
+def put_var(fb, v):
+    buf = struct.pack(VAR_FMT, *[v[k] for k in VAR_NAMES])
+    with open(fb, "r+b") as f:
+        fcntl.ioctl(f.fileno(), FBIOPUT_VSCREENINFO, buf)
+
+
+def blit(fb, cv, xres, yres, stride):
+    nbytes = yres * stride
+    with open(fb, "r+b") as f:
+        mm = mmap.mmap(f.fileno(), nbytes)
+        src_B, dst_B = cv.bpp // 8, stride // xres
+        if cv.bpp == 16 and dst_B == 2 and cv.w == xres:
+            mm[:nbytes] = bytes(cv.px[:nbytes])
+        else:
+            # generic row copy honoring both pitches
+            for y in range(min(cv.h, yres)):
+                s = cv.px[y * cv.w * src_B:(y + 1) * cv.w * src_B]
+                mm[y * stride:y * stride + len(s)] = s
+        mm.flush()
+        mm.close()
+
+
+def main(argv):
+    ap = argparse.ArgumentParser(description="numbered fb visibility carousel")
+    ap.add_argument("--fb", default="/dev/fb0")
+    ap.add_argument("--hold", type=int, default=8)
+    ap.add_argument("--rounds", type=int, default=3)
+    ap.add_argument("--log", default="/tmp/display-trial.log")
+    ap.add_argument("--save-png", default=None,
+                    help="render attempts to PNGs instead of fb (host check)")
+    args = ap.parse_args(argv)
+
+    if args.save_png:
+        os.makedirs(args.save_png, exist_ok=True)
+        for num, x, y, bpp, vx, note in ATTEMPTS:
+            w, h, b = x or 1280, y or 1024, bpp or 16
+            cv = draw_pattern(num, w, h, b, region_640=(num == 3))
+            p = os.path.join(args.save_png, "attempt-%d.png" % num)
+            write_png(p, cv)
+            print("wrote %s (%dx%dx%d) %s" % (p, w, h, b, note))
+        return 0
+
+    fh = open(args.log, "w")
+    try:
+        orig = get_var(args.fb)
+        log("stock vinfo: %dx%d/%dbpp virt=%dx%d off=%d,%d len=%s rotate=%s" % (
+            orig["xres"], orig["yres"], orig["bits_per_pixel"],
+            orig["xres_virtual"], orig["yres_virtual"],
+            orig["xoffset"], orig["yoffset"],
+            "?", orig["rotate"]), fh)
+        # save current pixels for restore
+        stride0 = orig["xres"] * (orig["bits_per_pixel"] // 8)
+        with open(args.fb, "r+b") as f:
+            mm0 = mmap.mmap(f.fileno(), orig["yres"] * stride0)
+            saved = bytes(mm0[:])
+            mm0.close()
+        log("saved %d framebuffer bytes for restore" % len(saved), fh)
+
+        for rnd in range(1, args.rounds + 1):
+            for num, x, y, bpp, vx, note in ATTEMPTS:
+                log("--- round %d/%d attempt %d: %s ---" % (
+                    rnd, args.rounds, num, note), fh)
+                if x is not None:
+                    v = dict(orig)
+                    v.update(xres=x, yres=y, bits_per_pixel=bpp,
+                             xres_virtual=vx or x, yres_virtual=y,
+                             xoffset=0, yoffset=0, activate=0)
+                    try:
+                        put_var(args.fb, v)
+                    except OSError as e:
+                        log("PUT FAILED (%s); drawing at resulting mode" % e,
+                            fh)
+                cur = get_var(args.fb)
+                log("active: %dx%d/%dbpp virt=%dx%d off=%d,%d" % (
+                    cur["xres"], cur["yres"], cur["bits_per_pixel"],
+                    cur["xres_virtual"], cur["yres_virtual"],
+                    cur["xoffset"], cur["yoffset"]), fh)
+                stride = cur["xres"] * (cur["bits_per_pixel"] // 8)
+                cv = draw_pattern(num, cur["xres"], cur["yres"],
+                                  cur["bits_per_pixel"],
+                                  region_640=(num == 3 and cur["xres"] > 640))
+                blit(args.fb, cv, cur["xres"], cur["yres"], stride)
+                log("showing #%d for %ds — OBSERVE LCD NOW" % (num, args.hold),
+                    fh)
+                time.sleep(args.hold)
+    finally:
+        try:
+            put_var(args.fb, orig)
+            with open(args.fb, "r+b") as f:
+                mm = mmap.mmap(f.fileno(), len(saved))
+                mm[:] = saved
+                mm.flush()
+                mm.close()
+            log("RESTORED stock mode + pixels", fh)
+        except Exception as e:  # noqa: BLE001 — restore must not raise
+            log("RESTORE FAILED: %r — reboot restores stock" % e, fh)
+        fh.close()
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
