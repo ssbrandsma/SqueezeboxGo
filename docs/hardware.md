@@ -22,7 +22,12 @@ driver vs firmware vs hardware-verified in all claims.
 ## Verified stock environment (root shell over UART)
 
 - OS: **Ubuntu 22.04 LTS Jammy ARM64** (!). Kernel: vendor **4.9.170**.
+  **glibc 2.35** — our 24.04-built ARM64 binaries (need 2.38) will NOT run
+  as-is; stock PoC needs a Jammy-compatible rebuild (in progress).
+- Stock userspace ships **SDL2**, **Mali GPU libraries**, framebuffer
+  graphics, and an **active OpenSSH server** (video backend TBD).
 - UART: ttyS0, 115200 8N1. Four-pin header next to speaker + microSD slot.
+  SSH access being established by owner (pending IP/credentials).
 - DT model `sun50iw9`, compatible `allwinner,h616` + `arm,sun50iw9p1`
   (BSP sun50iw9 = mainline H616/H700 class).
 - Wi-Fi module `8821cs` (vendor out-of-tree; ours: in-tree RTW88_8821CS).
