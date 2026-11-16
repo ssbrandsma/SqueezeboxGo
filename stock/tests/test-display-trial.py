@@ -139,6 +139,18 @@ r = subprocess.run([sys.executable, TRIAL, "--fb", "/nonexistent-fb"],
 check("passes preflight when dmenu dead (fails later on fb)",
       r.returncode != 3 and "REFUSING" not in r.stderr)
 
+# --preset contract (no fb on host: bad spec + missing fb paths)
+r = subprocess.run([sys.executable, TRIAL, "--preset", "bogus"],
+                   capture_output=True, text=True)
+check("preset rejects bad spec (rc=2)",
+      r.returncode == 2 and "bad mode spec" in r.stderr)
+r = subprocess.run([sys.executable, TRIAL, "--preset", "640x480x32",
+                    "--fb", "/nonexistent-fb"],
+                   capture_output=True, text=True)
+check("preset fails clean on missing fb (rc=1, no traceback)",
+      r.returncode == 1 and "FAILED" in r.stderr
+      and "Traceback" not in r.stderr)
+
 # CLI contract
 r = subprocess.run([sys.executable, TRIAL, "--help"], capture_output=True)
 check("--help exits 0", r.returncode == 0)

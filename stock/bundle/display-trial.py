@@ -63,7 +63,9 @@ FIX_LINE_LENGTH_IDX = 9
 
 ATTEMPTS = [
     # (number, xres, yres, bpp, vxres_or_None, note)
-    (1, None, None, None, None, "stock mode untouched (baseline)"),
+    # Attempt 1 RE-ASSERTS stock geometry every round (never "untouched":
+    # in rounds 2+ it would inherit attempt 6's mode — observed live).
+    (1, None, None, None, None, "stock geometry re-asserted (baseline)"),
     (2, 640, 480, 16, None, "native LCD geometry RGB565"),
     (3, 1280, 1024, 16, None, "stock geometry, picture in top-left 640x480"),
     (4, 640, 480, 32, None, "native geometry XRGB8888"),
@@ -292,7 +294,38 @@ def main(argv):
                     help="render attempts to PNGs instead of fb (host check)")
     ap.add_argument("--force", action="store_true",
                     help="run even with dmenu alive (patterns get overpainted)")
+    ap.add_argument("--preset", default=None, metavar="WxHxBPP",
+                    help="PUT one mode (e.g. 640x480x32), verify, exit; "
+                    "no drawing (for pre-setting fb before Jive)")
+    ap.add_argument("--restore-stock", action="store_true",
+                    help="PUT 1280x1024x16 back, verify, exit")
     args = ap.parse_args(argv)
+
+    if args.preset or args.restore_stock:
+        spec = "1280x1024x16" if args.restore_stock else args.preset
+        try:
+            w, h, b = (int(x) for x in
+                       spec.lower().replace("x", " ").split())
+        except ValueError:
+            print("bad mode spec (want WxHxBPP): %s" % spec,
+                  file=sys.stderr)
+            return 2
+        try:
+            orig = get_var(args.fb)
+            v = dict(orig)
+            v.update(xres=w, yres=h, bits_per_pixel=b,
+                     xres_virtual=w, yres_virtual=h,
+                     xoffset=0, yoffset=0, activate=0)
+            put_var(args.fb, v)
+            cur = get_var(args.fb)
+        except OSError as e:
+            print("preset %s FAILED: %r" % (spec, e), file=sys.stderr)
+            return 1
+        ok = (cur["xres"], cur["yres"], cur["bits_per_pixel"]) == (w, h, b)
+        print("preset %s: active %dx%d/%d %s" % (
+            spec, cur["xres"], cur["yres"], cur["bits_per_pixel"],
+            "OK" if ok else "MISMATCH"))
+        return 0 if ok else 1
 
     if args.save_png:
         os.makedirs(args.save_png, exist_ok=True)
@@ -311,15 +344,6 @@ def main(argv):
               file=sys.stderr)
         return 3
 
-    # Pre-render every attempt up front: pure-python painting of a full
-    # 1280x1024 frame takes ~9 s; observers must see instant flips.
-    rendered = {}
-    for num, x, y, bpp, vx, note in ATTEMPTS:
-        w, h, b = x or 1280, y or 1024, bpp or 16
-        rendered[num] = draw_pattern(num, w, h, b,
-                                     region_640=(num == 3 and w > 640))
-    print("pre-rendered %d patterns" % len(rendered), flush=True)
-
     fh = open(args.log, "w")
     try:
         orig = get_var(args.fb)
@@ -337,20 +361,42 @@ def main(argv):
             mm0.close()
         log("saved %d framebuffer bytes for restore" % len(saved), fh)
 
+        # Pre-render every attempt up front: pure-python painting of a
+        # full 1280x1024 frame takes ~9 s; observers must see instant
+        # flips. Attempt 1 uses the LIVE stock geometry (not assumed).
+        rendered = {}
+        for num, x, y, bpp, vx, note in ATTEMPTS:
+            if x is None:
+                w, h, b = orig["xres"], orig["yres"], \
+                    orig["bits_per_pixel"]
+            else:
+                w, h, b = x, y, bpp
+            rendered[num] = draw_pattern(num, w, h, b,
+                                         region_640=(num == 3 and w > 640))
+        print("pre-rendered %d patterns" % len(rendered), flush=True)
+        log("pre-rendered %d patterns" % len(rendered), fh)
+
         for rnd in range(1, args.rounds + 1):
             for num, x, y, bpp, vx, note in ATTEMPTS:
                 log("--- round %d/%d attempt %d: %s ---" % (
                     rnd, args.rounds, num, note), fh)
-                if x is not None:
-                    v = dict(orig)
+                v = dict(orig)
+                if x is None:
+                    # attempt 1: re-assert stock (never inherit last mode)
+                    v.update(xres=orig["xres"], yres=orig["yres"],
+                             bits_per_pixel=orig["bits_per_pixel"],
+                             xres_virtual=orig["xres"],
+                             yres_virtual=orig["yres"],
+                             xoffset=0, yoffset=0, activate=0)
+                else:
                     v.update(xres=x, yres=y, bits_per_pixel=bpp,
                              xres_virtual=vx or x, yres_virtual=y,
                              xoffset=0, yoffset=0, activate=0)
-                    try:
-                        put_var(args.fb, v)
-                    except OSError as e:
-                        log("PUT FAILED (%s); drawing at resulting mode" % e,
-                            fh)
+                try:
+                    put_var(args.fb, v)
+                except OSError as e:
+                    log("PUT FAILED (%s); drawing at resulting mode" % e,
+                        fh)
                 cur = get_var(args.fb)
                 fix = get_fix(args.fb)
                 log("active: %dx%d/%dbpp virt=%dx%d off=%d,%d "
