@@ -58,15 +58,24 @@ driver vs firmware vs hardware-verified in all claims.
   1280x1024 vs physical LCD 640x480 (scaling/orientation TBD — probe
   `fbset`, vinfo stride/pixelformat before assuming).
 - Mali via `mali_kbase` kernel module; vendor stack is legacy fb.
+- Stock DT (`lcd_driver_name`) and U-Boot log confirm panel
+  **`fog_fj035fhd05_v1`** 640x480 (our OOT nv3052c binding must be
+  confirmed against this exact panel on HW).
+- Vendor SDL2 2.0.12 = MALI-EGL + dummy video only; Ubuntu SDL2 dir holds
+  two hand-built 2.28.5 libs (not dpkg-owned). dmenu.bin itself is 32-bit
+  armhf using **SDL1.2-fbcon**. Stock PoC video = SDL1.2-fbcon build.
 - **Our SDL2/KMSDRM stack cannot be assumed to work on the 4.9 kernel.**
-  Stock track uses SDL1.2 fbcon or vendor SDL libs (under investigation).
 
 ## Verified input (discover by NAME, never hardcode eventN)
 
 - event0 `axp2202-pek` (power button), event1 `ANBERNIC-keys` (GPIO keys,
   joystick, analog), event2 `dierct-keys-polled` (sic — vendor typo).
-- Numbers can shift: match `/dev/input/by-id/*` or `by-path/*`, then read
-  actual evdev codes before finalizing any map.
+- Numbers can shift: match by-path (no by-id on stock), then read
+  actual evdev codes before finalizing any map. `dierct-keys-polled`
+  is the stock map partner to ANBERNIC-keys; PEK stays hands-off.
+- Frontend `dmenu.bin` holds ALSA (owner TID observed); it respawns via
+  `loadapp.sh` infinite loop under `launcher.service` — stop the SERVICE
+  (reversible), never kill the binary alone.
 
 ## Verified PMIC runtime (read-only; do NOT retune without evidence)
 
@@ -125,5 +134,8 @@ image; diff them. Save logs next to results (`boot-<variant>-<date>.txt`).
   nosuid; only fusermount3 retains setuid. No escalation attempts.
 - Stock suspends after ~80–85 s idle (`hci: ERR: hcd is null`, comms
   silent until wake — verified, not a wiring fault). SSH keepalive does
-  NOT prevent it. Keep device commands short; treat timeouts as SLEEP
-  (retry once, then BLOCKED-on-wake), never as crash or failure.
+  NOT prevent it. Mechanism: vendor-driven (dmenu idle timer →
+  `pwr_new.sh` → mem); systemd targets already runtime-masked. Clean
+  suspend/resume observed (7.1 s) — stopping dmenu likely also stops
+  auto-suspend (to verify). Keep device commands short; treat timeouts
+  as SLEEP (retry once, then BLOCKED-on-wake), never as crash/failure.

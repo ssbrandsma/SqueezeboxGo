@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: 2026-11-16 (Agent 0, diagnostics merged; Jammy PoC binary ready).
+Last updated: 2026-11-16 (Agent 0, hw Phase 1 merged; Phase 2 privileged).
 
 ## Completed
 
@@ -165,6 +165,19 @@ Last updated: 2026-11-16 (Agent 0, diagnostics merged; Jammy PoC binary ready).
 - Hardware agent briefed (queue): tarball path + hash, stock-probe.sh + bundle
   now on main; priorities: probe run (unprivileged parts), DT walk, frontend
   map; evtest/fb/snd writes + PoC launch blocked on the sudo fix.
+
+## Completed (hw Phase 1 inventory, merged)
+
+- Branch `hw/stock-poc` merged (32 files): full read-only inventory,
+  /proc/device-tree tarball + DT notes (panel fog_fj035fhd05_v1 in DT),
+  frontend/SDL/audio/input/sleep evidence, Jammy tarball staged on device.
+- Key facts: dmenu = 32-bit armhf SDL1.2-fbcon under respawning
+  launcher.service (holds ALSA); vendor SDL2 = MALI-EGL + dummy only;
+  no /dev/input/by-id; sleep = dmenu timer → pwr_new.sh → mem.
+- Stock DTB blob pulled via restored sudo: `docs/hw-evidence/
+  rg35xxh-stock.dtb` (144320 B, sha 7915a303…) + decompiled 6652-line
+  `.dts` (model sun50iw9, panel node confirmed).
+- sudo fix VERIFIED working (`sudo -n whoami` → root).
 
 ## Current work (SSH live, 2026-11-16)
 
