@@ -229,12 +229,14 @@ Last updated: 2026-11-16 (Agent 0, Jive VISIBLE on LCD (corrupted); display debu
 - MILESTONE (owner-observed): native Jive language screen VISIBLE on the
   physical LCD (corrupted: multicolour text artifacts, black regions,
   right-edge vertical line, scanlines, wrong screen fill).
-- Prime suspects (code-read): Jive adopts fbcon current mode
-  (jive_framework.c: screen_w/h+bpp from SDL_GetVideoInfo, likely
-  1280x1024x16) while skin/LCD are 640x480 → pitch/geometry mismatch
-  explains stripes/line/black fill; 32-bit RGBA widget blits to 16-bit
-  screen with wrong masks would explain colour artifacts. No splash.png
-  ships in share/ (splash path likely skipped).
+- Refined (owner: splash correct, menus torn): splash.png (480x272 Lyrion
+  logo) blits once right after the INITIAL SetVideoMode and shows
+  correctly → scanout, format and blit path are GOOD at that mode.
+  Corruption must start at the skin's setVideoMode call (mode switch or
+  layout/surface mismatch after it). Prime suspect now: skin-requested
+  size vs fbcon-negotiated surface (pitch/geometry), NOT the blitter.
+  hw agent tasked with Video-mode log lines + skin identity + fb state
+  at splash vs menu phase + SDL probe + DE state. Fix follows data.
 - hw agent tasked (queued, same run): 7-item display probe (Jive video
   log line, fbset+vinfo bitfields/offsets, SDL-vs-fb pitch probe,
   DE layer state, Lyrion-splash renderer identification). No code
