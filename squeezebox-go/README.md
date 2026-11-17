@@ -19,7 +19,7 @@ squeezebox-go/
   apps/SqueezeboxGo.sh App Center entry (FAT-safe POSIX sh, runs as root)
   runtime/launch.sh    ext4 launcher (claim, snapshot, run, always restore)
   runtime/restore.sh   mixer + framebuffer restore helper
-  icon/make-icon.py    stdlib-only 160x120 RGBA icon generator (git stays
+  icon/make-icon.py    stdlib-only 240x180 RGBA icon generator (git stays
                        text-only; the PNG is generated at pack time)
   tests/test-package.sh   package-content test suite (committed)
   tests/test-jive-action.lua  host harness executing the Jive action
@@ -134,11 +134,11 @@ cgroup the APPS script lands in.
 
 ## Known limitations (host-side view; GO-HW confirms)
 
-- Input: handheld buttons reach Jive only through SDL keyboard events;
-  the evdev2jive mapper is NOT in this package (GO-HW/UI follow-up).
-  Button navigation is human-gated on device.
-- Sleep: stock auto-suspends after ~80 s idle (dmenu timer); stopping
-  the frontend likely stops it (to verify on device).
+- Input: handheld buttons reach Jive through the bundled evdev2jive
+  mapper (`input/` in the payload) as SDL keyboard events; full map
+  verified live on device.
+- Sleep: stock display-sleeps ~250 s idle in the menu (dmenu verdict:
+  healthy); no suspend observed during app playback.
 - Skin: `RG35XXHBaseSkin` ships in the payload; first-run skin
   selection falls back gracefully if a skin id is ever missing
   (SelectSkin → reload picks a registered skin; never a crash).

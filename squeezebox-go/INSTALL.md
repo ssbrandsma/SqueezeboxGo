@@ -54,6 +54,17 @@ detects the version change and reinstalls the runtime automatically
 (settings in `/opt/squeezebox-go/config/` survive). To force a clean
 reinstall, follow [UNINSTALL](UNINSTALL.md) first.
 
+## Display notes
+
+- Only the **RG35XXH 640x480** skins work on this hardware (pre-selected).
+  The Touch/Joggler/QVGA/WQVGA skins are for other devices: selecting one
+  reprograms the video mode and garbles the screen. Your saved skin never
+  changes, so quitting (Return to Anbernic) and relaunching always
+  recovers to a clean display.
+- First launch shows the App Center Loading screen for a while (~30–60 s
+  on install, ~15 s after); 0.2.9+ unsticks itself automatically. If an
+  older version sticks at Loading, reboot and upgrade.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
