@@ -169,6 +169,8 @@ cp "$REPO/stock/compat/evdev2jive-stock" "$PAY/input/evdev2jive-stock"
 cp "$REPO/ui/input/rg35xxh-stock.map" "$PAY/input/rg35xxh-stock.map"
 mkdir -p "$PAY/jive-compat"
 cp "$HERE/runtime/jive-compat/json.lua" "$PAY/jive-compat/json.lua"
+mkdir -p "$PAY/seed"
+cp "$HERE/runtime/seed/SetupWallpaper.lua" "$PAY/seed/SetupWallpaper.lua"
 
 cp "$HERE/runtime/launch.sh" "$HERE/runtime/restore.sh" \
 	"$HERE/runtime/vt-reset.py" "$HERE/runtime/fb-preset.py" \
@@ -201,7 +203,7 @@ done
 # --- payload.tar.gz (ordered top level, sorted, fixed meta, gzip -n) ------
 (cd "$PAY" && tar --sort=name --mtime="@$EPOCH" --owner=0 --group=0 \
 	--numeric-owner -cf - MANIFEST VERSION config fb-preset.py input jive jive-compat launch.sh \
-	lib-compat lib-fbcon logconf.lua nslookup restore.sh vt-reset.py \
+	lib-compat lib-fbcon logconf.lua nslookup restore.sh seed vt-reset.py \
 	| gzip -n >"$ZIPROOT/APPS/SqueezeboxGo/payload.tar.gz")
 
 # --- FAT part --------------------------------------------------------------

@@ -1,0 +1,82 @@
+--- /tmp/applet-src/StandaloneRadioApplet.lua	2026-11-17 08:55:52.112691439 +0100
++++ /tmp/applet-src/StandaloneRadioApplet.patched.lua	2026-11-17 08:59:15.846507747 +0100
+@@ -27,6 +27,7 @@
+ local Stations = require("applets.StandaloneRadio.Stations")
+ local StreamPlayer = require("applets.StandaloneRadio.StreamPlayer")
+ local StandaloneBaseNowPlaying = require("applets.StandaloneRadio.StandaloneBaseNowPlaying")
++local LocalPlayerStatus = require("applets.StandaloneRadio.LocalPlayerStatus")
+ local TrackArtwork = require("applets.StandaloneRadio.TrackArtwork")
+ local UserStations = require("applets.StandaloneRadio.UserStations")
+ local UrlTransport = require("applets.StandaloneRadio.UrlTransport")
+@@ -111,6 +112,22 @@
+             self.nativeNowPlaying:request(stationGeneration)
+ 		end,
+ 	})
++	-- Local fallback: stage the native Player while Base is absent.
++	-- Yields automatically once the Base client holds a session.
++	self.localPlayerStatus = LocalPlayerStatus.new({
++		log = log,
++		appletManager = appletManager,
++		baseClient = self.baseNowPlaying,
++		isPlaybackOwner = function()
++			return self.streamPlayer and self.streamPlayer.ownsPlayback == true
++		end,
++		onFirstPush = function(stationGeneration)
++			-- Navigate without onStage: subscribing here would pull the
++			-- remote library's empty playlist over our synthesized state.
++			self.nativeNowPlaying:request(stationGeneration)
++		end,
++	})
++
+ 	self.nativeNowPlaying = NativeNowPlaying.new({
+ 		appletManager = appletManager,
+ 		framework = Framework,
+@@ -130,19 +147,24 @@
+ 				self.nativeNowPlaying:shutdown()
+ 				self.trackArtwork:reset(nil)
+ 				self.baseNowPlaying:release()
++				if self.localPlayerStatus then self.localPlayerStatus:release() end
+ 			end,
+ 			onTimedMetadata = function(event, station, stationGeneration)
+ 				self.baseNowPlaying:updateTimedMetadata(event, station, stationGeneration)
++				if self.localPlayerStatus then self.localPlayerStatus:updateTimedMetadata(event, station, stationGeneration) end
+ 			end,
+             onPosition = function(position, station, stationGeneration)
+                 self.baseNowPlaying:updatePosition(position,station,stationGeneration)
++                if self.localPlayerStatus then self.localPlayerStatus:updatePosition(position, station and station.duration_ms, stationGeneration) end
+             end,
+ 			onState = function(station, state, show, stationGeneration)
+ 				self.baseNowPlaying:updateState(state, station, stationGeneration)
++				if self.localPlayerStatus then self.localPlayerStatus:updateState(state, station, stationGeneration) end
+ 				self:_refreshMenu()
+ 			end,
+ 			onMetadata = function(title, station, stationGeneration)
+ 				self.baseNowPlaying:updateMetadata(title, station, stationGeneration)
++				if self.localPlayerStatus then self.localPlayerStatus:updateMetadata(title, station, stationGeneration) end
+ 				if station and not station.episode and station.source ~= "radiofeeds" then
+ 					self.trackArtwork:lookup(station, title, stationGeneration)
+ 				end
+@@ -151,6 +173,7 @@
+ 				self.lastStation = station
+ 				self.trackArtwork:reset(station)
+ 				self.baseNowPlaying:activate(station, stationGeneration)
++				if self.localPlayerStatus then self.localPlayerStatus:activate(station, stationGeneration) end
+ 				settings.lastStationId = station.id
+ 				self.presetStore:rememberStation(station)
+ 				if station.preset then
+@@ -162,6 +185,7 @@
+ 			onConnected = function(station, stationGeneration)
+ 				self.lastStation = station
+ 				self.baseNowPlaying:updateStation(station, stationGeneration)
++				if self.localPlayerStatus then self.localPlayerStatus:updateStation(station, stationGeneration) end
+ 				self:_refreshMenu()
+ 			end,
+ 		},
+@@ -179,6 +203,7 @@
+ -- active from boot until SqueezePlay exits.
+ function free(self)
+ 	if self.nativeNowPlaying then self.nativeNowPlaying:shutdown() end
++	if self.localPlayerStatus then self.localPlayerStatus:release() end
+ 	if self.activeOpmlNavigator then self.activeOpmlNavigator:close() end
+ 	return false
+ end

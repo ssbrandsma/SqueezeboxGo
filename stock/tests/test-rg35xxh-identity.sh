@@ -26,6 +26,8 @@ marker "$PATCH" 'setDeviceType("rg35xxh", "Squeezebox RG35XX H")'
 marker "$PATCH" 'target = target or "rg35xxh"'
 marker "$PATCH" 'falling back to baby'
 marker "$PATCH" 'triedBaby'
+marker "$PATCH" 'getMachine() ~= "rg35xxh"'
+marker "$PATCH" 'SqueezeboxRG35XXH owns capabilities'
 
 # mirror coupling: behavior test tracks the same logic
 marker "$MIRROR" 'target = target or "rg35xxh"'

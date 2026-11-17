@@ -168,9 +168,21 @@ function init(self)
 	})
 
 	System:setCapabilities({
-		-- No touch panel, no IR receiver on this handheld.
-		-- Keys/buttons/sticks arrive as SDL events (Agent 4 map).
+		-- Hardware truth for the RG35XX H (verified live 2026-11-17):
+		-- local player with speakers + headphone jack (audioByDefault
+		-- keeps Choose Player/Playback menus in player layout),
+		-- D-pad + buttons (coreKeys enables hold-shortcut config),
+		-- battery + SD + USB OTG present. No touch panel, no IR
+		-- receiver, no preset/alarm/mute keys, no rotation sensor,
+		-- no wired ethernet: those stay unset. DesktopJive skips its
+		-- own grant on this machine (identity patch guard), so load
+		-- order cannot clobber this table.
 		["powerKey"] = 1,
+		["audioByDefault"] = 1,
+		["coreKeys"] = 1,
+		["batteryCapable"] = 1,
+		["sdcard"] = 1,
+		["usb"] = 1,
 	})
 
 	-- Local player identity (fab4 registers "fab4"/"Squeezebox Touch").

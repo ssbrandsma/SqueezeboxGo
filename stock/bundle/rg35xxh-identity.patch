@@ -90,3 +90,25 @@
  	-- if we got no entries in all responses, try squeezenetwork if not already tried
  	if (self.best.count == nil or self.best.count == 0) and self.sn then
  		log:info("no entries - sending query to squeezenetwork");
+
+--- a/jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua
++++ b/jive/share/jive/applets/DesktopJive/DesktopJiveMeta.lua
+@@ -98,14 +98,18 @@
++	-- RG35XXH: SqueezeboxRG35XXH owns capabilities on this hardware
++	-- (no touch/IR/presets); skipping keeps load order irrelevant.
++	if System:getMachine() ~= "rg35xxh" then
+ 	System:setCapabilities({
+ 		["touch"] = 1,
+ 		["ir"] = 1,
+ 		["powerKey"] = 1,
+ 		["muteKey"] = 1,
+ 		["alarmKey"] = 1,
+ 		["audioByDefault"] = 1,
+ 		["wiredNetworking"] = 1,
+ 		["deviceRotation"] = 1,
+ 		["coreKeys"] = 1,
+ 		["presetKeys"] = 1,
+ 	})
++	end
+ 
+ 	--uncomment this to simulate fab4 scrollbar behavior

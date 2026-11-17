@@ -312,6 +312,17 @@ if [ -x "$ROOT/fb-preset.py" ]; then
 	run_helper "$ROOT/fb-preset.py" 640x480x32 >>"$LOG" 2>&1 \
 		&& log 'fb pre-set to 640x480x32' \
 		|| log 'WARN: fb pre-set failed (watcher may still fix it)'
+	# Tap-path race (proven live 2026-11-17, 3/3 App Center taps stuck
+	# at Loading): dmenu.bin's exit teardown reprograms the display
+	# pipeline AFTER our pre-set, freezing scanout on the Loading
+	# frame while fb0 holds live Jive. A same-mode re-PUT is a driver
+	# no-op; only a real mode CHANGE re-arms the layer (proven 2/2
+	# via remote cycle). Bounce before Jive paints (black gap only).
+	sleep 2
+	run_helper "$ROOT/fb-preset.py" 1280x1024x16 >>"$LOG" 2>&1 \
+		&& run_helper "$ROOT/fb-preset.py" 640x480x32 >>"$LOG" 2>&1 \
+		&& log 'fb tap-bounce 1280x1024x16 -> 640x480x32 OK' \
+		|| log 'WARN: fb tap-bounce failed (panel may freeze on Loading)'
 fi
 
 start_mapper
@@ -354,6 +365,19 @@ if [ ! -f "$SQUEEZEPLAY_HOME/userpath/json.lua" ]; then
 			|| log 'WARN: json.lua seed copy failed (json applets will fail)'
 	else
 		log 'WARN: payload jive-compat/json.lua missing; json applets will fail'
+	fi
+fi
+# Default wallpaper (0.2.9): fresh installs have no SetupWallpaper
+# setting, and stock Jive then never calls setBackground, leaving a
+# black home screen (verified live: reference home is a green/teal
+# gradient). Seed once per skin key; never overwrite a user choice.
+if [ ! -f "$SQUEEZEPLAY_HOME/userpath/settings/SetupWallpaper.lua" ]; then
+	if [ -f "$ROOT/seed/SetupWallpaper.lua" ]; then
+		cp "$ROOT/seed/SetupWallpaper.lua" "$SQUEEZEPLAY_HOME/userpath/settings/SetupWallpaper.lua" 2>/dev/null \
+			&& log 'seeded settings/SetupWallpaper.lua (bb_sonata default)' \
+			|| log 'WARN: wallpaper seed copy failed (home stays black)'
+	else
+		log 'WARN: payload seed/SetupWallpaper.lua missing; home stays black'
 	fi
 fi
 export LD_LIBRARY_PATH="$ROOT/lib-fbcon:$ROOT/jive/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"

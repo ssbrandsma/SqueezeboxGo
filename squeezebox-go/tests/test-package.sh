@@ -63,6 +63,14 @@ grep -q 'EXIT_RETURN_TO_FRONTEND = 42' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua"
 grep -q 'EXIT_FRONTEND=42' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 	&& ok 'launch.sh exit code matches (42)' \
 	|| fail 'launch.sh/Applet exit code mismatch'
+grep -q '"audioByDefault"\] = 1' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null \
+	&& ok 'BSP grants audioByDefault (local player layout)' \
+	|| fail 'BSP lacks audioByDefault (controller layout leaks in)'
+if grep -q '"touch"\] = 1' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null; then
+	fail 'BSP grants touch on button-only hardware (dead skin menu)'
+else
+	ok 'BSP grants no touch (single skin list)'
+fi
 # boot env contract (0.2.0: App Center runs HOME-less; Jive segvs on
 # unset HOME and dies silently without a seeded userpath/logconf).
 for marker in 'JIVE_HOME_DIR' 'SQUEEZEPLAY_HOME' 'userpath' \
@@ -96,6 +104,28 @@ for marker in 'squeezeplay.applets' 'net.http'; do
 		&& ok "logconf names $marker" \
 		|| fail "logconf lacks $marker (blind spot)"
 done
+# wallpaper seed (0.2.9: fresh installs had no SetupWallpaper setting,
+# stock Jive never calls setBackground, home stays black instead of the
+# reference gradient). Seed file ships in payload, launch.sh plants it.
+for marker in 'seed/SetupWallpaper.lua' 'settings/SetupWallpaper.lua'; do
+	grep -qF "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+		&& ok "launch.sh seeds wallpaper: $marker" \
+		|| fail "launch.sh lacks wallpaper seed: $marker"
+done
+[ -f "$GO_ROOT/runtime/seed/SetupWallpaper.lua" ] 2>/dev/null \
+	&& ok 'wallpaper seed file ships' \
+	|| fail 'wallpaper seed file missing'
+grep -qF 'bb_sonata.png' "$GO_ROOT/runtime/seed/SetupWallpaper.lua" 2>/dev/null \
+	&& ok 'wallpaper seed names bb_sonata' \
+	|| fail 'wallpaper seed lacks bb_sonata'
+# tap-bounce (0.2.9: 3/3 App Center taps froze scanout on Loading;
+# only a real mode change re-arms the layer, proven 2/2 remotely).
+grep -qF 'fb tap-bounce' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+	&& ok 'launch.sh tap-bounces the display mode' \
+	|| fail 'launch.sh lacks tap-bounce (taps freeze on Loading)'
+grep -qF '1280x1024x16' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+	&& ok 'tap-bounce cycles through stock mode' \
+	|| fail 'tap-bounce lacks stock-mode leg'
 # nslookup shim (0.2.6: applets shell out to nslookup, absent on stock).
 grep -qF 'PATH="$ROOT:$PATH"' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 	&& ok 'launch.sh prepends payload root to PATH (nslookup shim)' \
@@ -413,7 +443,7 @@ APPS/SqueezeboxGo/payload.tar.gz'
 	fi
 	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py fb-preset.py nslookup jive/bin/jive \
 				lib-fbcon/libSDL-1.2.so.0 lib-compat/sysv_shim.so \
-				jive-compat/json.lua \
+				jive-compat/json.lua seed/SetupWallpaper.lua \
 				input/evdev2jive-stock input/rg35xxh-stock.map \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \
