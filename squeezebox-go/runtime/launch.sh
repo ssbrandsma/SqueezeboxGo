@@ -51,6 +51,9 @@ log() { printf '[launch] %s\n' "$*"; }
 # jive/lib ships an ancient libexpat that breaks system python3
 # (proven live: XML_SetHashSalt lookup error killed both helpers).
 run_helper() { env -u LD_LIBRARY_PATH -u LD_PRELOAD "$@"; }
+# Payload tools (nslookup shim) first on PATH so applets that shell
+# out find them; system paths stay behind.
+export PATH="$ROOT:$PATH"
 log "SqueezeboxGo $VERSION starting (root=$ROOT state=$STATE)"
 
 # Persistent operator overrides (SSH-editable, survives upgrades of /opt).

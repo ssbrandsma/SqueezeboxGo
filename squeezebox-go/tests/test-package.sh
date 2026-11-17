@@ -41,7 +41,7 @@ need() { command -v "$1" >/dev/null 2>&1; }
 # ------------------------------------------------- 1. files present
 for f in pack.sh VERSION README.md INSTALL.md UNINSTALL.md \
 		apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh \
-		runtime/vt-reset.py runtime/fb-preset.py runtime/jive-compat/json.lua \
+		runtime/vt-reset.py runtime/fb-preset.py runtime/nslookup runtime/jive-compat/json.lua \
 		icon/make-icon.py tests/test-package.sh tests/test-jive-action.lua; do
 	if [ -f "$GO_ROOT/$f" ]; then ok "file present: $f"; else fail "file missing: $f"; fi
 done
@@ -96,6 +96,10 @@ for marker in 'squeezeplay.applets' 'net.http'; do
 		&& ok "logconf names $marker" \
 		|| fail "logconf lacks $marker (blind spot)"
 done
+# nslookup shim (0.2.6: applets shell out to nslookup, absent on stock).
+grep -qF 'PATH="$ROOT:$PATH"' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+	&& ok 'launch.sh prepends payload root to PATH (nslookup shim)' \
+	|| fail 'launch.sh lacks PATH prepend for nslookup shim'
 # helpers must run with SYSTEM libs: jive/lib's ancient libexpat breaks
 # system python3 (proven live: XML_SetHashSalt lookup error killed both
 # python helpers). Fixed strings match the run_helper() implementation.
@@ -276,6 +280,37 @@ else
 	skip 'no lua5.1 for json facade check'
 fi
 
+# ------------------------------------------------- 5c. nslookup shim
+# Must print classic nslookup shape (Name:/Address: lines) for a name
+# that resolves without network (localhost), and fail loudly otherwise.
+if [ -x "$GO_ROOT/runtime/nslookup" ]; then
+	if "$GO_ROOT/runtime/nslookup" localhost >"$TMP/ns.out" 2>&1 \
+		&& grep -q 'Address: 127.0.0.1' "$TMP/ns.out" \
+		&& grep -q 'Name:' "$TMP/ns.out"; then
+		ok 'nslookup shim resolves localhost in nslookup shape'
+	else
+		fail "nslookup shim: $(cat "$TMP/ns.out" 2>/dev/null | tr '\n' ';')"
+	fi
+	if "$GO_ROOT/runtime/nslookup" 'no-such-host.invalid' >"$TMP/ns2.out" 2>&1; then
+		fail 'nslookup shim exits 0 for bogus host'
+	else
+		ok 'nslookup shim fails loudly for bogus host'
+	fi
+	# the shim runs under Jive's poisoned loader env (ancient libexpat
+	# first); it must sanitize and still resolve.
+	mkdir -p "$TMP/nspois" && printf 'poison' >"$TMP/nspois/libexpat.so.1"
+	if LD_LIBRARY_PATH="$TMP/nspois${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+		LD_PRELOAD="/nonexistent-shim.so" \
+		"$GO_ROOT/runtime/nslookup" localhost >"$TMP/ns3.out" 2>&1 \
+		&& grep -q 'Address: 127.0.0.1' "$TMP/ns3.out"; then
+		ok 'nslookup shim sanitizes loader env'
+	else
+		fail "nslookup shim poisoned-env: $(cat "$TMP/ns3.out" 2>/dev/null | tr '\n' ';')"
+	fi
+else
+	fail 'nslookup shim missing or not executable'
+fi
+
 # ------------------------------------------------- 6. fixture ZIP build
 ZIP1="$TMP/zip1"; ZIP2="$TMP/zip2"
 if need python3 && need tar && need gzip && need sha256sum && need unzip; then
@@ -332,7 +367,7 @@ APPS/SqueezeboxGo/payload.tar.gz'
 	else
 		skip 'kernel UAPI headers absent; ioctl constants unchecked'
 	fi
-	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py fb-preset.py jive/bin/jive \
+	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py fb-preset.py nslookup jive/bin/jive \
 				lib-fbcon/libSDL-1.2.so.0 lib-compat/sysv_shim.so \
 				jive-compat/json.lua \
 				input/evdev2jive-stock input/rg35xxh-stock.map \
@@ -469,6 +504,23 @@ if [ -f "$ZIP1/SqueezeboxGo-$PKGVER-fixture.zip" ]; then
 		ok 'drill helpers run sanitized under poisoned path'
 	else
 		fail "drill poisoned path: ${DRILL_LOG3:-no launch log}"
+	fi
+	# upgrade must preserve config/ (jive-home, pairings, seeds): plant
+	# a marker, rebuild at a new version, re-run, marker must survive.
+	printf 'precious' >"$TMP/squeezebox-go/config/marker.txt"
+	if bash "$GO_ROOT/pack.sh" --fixture --version 9.9.9-test --output "$TMP/zipup" --epoch 1767225600 >"$TMP/packup.out" 2>&1; then
+		(cd "$TMP/roms" && unzip -q -o "$TMP/zipup/SqueezeboxGo-9.9.9-test-fixture.zip" 'APPS/*')
+		# shellcheck disable=SC2086
+		env $DRILL_ENV SQUEEZEBOX_GO_ROOT="$TMP/squeezebox-go" \
+			sh "$TMP/roms/APPS/SqueezeboxGo.sh" >"$TMP/entryup.out" 2>&1 || true
+		if [ "$(cat "$TMP/squeezebox-go/config/marker.txt" 2>/dev/null)" = 'precious' ] \
+			&& [ "$(cat "$TMP/squeezebox-go/VERSION" 2>/dev/null)" = '9.9.9-test' ]; then
+			ok 'entry upgrade preserves config/, bumps version'
+		else
+			fail 'entry upgrade lost config or version'
+		fi
+	else
+		fail "upgrade fixture pack: $(tail -2 "$TMP/packup.out" | tr '\n' ';')"
 	fi
 	# corrupt payload must be refused (fresh root forces reinstall path)
 	printf 'corrupt' >"$TMP/roms/APPS/SqueezeboxGo/payload.tar.gz"

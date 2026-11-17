@@ -67,6 +67,15 @@ else
 		*/squeezebox-go) ;;
 		*) fatal "refusing to install outside a squeezebox-go dir: $ROOT" ;;
 	esac
+	# Preserve user data across upgrades: config/ holds jive-home
+	# (settings, pairings, installed applets, seeds). Stow it aside
+	# unless a leftover keep from a crashed run already exists (the
+	# leftover wins: it is the newest user data we have).
+	KEEP_DIR="$(dirname "$ROOT")/squeezebox-go.keep"
+	if [ -d "$ROOT/config" ] && [ ! -d "$KEEP_DIR" ]; then
+		mv "$ROOT/config" "$KEEP_DIR" || fatal "cannot stow $ROOT/config"
+		log "stowed config/ aside for upgrade"
+	fi
 	rm -rf "$ROOT"
 	mkdir -p "$ROOT" || fatal "cannot create $ROOT"
 	INSTALL_LOG="$ROOT/install.log"
@@ -83,6 +92,11 @@ else
 	INSTALLED_VER="$(cat "$ROOT/VERSION" 2>/dev/null || echo '')"
 	[ "$INSTALLED_VER" = "$WANT_VER" ] \
 		|| fatal "payload VERSION ($INSTALLED_VER) != $WANT_VER"
+	if [ -n "${KEEP_DIR:-}" ] && [ -d "$KEEP_DIR" ]; then
+		rm -rf "$ROOT/config"
+		mv "$KEEP_DIR" "$ROOT/config" || fatal "cannot restore stowed config/"
+		log "restored stowed config/"
+	fi
 	log "runtime $INSTALLED_VER installed"
 fi
 

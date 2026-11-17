@@ -1,6 +1,29 @@
 # Project status
 
-Last updated: 2026-11-16 (SqueezeboxGo 0.2.3 live-verified on stock OS).
+Last updated: 2026-11-17 (Standalone Radio playing end-to-end; Go 0.2.7).
+
+## Overnight: Standalone Radio E2E (2026-11-16/17)
+
+- SqueezeboxGo 0.2.7 on card + running: Radio applet loads, opens,
+  browses (Popular populated via nslookup shim), NPO Radio 1 PLAYING:
+  AAC decode, ICY metadata, PCM RUNNING realtime, 0 XRUNs (10-min soak).
+- Fixes: json.lua cjson bridge (HlsMetadata require), nslookup shim
+  (Resolver shells out; absent on stock) with loader sanitize,
+  config-preserving upgrades (entry wiped jive-home!), sem no-ops in
+  shim (watchdog flood gone), product logconf names applets+net.http
+  (unlisted categories default OFF, even errors vanish).
+- KNOWN ISSUE (cosmetic, intermittent): UI tint lottery (white /
+  magenta / teal / yellow = single channels dropping) varying per
+  moment within one boot, no mode PUTs involved. Navigable throughout.
+  Excluded: mode/bitfields (verified correct), skins (no alpha/fade
+  literals), fades (alpha-blend, can't drop channels). Open.
+- KNOWN ISSUE (cosmetic): language-setup help/list overlap (see 0.2.3).
+- dmenu verdict: HEALTHY (paints ~100s after start, display-sleeps
+  ~250s idle). Earlier black-screen reads were too-early/too-late.
+- Peer coordination: device held overnight per user mandate; west told
+  to vendor json + use socket.dns; locks unified to /tmp/sb-hw-test.lock.
+- Pending user: ears-check Radio audio; tap-through 0.2.7; Standalone
+  Base source location; release peers in the morning.
 
 ## Live hardware session 2026-11-16 (RG35XX H V4.0, stock Ubuntu 22.04)
 

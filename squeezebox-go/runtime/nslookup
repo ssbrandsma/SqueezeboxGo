@@ -1,0 +1,20 @@
+#!/bin/sh
+# nslookup shim (SqueezeboxGo): stock Ubuntu lacks dnsutils, but applets
+# (StandaloneRadio Resolver) shell out to `nslookup HOST` and parse the
+# classic output shape (Name:/Address: lines). Resolve via python3
+# (always present) and print that shape. First IPv4 answer wins.
+# Usage: nslookup HOST
+# SPDX-License-Identifier: GPL-2.0-or-later
+set -u
+# Applets invoke this from inside Jive, whose loader env ships an
+# ancient libexpat first and preloads the SysV shim: both break system
+# python3 (proven live). System libs only from here down.
+unset LD_LIBRARY_PATH LD_PRELOAD
+host="${1:-}"
+case "$host" in ''|-*) echo "nslookup: need a hostname" >&2; exit 2 ;; esac
+ip="$(python3 -c 'import socket,sys; print(socket.getaddrinfo(sys.argv[1], 80, socket.AF_INET)[0][4][0])' "$host" 2>/dev/null)" || {
+	echo "** server can't find $host: NXDOMAIN" >&2
+	exit 1
+}
+[ -n "$ip" ] || { echo "** server can't find $host: NXDOMAIN" >&2; exit 1; }
+printf 'Server:\t\t127.0.0.53\nAddress:\t127.0.0.53#53\n\nName:\t%s\nAddress: %s\n' "$host" "$ip"

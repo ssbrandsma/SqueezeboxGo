@@ -95,6 +95,7 @@ done
 [ -f "$IDENTITY_PATCH" ] || { printf 'pack.sh: missing identity patch: %s\n' "$IDENTITY_PATCH" >&2; exit 2; }
 [ -f "$HERE/runtime/fb-preset.py" ] || { printf 'pack.sh: missing runtime/fb-preset.py\n' >&2; exit 2; }
 [ -f "$HERE/runtime/logconf.lua" ] || { printf 'pack.sh: missing runtime/logconf.lua\n' >&2; exit 2; }
+[ -x "$HERE/runtime/nslookup" ] || { printf 'pack.sh: missing runtime/nslookup\n' >&2; exit 2; }
 
 if [ "$FIXTURE" = '1' ]; then
 	MODE='fixture'
@@ -171,7 +172,7 @@ cp "$HERE/runtime/jive-compat/json.lua" "$PAY/jive-compat/json.lua"
 
 cp "$HERE/runtime/launch.sh" "$HERE/runtime/restore.sh" \
 	"$HERE/runtime/vt-reset.py" "$HERE/runtime/fb-preset.py" \
-	"$HERE/runtime/logconf.lua" "$PAY/"
+	"$HERE/runtime/logconf.lua" "$HERE/runtime/nslookup" "$PAY/"
 printf '%s\n' "$VERSION" >"$PAY/VERSION"
 mkdir -p "$PAY/config"
 {
@@ -189,7 +190,7 @@ mkdir -p "$PAY/config"
 # ext4 extract + rebuild-twice comparison need them stable).
 find "$PAY" -type d -exec chmod 755 {} +
 find "$PAY" -type f -exec chmod 644 {} +
-chmod 755 "$PAY/launch.sh" "$PAY/restore.sh" "$PAY/vt-reset.py" "$PAY/fb-preset.py"
+chmod 755 "$PAY/launch.sh" "$PAY/restore.sh" "$PAY/vt-reset.py" "$PAY/fb-preset.py" "$PAY/nslookup"
 # bin/ holds executables (jive, jive_alsa, lua, ...): the blanket 644
 # above would break backend fork+exec (proven live: 644 jive_alsa).
 for b in "$PAY"/jive/bin/*; do
@@ -200,7 +201,7 @@ done
 # --- payload.tar.gz (ordered top level, sorted, fixed meta, gzip -n) ------
 (cd "$PAY" && tar --sort=name --mtime="@$EPOCH" --owner=0 --group=0 \
 	--numeric-owner -cf - MANIFEST VERSION config fb-preset.py input jive jive-compat launch.sh \
-	lib-compat lib-fbcon logconf.lua restore.sh vt-reset.py \
+	lib-compat lib-fbcon logconf.lua nslookup restore.sh vt-reset.py \
 	| gzip -n >"$ZIPROOT/APPS/SqueezeboxGo/payload.tar.gz")
 
 # --- FAT part --------------------------------------------------------------
