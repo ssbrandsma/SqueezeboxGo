@@ -311,6 +311,50 @@ else
 	fail 'nslookup shim missing or not executable'
 fi
 
+# ------------------------------------------------- 5d. fb-preset
+# Pure checks only (ioctl needs hardware): compiles, --help works,
+# and the explicit RGB tables pin XRGB8888 + RGB565 exactly.
+if [ -f "$GO_ROOT/runtime/fb-preset.py" ]; then
+	if python3 -m py_compile "$GO_ROOT/runtime/fb-preset.py" 2>/dev/null \
+		&& python3 "$GO_ROOT/runtime/fb-preset.py" --help >/dev/null 2>&1; then
+		ok 'fb-preset compiles, --help works'
+	else
+		fail 'fb-preset py_compile/--help'
+	fi
+	if python3 - "$GO_ROOT/runtime" >"$TMP/fb.out" 2>&1 <<'EOF'
+import sys
+sys.path.insert(0, sys.argv[1])
+import importlib.util
+spec = importlib.util.spec_from_file_location(
+    "fbpreset", sys.argv[1] + "/fb-preset.py")
+m = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(m)
+f32 = m.fields_for_bpp(32)
+assert (f32["red.offset"], f32["red.length"]) == (16, 8), f32
+assert (f32["green.offset"], f32["green.length"]) == (8, 8), f32
+assert (f32["blue.offset"], f32["blue.length"]) == (0, 8), f32
+f16 = m.fields_for_bpp(16)
+assert (f16["red.offset"], f16["red.length"]) == (11, 5), f16
+assert (f16["green.offset"], f16["green.length"]) == (5, 6), f16
+assert (f16["blue.offset"], f16["blue.length"]) == (0, 5), f16
+try:
+    m.fields_for_bpp(24)
+    raise SystemExit("24bpp accepted")
+except ValueError:
+    pass
+print("fields pin XRGB8888 + RGB565")
+EOF
+	then
+		grep -q 'fields pin' "$TMP/fb.out" \
+			&& ok 'fb-preset fields pin XRGB8888 + RGB565' \
+			|| fail "fb-preset fields: $(cat "$TMP/fb.out")"
+	else
+		fail "fb-preset fields: $(cat "$TMP/fb.out")"
+	fi
+else
+	fail 'fb-preset.py missing for unit check'
+fi
+
 # ------------------------------------------------- 6. fixture ZIP build
 ZIP1="$TMP/zip1"; ZIP2="$TMP/zip2"
 if need python3 && need tar && need gzip && need sha256sum && need unzip; then

@@ -35,6 +35,23 @@ assert len(VAR_NAMES) == 40
 TARGET = (640, 480, 32)
 CLOBBER = (512, 384)
 
+# Explicit RGB channel bitfields per depth (only what SDL1.2's blit
+# shifts are built from; transp/grayscale/timings are left inherited
+# so the PUT stays minimal). Never inherit RGB from the current var:
+# stale fields (e.g. 16-bit fields under a 32-bit mode after a
+# geometry-only PUT) produce single-channel-drop tints (proven live:
+# white/magenta/teal/yellow lottery).
+def fields_for_bpp(bpp):
+    if bpp == 32:
+        return {"red.offset": 16, "red.length": 8,
+                "green.offset": 8, "green.length": 8,
+                "blue.offset": 0, "blue.length": 8}
+    if bpp == 16:
+        return {"red.offset": 11, "red.length": 5,
+                "green.offset": 5, "green.length": 6,
+                "blue.offset": 0, "blue.length": 5}
+    raise ValueError("unsupported bpp for explicit fields: %r" % (bpp,))
+
 
 def get_var(fb):
     with open(fb, "r+b") as f:
@@ -48,15 +65,22 @@ def put_mode(fb, w, h, bpp):
     v.update(xres=w, yres=h, bits_per_pixel=bpp,
              xres_virtual=w, yres_virtual=h,
              xoffset=0, yoffset=0, activate=0)
+    v.update(fields_for_bpp(bpp))
     with open(fb, "r+b") as f:
         fcntl.ioctl(f.fileno(), FBIOPUT_VSCREENINFO,
                     struct.pack(VAR_FMT, *[v[k] for k in VAR_NAMES]))
     cur = get_var(fb)
-    ok = (cur["xres"], cur["yres"],
-          cur["bits_per_pixel"]) == (w, h, bpp)
+    want = fields_for_bpp(bpp)
+    ok = (cur["xres"], cur["yres"], cur["bits_per_pixel"]) == (w, h, bpp)
+    ok = ok and all(cur[k] == want[k] for k in want)
     print("preset %dx%dx%d: active %dx%d/%d %s" % (
         w, h, bpp, cur["xres"], cur["yres"],
         cur["bits_per_pixel"], "OK" if ok else "MISMATCH"))
+    if not ok:
+        print("  fields now R=%d/%d G=%d/%d B=%d/%d" % (
+            cur["red.offset"], cur["red.length"],
+            cur["green.offset"], cur["green.length"],
+            cur["blue.offset"], cur["blue.length"]))
     return ok
 
 
@@ -80,6 +104,11 @@ def watch_clobber(fb, timeout=25):
 
 
 def main(argv):
+    if "--help" in argv or "-h" in argv:
+        print("usage: fb-preset.py [WxHxBPP] [--watch-clobber] "
+              "[--fb=/dev/fb0]")
+        print("set + verify one framebuffer mode (default 640x480x32).")
+        return 0
     fb = "/dev/fb0"
     args = [a for a in argv if not a.startswith("--fb=")]
     for a in argv:
