@@ -153,6 +153,9 @@ function buildStatus(view, preserve)
 	local display = str(view.display)
 	if display == "" then display = title ~= "" and title or stationText end
 	status["mode"] = view.mode or "stop"
+	-- getTrackElapsed multiplies self.rate (Player.lua:700); a nil rate
+	-- aborts the whole NP open. LMS rate: 1 = normal play, else 0.
+	status["rate"] = (view.mode == "play") and 1 or 0
 	status["waitingToPlay"] = view.waiting == true
 	status["remote"] = 1
 	status["current_title"] = display

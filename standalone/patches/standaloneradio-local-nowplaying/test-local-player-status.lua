@@ -46,6 +46,7 @@ check("volume preserved", s["mixer volume"] == 63)
 check("power preserved", s.power == 1)
 check("name preserved", s.player_name == "RG35XXH")
 check("time zero hides progress", s.time == 0)
+check("rate play", s.rate == 1)
 
 -- 2. Missing metadata falls back to station text; never nil strings.
 s = LPS.buildStatus({ mode = "play", stationText = "Radio 538" }, {})
@@ -62,6 +63,7 @@ check("waiting", s.waitingToPlay == true and s.mode == "play")
 s = LPS.buildStatus({ mode = "stop", stationText = "NPO Radio 1",
 	title = "T", artist = "A", display = "A - T" }, {})
 check("stop mode", s.mode == "stop" and s.waitingToPlay == false)
+check("rate stop", s.rate == 0)
 check("stop keeps track", s.item_loop[1].track == "T")
 check("stop keeps playlist", s.playlist_tracks == 1)
 

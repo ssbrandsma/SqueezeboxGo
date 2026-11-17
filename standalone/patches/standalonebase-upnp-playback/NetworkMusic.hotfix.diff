@@ -1,0 +1,67 @@
+--- /tmp/applet-src/NetworkMusic.lua	2026-11-17 18:42:48.247487566 +0100
++++ /tmp/applet-src/NetworkMusic.hotfix2.lua	2026-11-17 19:45:58.968879723 +0100
+@@ -12,6 +12,8 @@
+ local okDecode,Decode=pcall(require,"squeezeplay.decode")
+ local okStream,Stream=pcall(require,"squeezeplay.stream")
+ local okLog,Log=pcall(require,"jive.utils.log")
++local okLPS,LocalPlayerStatus=pcall(require,"applets.StandaloneBase.LocalPlayerStatus")
++if not okLPS and diagLog then diagLog:warn("StandaloneBase: upnp synthesis unavailable: ", tostring(LocalPlayerStatus)) end
+ local diagLog=okLog and Log.logger("StandaloneBase") or nil
+ local function diag(...)
+     if diagLog then diagLog:info("StandaloneBase: directplay ",...) end
+@@ -47,6 +49,11 @@
+ function M.new(applet,options)
+     local o=options or {}
+     local self={active=true,nodes={},pending={},revision=nil}
++    self.upnpGen=0
++    self.localStatus=(okLPS and LocalPlayerStatus) and LocalPlayerStatus.new({
++        log=log,appletManager=appletManager,
++        isPlaybackOwner=function() return self.direct~=nil end,
++    }) or nil
+     local main=o.main or jiveMain
+     local function label(key) return tostring(applet:string("NETWORK_MUSIC_"..key)) end
+     function self:request(args,done)
+@@ -131,6 +138,9 @@
+     function self:stopDirect()
+         local d=self.direct
+         self.direct=nil
++        if self.upnpBeat then self.upnpBeat:stop() end
++        self.upnpBeat=nil
++        if self.localStatus then self.localStatus:release() end
+         if not d then return end
+         if d.heartbeat then d.heartbeat:stop() end
+         if d.id then npPost("/api/nowplaying/release",{session_id=d.id},function() end) end
+@@ -184,7 +194,7 @@
+         if player.incrementSequenceNumber then player:incrementSequenceNumber() end
+         playback.flags=0
+         playback.mode='m'
+-        playback.header="GET "..path.." HTTP/1.0\nHost: "..host..(port~=80 and (":"..port) or "").."\nAccept: audio/mpeg,audio/*,*/*\nConnection: close\n\n"
++        playback.header="GET "..path.." HTTP/1.0\r\nHost: "..host..(port~=80 and (":"..port) or "").."\r\nAccept: audio/mpeg,audio/*,*/*\r\nConnection: close\r\n\r\n" -- HOTFIX: CRLF (bare-LF hangs lighttpd/Synology)
+         playback.autostart='1'
+         playback.threshold=0
+         playback.decodeThreshold=2048
+@@ -202,6 +212,24 @@
+         local function text(v) return tostring(v or ""):gsub("^%s*(.-)%s*$","%1") end
+         local session={playback=playback,idleTicks=0}
+         self.direct=session
++        if self.localStatus then
++            if not self.upnpMarked then self.upnpMarked=true
++                if log then log:warn("StandaloneBase: upnp synthesis live") end
++            end
++            self.upnpGen=self.upnpGen+1
++            local st={name=tostring(item.title or "Network Music")}
++            self.localStatus:activate(st, self.upnpGen)
++            self.localStatus:updateTimedMetadata({title=item.title,artist=item.artist,album=item.album}, st, self.upnpGen)
++            self.localStatus:updateState("PLAYING", st, self.upnpGen)
++            self.upnpLast={state="PLAYING",st=st,gen=self.upnpGen}
++            if self.upnpBeat then self.upnpBeat:stop() end
++            self.upnpBeat=Timer(15000,function()
++                if self.direct and self.upnpLast and self.localStatus then
++                    self.localStatus:updateState(self.upnpLast.state, self.upnpLast.st, self.upnpLast.gen)
++                end
++            end)
++            self.upnpBeat:start()
++        end
+         npPost("/api/nowplaying/claim",{source="upnp",name="Network Music",capabilities={play=false,pause=false,stop=false,next=false,previous=false,seek=false,volume=false}},function(value,err)
+             diag("claim done err=",tostring(err)," success=",tostring(value and value.success)," session=",tostring(value and value.session_id))
+             if self.direct~=session or err or not value or value.success~=true or not value.session_id then return end
