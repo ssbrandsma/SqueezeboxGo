@@ -1,7 +1,7 @@
 # Project status
 
-Last updated: 2026-11-17 (Standalone Radio E2E GREEN on Go 0.2.8;
-tint root-caused + fixed; device parked clean overnight).
+Last updated: 2026-11-17 (Go 0.2.10 live: Now Playing fixed, wallpaper
+seed, capabilities truth, tap-bounce; user tap-verifying).
 
 ## Overnight: Standalone Radio E2E (2026-11-16/17)
 
@@ -23,6 +23,47 @@ tint root-caused + fixed; device parked clean overnight).
   release; west owes durable applet fixes (vendor json, socket.dns).
 - Pending user: ears-check Radio audio; tap-through 0.2.8 fresh
   App Center launch; Standalone Base source location; release peers.
+
+## Morning session 2026-11-17 (Go 0.2.8 -> 0.2.10, live with user)
+
+- App Center taps stuck at Loading 3/3 (fresh boot): dmenu exit
+  teardown races our fb pre-set, freezing scanout on Loading while
+  fb0 holds live Jive (proven: red/green fills invisible; mode
+  CHANGE re-arms the layer 2/2, same-mode re-PUT is a no-op).
+  Fix shipped in 0.2.9 entry: pre-Jive tap-bounce
+  640->1280x1024x16->640 (black gap only). Live-verified OK.
+- Now Playing dead without Base: full chain root-caused (Base
+  publish refused -> onPublished never fires -> native player never
+  staged -> empty playlist -> menu item falls to playlist browser).
+  Shipped applet-side `LocalPlayerStatus` synthesis (LMS-style
+  playerstatus via Player:_process_status; yields on Base session;
+  repeat/shuffle defaulted after live nil-concat crash). v2
+  live-verified: NPO Radio 2 playing, Now Playing shows
+  station/artist/title. Peer-diff packaged at
+  standalone/patches/standaloneradio-local-nowplaying/ (module +
+  wiring diff + applier + README + 30-check lua5.1 test) for the
+  user's applet repo. Cover art skipped per user (needs Base https
+  proxy; user installs Base next).
+- B&W UI: monochrome home icons are stock assets (verified); black
+  home bg = no wallpaper setting on fresh installs (stock Jive never
+  calls setBackground then). Fix: seed bb_sonata per skin key,
+  absent-only (0.2.10; 0.2.9 packed without seed/ — explicit tar
+  file list missed it, now test-covered).
+- Skin switching: dead Touch/Remote entries explained (active skin
+  type hardwired to "skin"; getActiveSkinType service unregistered).
+  Deeper find: DesktopJiveMeta (patched for identity) loads AFTER
+  our BSP applet and clobbers capabilities with desktop values
+  (touch/ir/presets/...). Fixed: identity-patch guard skips
+  DesktopJive grant on rg35xxh (order-independent); BSP grants
+  hardware truth (powerKey/audioByDefault/coreKeys/batteryCapable/
+  sdcard/usb) after auditing every has* consumer. Single skin list
+  now; only RG35XXH 640x480 skins work (user warned: Touch/Joggler/
+  QVGA/WQVGA garble the display; settings stayed Landscape).
+- Device rebooted ~10:07 (cause unclear, no panic; likely user power
+  button during slow dmenu repaint). wtmp shows unclean boots.
+- 0.2.10 on card + running (upgrade preserved config): bounce OK,
+  wallpaper seeded, 131/131 + 27/27 green. Awaiting user confirm of
+  wallpaper home + NP re-verify post-upgrade.
 
 ## Live hardware session 2026-11-16 (RG35XX H V4.0, stock Ubuntu 22.04)
 
