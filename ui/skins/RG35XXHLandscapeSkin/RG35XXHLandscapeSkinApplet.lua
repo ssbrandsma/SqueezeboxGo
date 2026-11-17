@@ -86,11 +86,13 @@ function param(self)
 			{ 
 				style = 'nowplaying',
 				artworkSize = '640x640',
+				suppressTitlebar = 1,
 				text = self:string('LARGE_ART'),
 			 },
 			{
 				style = 'nowplaying_small_art',
 				artworkSize = '286x286',
+				suppressTitlebar = 1,
 				text = self:string('SMALL_ART'),
 			},
 		},
@@ -282,7 +284,41 @@ function skin(self, s, reload, useDefaultSize)
 		},
 	
 		--transport controls
-		npcontrols = { hidden = 1 },
+		npcontrols = {
+			order = { 'rew', 'play', 'fwd' },
+			position = LAYOUT_SOUTH,
+			h = controlHeight,
+			w = WH_FILL,
+			align = 'center',
+			rew = {
+				w = controlWidth, h = controlHeight, align = 'center',
+				img = Surface:loadImage(imgpath .. "Icons/icon_toolbar_rew.png"),
+			},
+			play = {
+				w = controlWidth, h = controlHeight, align = 'center',
+				img = Surface:loadImage(imgpath .. "Icons/icon_toolbar_play.png"),
+			},
+			pause = {
+				w = controlWidth, h = controlHeight, align = 'center',
+				img = Surface:loadImage(imgpath .. "Icons/icon_toolbar_pause.png"),
+			},
+			fwd = {
+				w = controlWidth, h = controlHeight, align = 'center',
+				img = Surface:loadImage(imgpath .. "Icons/icon_toolbar_ffwd.png"),
+			},
+			div1 = { hidden = 1 },
+			div2 = { hidden = 1 },
+			div3 = { hidden = 1 },
+			div4 = { hidden = 1 },
+			div5 = { hidden = 1 },
+			div6 = { hidden = 1 },
+			div7 = { hidden = 1 },
+			repeatMode = { hidden = 1 },
+			shuffleMode = { hidden = 1 },
+			volDown = { hidden = 1 },
+			volUp = { hidden = 1 },
+			volSlider = { hidden = 1 },
+		},
 	
 		-- Progress bar
 		npprogress = {

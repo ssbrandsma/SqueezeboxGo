@@ -37,13 +37,13 @@ key BTN_NORTH KEY_LEFTBRACE tap                    # X -> '[' -> go_now_playing
 key BTN_WEST  KEY_F         tap                    # Y -> 'f' -> go_favorites
 
 # --- Start/Select/Menu ---
-key BTN_START  KEY_SPACE tap long 800 KEY_G  # Start -> ' ' -> pause(toggle); hold=stop(g)
+key BTN_START  KEY_PLAYPAUSE tap long 800 KEY_G  # Start -> AudioPlay -> JIVE_KEY_PLAY (C keymap has no SPACE; direct-play applets toggle on the key event); hold=stop(g)
 key BTN_SELECT KEY_HOME  hold long 800 KEY_Q  # Select -> HOME; hold=power(q)
 key BTN_MODE   KEY_MENU  hold                 # Menu -> ADD
 
 # --- Shoulders: prev/next track (C: jump_rew/jump_fwd), volume (C) ---
-key BTN_TL  KEY_Z     tap    # L1 -> 'z' -> jump_rew (prev track)
-key BTN_TR  KEY_B     tap    # R1 -> 'b' -> jump_fwd (next track)
+key BTN_TL  KEY_PREVIOUSSONG tap    # L1 -> AudioPrev -> JIVE_KEY_REW (restart/prev)
+key BTN_TR  KEY_NEXTSONG     tap    # R1 -> AudioNext -> JIVE_KEY_FWD (next)
 key BTN_TL2 KEY_MINUS hold   # L2 -> '-' -> volume_down (hold repeats)
 key BTN_TR2 KEY_EQUAL hold   # R2 -> '=' -> volume_up   (hold repeats)
 

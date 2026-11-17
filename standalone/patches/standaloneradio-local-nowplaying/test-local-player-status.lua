@@ -42,6 +42,10 @@ check("item artist", s.item_loop[1].artist == "Some Artist")
 check("item album", s.item_loop[1].album == "")
 check("no artwork fetch", s.item_loop[1]["icon-id"] == nil and s.item_loop[1].icon == nil
 	and (s.item_loop[1].params == nil))
+local sart = LPS.buildStatus({ mode = "play", stationText = "X",
+	artwork = "http://192.168.1.67:50002/transcoder/jpegtnscaler.cgi/ebdart/1.jpg" }, {})
+check("artwork icon set", sart.item_loop[1].icon ==
+	"http://192.168.1.67:50002/transcoder/jpegtnscaler.cgi/ebdart/1.jpg")
 check("volume preserved", s["mixer volume"] == 63)
 check("power preserved", s.power == 1)
 check("name preserved", s.player_name == "RG35XXH")

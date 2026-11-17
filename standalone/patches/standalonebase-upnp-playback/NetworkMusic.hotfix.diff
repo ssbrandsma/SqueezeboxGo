@@ -1,5 +1,5 @@
 --- /tmp/applet-src/NetworkMusic.lua	2026-11-17 18:42:48.247487566 +0100
-+++ /tmp/applet-src/NetworkMusic.hotfix2.lua	2026-11-17 19:45:58.968879723 +0100
++++ /tmp/applet-src/NetworkMusic.hotfix8.lua	2026-11-17 22:28:38.967216515 +0100
 @@ -12,6 +12,8 @@
  local okDecode,Decode=pcall(require,"squeezeplay.decode")
  local okStream,Stream=pcall(require,"squeezeplay.stream")
@@ -9,19 +9,172 @@
  local diagLog=okLog and Log.logger("StandaloneBase") or nil
  local function diag(...)
      if diagLog then diagLog:info("StandaloneBase: directplay ",...) end
-@@ -47,6 +49,11 @@
+@@ -42,32 +44,160 @@
+     end
+ end
+ local FrameworkConstants={};Framework.constants(FrameworkConstants)
++local EU_UNUSED=FrameworkConstants.EVENT_UNUSED
++local EU_CONSUME=FrameworkConstants.EVENT_CONSUME
+ local haveLog,Log=pcall(require,"jive.utils.log")
+ local log=haveLog and Log.logger("StandaloneBase") or nil
  function M.new(applet,options)
      local o=options or {}
      local self={active=true,nodes={},pending={},revision=nil}
 +    self.upnpGen=0
++    self.upnpQueue={}
++    self.directItem=nil
++    local keyPlay, keyPause, keyRew, keyFwd
++    pcall(function()
++        keyPlay, keyPause = jive.ui.KEY_PLAY, jive.ui.KEY_PAUSE
++        keyRew, keyFwd = jive.ui.KEY_REW, jive.ui.KEY_FWD
++    end)
++    local function toggleDirect(where)
++        if not self.direct then return EU_UNUSED end
++        if self.direct.paused then
++            self.direct.paused=false
++            if log then log:warn("StandaloneBase: upnp resumed (" .. tostring(where) .. ")") end
++            if okDecode and Decode.resumeAudio then pcall(function() Decode:resumeAudio() end) end
++        else
++            self.direct.paused=true
++            if log then log:warn("StandaloneBase: upnp paused (" .. tostring(where) .. ")") end
++            if okDecode and Decode.pauseAudio then pcall(function() Decode:pauseAudio(0) end) end
++        end
++        if self.localStatus and self.upnpLast then
++            local st=self.direct.paused and "PAUSED" or "PLAYING"
++            self.upnpLast.state=st
++            self.localStatus:updateState(st, self.upnpLast.st, self.upnpLast.gen)
++        end
++        return EU_CONSUME
++    end
++    if not keyPlay and log then log:warn("StandaloneBase: upnp mediakeys unavailable (no jive.ui.KEY_PLAY)") end
++    if Framework.addListener and FrameworkConstants.EVENT_KEY_PRESS and keyPlay then
++        Framework:addListener(FrameworkConstants.EVENT_KEY_PRESS, function(event)
++            local code = event.getKeycode and event:getKeycode()
++            if code == keyPlay or code == keyPause then
++                return toggleDirect("key")
++            elseif code == keyFwd then
++                if log then log:warn("StandaloneBase: upnp fwd key, queue=", tostring(#self.upnpQueue)) end
++                if not self.direct then return EU_UNUSED end
++                if self:playNext() then return EU_CONSUME end
++                return EU_UNUSED
++            elseif code == keyRew then
++                if log then log:warn("StandaloneBase: upnp rew key") end
++                if not self.direct or not self.directItem then return EU_UNUSED end
++                self:playDirect(self.directItem.server, self.directItem.item, nil, true)
++                return EU_CONSUME
++            end
++            return EU_UNUSED
++        end)
++    end
++    if Framework.addActionListener then
++        Framework:addActionListener("pause", self, function()
++            if not self.direct then return EU_UNUSED end
++            if self.direct.paused then
++                self.direct.paused=false
++                if log then log:warn("StandaloneBase: upnp resumed") end
++                if okDecode and Decode.resumeAudio then pcall(function() Decode:resumeAudio() end) end
++            else
++                self.direct.paused=true
++                if log then log:warn("StandaloneBase: upnp paused") end
++                if okDecode and Decode.pauseAudio then pcall(function() Decode:pauseAudio(0) end) end
++            end
++            if self.localStatus and self.upnpLast then
++                local st=self.direct.paused and "PAUSED" or "PLAYING"
++                self.upnpLast.state=st
++                self.localStatus:updateState(st, self.upnpLast.st, self.upnpLast.gen)
++            end
++            return EU_CONSUME
++        end, -100)
++        Framework:addActionListener("play", self, function()
++            if not self.direct then return EU_UNUSED end
++            if self.direct.paused then
++                self.direct.paused=false
++                if log then log:warn("StandaloneBase: upnp resumed") end
++                if okDecode and Decode.resumeAudio then pcall(function() Decode:resumeAudio() end) end
++            else
++                self.direct.paused=true
++                if log then log:warn("StandaloneBase: upnp paused") end
++                if okDecode and Decode.pauseAudio then pcall(function() Decode:pauseAudio(0) end) end
++            end
++            if self.localStatus and self.upnpLast then
++                local st=self.direct.paused and "PAUSED" or "PLAYING"
++                self.upnpLast.state=st
++                self.localStatus:updateState(st, self.upnpLast.st, self.upnpLast.gen)
++            end
++            return EU_CONSUME
++        end, -100)
++        Framework:addActionListener("stop", self, function()
++            if not self.direct then return EU_UNUSED end
++            self.upnpQueue={}
++            self:stopDirect()
++            return EU_CONSUME
++        end, -100)
++        Framework:addActionListener("jump_fwd", self, function()
++            if not self.direct then return EU_UNUSED end
++            if self:playNext() then return EU_CONSUME end
++            return EU_UNUSED
++        end, -100)
++        Framework:addActionListener("jump_rew", self, function()
++            if not self.direct or not self.directItem then return EU_UNUSED end
++            self:playDirect(self.directItem.server, self.directItem.item, nil, true)
++            return EU_CONSUME
++        end, -100)
++    end
 +    self.localStatus=(okLPS and LocalPlayerStatus) and LocalPlayerStatus.new({
 +        log=log,appletManager=appletManager,
 +        isPlaybackOwner=function() return self.direct~=nil end,
 +    }) or nil
      local main=o.main or jiveMain
      local function label(key) return tostring(applet:string("NETWORK_MUSIC_"..key)) end
-     function self:request(args,done)
-@@ -131,6 +138,9 @@
+-    function self:request(args,done)
++    function self:requestFresh(args,done)
++        self:request({op="servers"},function(servers,err)
++            if err or not servers or type(servers.servers)~="table" then done(nil,err or "unavailable");return end
++            local want=tostring(args.server or "")
++            for _,s in ipairs(servers.servers) do
++                if tostring(s.udn)==want then
++                    args.server=s.udn;args.generation=s.generation
++                    self.revision=servers.revision
++                    self:request(args,done,true)
++                    return
++                end
++            end
++            done(nil,"unavailable")
++        end,true)
++    end
++    function self:request(args,done,noRetry)
+         local f=io.open(o.tokenPath or "/var/run/sb-upnp/token","r")
+         local token=f and f:read(65);if f then f:close() end
+         if not token or #token~=64 or not token:match("^[0-9a-f]+$") then done(nil,"unavailable");return function() end end
+         local finished,sent,body=false,false,""
+         local socket=SocketHttp(o.jnt or jnt,"127.0.0.1",9000,"StandaloneNetworkMusic")
+         local timer
+-        local function finish(value,err)
++        local function finish(value,err,silent)
+             if finished then return end;finished=true
+             if timer then timer:stop() end
+             self.pending[socket]=nil
+             if type(socket.close)=="function" then pcall(function() socket:close() end) end
+-            if self.active then done(value,err) end
++            if self.active and not silent then done(value,err) end
+         end
+         local command={"networkmusic"};for key,value in pairs(args) do command[#command+1]=key..":"..(type(value)=="number" and string.format("%.0f",value) or tostring(value)) end
+         local payload=json.encode({data={request={"",command}}})
+         local request=RequestHttp(function(data,err)
+             if finished then return end
+-            if err then finish(nil,"network_error");return end
++            if err then
++                if not noRetry and type(err)=="string" and (err:find("409",1,true) or err:find("403",1,true)) and args.op~="servers" then
++                    finish(nil,"stale_retry",true)
++                    self:requestFresh(args,done)
++                    return
++                end
++                finish(nil,"network_error");return
++            end
+             if data then
+                 body=body..data;if #body>131072 then finish(nil,"response_too_large");return end
+                 local ok,value=pcall(json.decode,body)
+@@ -131,6 +261,9 @@
      function self:stopDirect()
          local d=self.direct
          self.direct=nil
@@ -31,7 +184,28 @@
          if not d then return end
          if d.heartbeat then d.heartbeat:stop() end
          if d.id then npPost("/api/nowplaying/release",{session_id=d.id},function() end) end
-@@ -184,7 +194,7 @@
+@@ -149,7 +282,7 @@
+         end
+         if alive then d.idleTicks=0;return end
+         d.idleTicks=(d.idleTicks or 0)+1
+-        if d.idleTicks>=2 then self:stopDirect() end
++        if d.idleTicks>=2 then if not self:playNext() then self:stopDirect() end end
+     end
+     local function directHeartbeat(self,session)
+         if self.direct~=session or not session.id then return end
+@@ -171,8 +304,10 @@
+             end
+         end)
+     end
+-    function self:playDirect(server,item,menu)
++    function self:playDirect(server,item,menu,keepQueue)
+         if not directMode() then return false end
++        if not keepQueue then self.upnpQueue={} end
++        self.directItem={server=server,item=item}
+         local host,port,path=directParse(item)
+         if not host then menu:addItem({text=label("UNSUPPORTED"),style="item_info"});return true end
+         self:stopDirect()
+@@ -184,7 +319,7 @@
          if player.incrementSequenceNumber then player:incrementSequenceNumber() end
          playback.flags=0
          playback.mode='m'
@@ -40,7 +214,7 @@
          playback.autostart='1'
          playback.threshold=0
          playback.decodeThreshold=2048
-@@ -202,6 +212,24 @@
+@@ -202,6 +337,24 @@
          local function text(v) return tostring(v or ""):gsub("^%s*(.-)%s*$","%1") end
          local session={playback=playback,idleTicks=0}
          self.direct=session
@@ -51,7 +225,7 @@
 +            self.upnpGen=self.upnpGen+1
 +            local st={name=tostring(item.title or "Network Music")}
 +            self.localStatus:activate(st, self.upnpGen)
-+            self.localStatus:updateTimedMetadata({title=item.title,artist=item.artist,album=item.album}, st, self.upnpGen)
++            self.localStatus:updateTimedMetadata({title=item.title,artist=item.artist,album=item.album,artwork_url=item.artwork}, st, self.upnpGen)
 +            self.localStatus:updateState("PLAYING", st, self.upnpGen)
 +            self.upnpLast={state="PLAYING",st=st,gen=self.upnpGen}
 +            if self.upnpBeat then self.upnpBeat:stop() end
@@ -65,3 +239,31 @@
          npPost("/api/nowplaying/claim",{source="upnp",name="Network Music",capabilities={play=false,pause=false,stop=false,next=false,previous=false,seek=false,volume=false}},function(value,err)
              diag("claim done err=",tostring(err)," success=",tostring(value and value.success)," session=",tostring(value and value.session_id))
              if self.direct~=session or err or not value or value.success~=true or not value.session_id then return end
+@@ -218,6 +371,17 @@
+         pcall(function() appletManager:callService("goNowPlaying") end)
+         return true
+     end
++    function self:enqueue(server,item,menu)
++        self.upnpQueue[#self.upnpQueue+1]={server=server,item=item}
++        if menu then menu:addItem({text="Queued: "..tostring(item.title or ""),style="item_info"}) end
++    end
++    function self:playNext()
++        local next=self.upnpQueue[1]
++        if not next then return false end
++        table.remove(self.upnpQueue,1)
++        self:playDirect(next.server,next.item,nil,true)
++        return true
++    end
+     function self:browse(server,object,title,search)
+         local window=Window("text_list",title)
+         local menu=SimpleMenu("menu");window:addWidget(menu)
+@@ -304,6 +468,9 @@
+         menu:addItem({text=label("ADD"),callback=function() if cancel then cancel() end;cancel=self:queue(server,item.id,"add",menu) end})
+         menu:addItem({text=label("PLAY_NEXT"),callback=function() if cancel then cancel() end;cancel=self:queue(server,item.id,"next",menu) end})
+         end
++        if direct then
++        menu:addItem({text=label("ADD"),callback=function() self:enqueue(server,item,menu) end})
++        end
+         window:addListener(FrameworkConstants.EVENT_WINDOW_POP,function() if cancel then cancel() end end)
+         window:addWidget(menu);applet:tieAndShowWindow(window)
+     end

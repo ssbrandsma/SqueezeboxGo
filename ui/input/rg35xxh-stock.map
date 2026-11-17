@@ -38,14 +38,18 @@ key BTN_C KEY_LEFTBRACE tap
 key BTN_NORTH KEY_F tap
 
 # --- Shoulders + triggers ---
-key BTN_TL KEY_Z tap
-key BTN_TR KEY_B tap
+# L1/R1 emit media keys: Jive translates these to KEY_REW/FWD, which
+# direct-play applets consume for prev/next (SPACE/Z/B have no action).
+key BTN_TL KEY_PREVIOUSSONG tap
+key BTN_TR KEY_NEXTSONG tap
 key BTN_TL2 KEY_MINUS hold
 key BTN_TR2 KEY_EQUAL hold
 
 # --- System buttons ---
 key BTN_SELECT KEY_HOME tap
-key BTN_START KEY_SPACE tap
+# Start emits PLAYPAUSE: the C keymap has no SPACE entry (dropped),
+# while AudioPlay becomes JIVE_KEY_PLAY for transport control.
+key BTN_START KEY_PLAYPAUSE tap
 key BTN_MODE KEY_HOME tap
 
 # --- Stick clicks (paired presses; verify L/R assignment live) ---

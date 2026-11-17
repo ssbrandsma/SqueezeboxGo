@@ -207,6 +207,69 @@ def scale_applet_lua(text, src_applet, pin):
                       _bpp, text)
     if n != text.count("setVideoMode("):
         raise SystemExit("video-bpp pin missed a setVideoMode call")
+    # Visible NP transport (landscape only): stock Radio skins hide
+    # npcontrols (pause = physical PLAY key), but users expect an
+    # on-screen pause button; the skin's play widget pushes the
+    # "pause" action, which direct-play applets consume. Minimal
+    # working set {rew, play, fwd} — repeat/shuffle are server-bound.
+    # Number-free on purpose: controlHeight/controlWidth are file
+    # locals at final scale, so no doubling applies either way.
+    if src_applet == "QVGAlandscapeSkin":
+        anchor = "\t\tnpcontrols = { hidden = 1 },"
+        if text.count(anchor) != 1:
+            raise SystemExit("npcontrols anchor missing/ambiguous")
+        block = (
+            "\t\tnpcontrols = {\n"
+            "\t\t\torder = { 'rew', 'play', 'fwd' },\n"
+            "\t\t\tposition = LAYOUT_SOUTH,\n"
+            "\t\t\th = controlHeight,\n"
+            "\t\t\tw = WH_FILL,\n"
+            "\t\t\talign = 'center',\n"
+            "\t\t\trew = {\n"
+            "\t\t\t\tw = controlWidth, h = controlHeight, align = 'center',\n"
+            "\t\t\t\timg = Surface:loadImage(imgpath .. \"Icons/icon_toolbar_rew.png\"),\n"
+            "\t\t\t},\n"
+            "\t\t\tplay = {\n"
+            "\t\t\t\tw = controlWidth, h = controlHeight, align = 'center',\n"
+            "\t\t\t\timg = Surface:loadImage(imgpath .. \"Icons/icon_toolbar_play.png\"),\n"
+            "\t\t\t},\n"
+            "\t\t\tpause = {\n"
+            "\t\t\t\tw = controlWidth, h = controlHeight, align = 'center',\n"
+            "\t\t\t\timg = Surface:loadImage(imgpath .. \"Icons/icon_toolbar_pause.png\"),\n"
+            "\t\t\t},\n"
+            "\t\t\tfwd = {\n"
+            "\t\t\t\tw = controlWidth, h = controlHeight, align = 'center',\n"
+            "\t\t\t\timg = Surface:loadImage(imgpath .. \"Icons/icon_toolbar_ffwd.png\"),\n"
+            "\t\t\t},\n"
+            "\t\t\tdiv1 = { hidden = 1 },\n"
+            "\t\t\tdiv2 = { hidden = 1 },\n"
+            "\t\t\tdiv3 = { hidden = 1 },\n"
+            "\t\t\tdiv4 = { hidden = 1 },\n"
+            "\t\t\tdiv5 = { hidden = 1 },\n"
+            "\t\t\tdiv6 = { hidden = 1 },\n"
+            "\t\t\tdiv7 = { hidden = 1 },\n"
+            "\t\t\trepeatMode = { hidden = 1 },\n"
+            "\t\t\tshuffleMode = { hidden = 1 },\n"
+            "\t\t\tvolDown = { hidden = 1 },\n"
+            "\t\t\tvolUp = { hidden = 1 },\n"
+            "\t\t\tvolSlider = { hidden = 1 },\n"
+            "\t\t},"
+        )
+        text = text.replace(anchor, block)
+        # Full-bleed NP: the bottom-docked transport would cover the
+        # window titlebar (no above-titlebar anchor exists); suppress
+        # it like WQVGA's art_only style does.
+        def _notitle(m):
+            return ("%sstyle = '%s',\n%sartworkSize = '%s',\n"
+                    "%ssuppressTitlebar = 1,\n") % (
+                        m.group(1), m.group(2), m.group(1), m.group(3),
+                        m.group(1))
+        text, nn = re.subn(
+            r"^([ \t]+)style = '(nowplaying_small_art|nowplaying)',\n"
+            r"[ \t]+artworkSize = '([^']+)',\n",
+            _notitle, text, flags=re.M)
+        if nn != 2:
+            raise SystemExit("suppressTitlebar expected 2 NP styles")
     return GENERATED_HEADER.format(src_applet=src_applet, pin=pin) + text
 
 

@@ -165,14 +165,18 @@ function buildStatus(view, preserve)
 	status["playlist_cur_index"] = 0
 	status["playlist_timestamp"] = view.playlistTimestamp or os.time()
 	status["power"] = preserve["power"] ~= nil and preserve["power"] or 1
-	status["item_loop"] = {
-		{
-			text = stationText,
-			track = title,
-			artist = artist,
-			album = album,
-		},
+	local item = {
+		text = stationText,
+		track = title,
+		artist = artist,
+		album = album,
 	}
+	-- Stock _getIcon fetches item.icon via server:fetchArtwork; absolute
+	-- http(s) URLs are GET directly (private LAN needs no proxy).
+	if type(view.artwork) == "string" and view.artwork ~= "" then
+		item.icon = view.artwork
+	end
+	status["item_loop"] = { item }
 	return status
 end
 
@@ -207,6 +211,7 @@ function Client:_view()
 	return {
 		mode = self.mode,
 		waiting = self.waiting,
+		artwork = self.artwork,
 		stationText = stationName(station),
 		title = title,
 		artist = artist,
@@ -263,6 +268,7 @@ function Client:activate(station, stationGeneration)
 	self.stationGeneration = stationGeneration
 	self.metadata = nil
 	self.timed = nil
+	self.artwork = nil
 	self.position = nil
 	self.duration = nil
 	self.mode = "play"
@@ -307,7 +313,20 @@ function Client:updateTimedMetadata(event, station, stationGeneration)
 	local artist = type(event.artist) == "string" and event.artist ~= "" and event.artist or nil
 	local album = type(event.album) == "string" and event.album ~= "" and event.album or nil
 	self.timed = (title or artist or album) and { title = title, artist = artist, album = album } or nil
+	local artwork = type(event.artwork_url) == "string" and event.artwork_url ~= "" and event.artwork_url or nil
+	if artwork ~= self.artwork then self.artwork = artwork end
 	self:_push()
+end
+
+function Client:updateTrackArtwork(url, station, stationGeneration)
+	stationGeneration = tonumber(stationGeneration) or self.stationGeneration
+	if stationGeneration ~= self.stationGeneration then return false end
+	if station then self.station = station end
+	local value = type(url) == "string" and url ~= "" and url or nil
+	if value == self.artwork then return value ~= nil end
+	self.artwork = value
+	self:_push()
+	return value ~= nil
 end
 
 function Client:updatePosition(positionMs, durationMs, stationGeneration)

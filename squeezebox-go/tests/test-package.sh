@@ -66,6 +66,23 @@ grep -q 'EXIT_FRONTEND=42' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 grep -q '"audioByDefault"\] = 1' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null \
 	&& ok 'BSP grants audioByDefault (local player layout)' \
 	|| fail 'BSP lacks audioByDefault (controller layout leaks in)'
+SKIN_LAND="$REPO/ui/skins/RG35XXHLandscapeSkin"
+grep -q "order = { 'rew', 'play', 'fwd' }" "$SKIN_LAND/RG35XXHLandscapeSkinApplet.lua" 2>/dev/null \
+	&& ok 'Landscape NP transport visible (pause button)' \
+	|| fail 'Landscape hides NP transport (no pause button)'
+for icon in play pause rew ffwd; do
+	[ -f "$SKIN_LAND/images/Icons/icon_toolbar_$icon.png" ] 2>/dev/null \
+		&& ok "toolbar icon ships: $icon" \
+		|| fail "toolbar icon missing: $icon"
+done
+grep -q 'suppressTitlebar = 1' "$SKIN_LAND/RG35XXHLandscapeSkinApplet.lua" 2>/dev/null \
+	&& ok 'NP suppresses titlebar (no transport overlap)' \
+	|| fail 'NP titlebar overlaps transport'
+for key in KEY_PLAYPAUSE KEY_PREVIOUSSONG KEY_NEXTSONG; do
+	grep -q "$key" "$REPO/ui/input/rg35xxh-stock.map" 2>/dev/null \
+		&& ok "stock map emits $key" \
+		|| fail "stock map lacks $key (transport dead)"
+done
 if grep -q '"touch"\] = 1' "$APPLET_DIR/SqueezeboxRG35XXHApplet.lua" 2>/dev/null; then
 	fail 'BSP grants touch on button-only hardware (dead skin menu)'
 else

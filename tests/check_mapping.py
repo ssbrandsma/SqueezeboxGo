@@ -44,11 +44,14 @@ MAP_REQUIRED_INPUTS = ["BTN_DPAD_UP", "BTN_DPAD_DOWN", "BTN_DPAD_LEFT",
                        "BTN_DPAD_RIGHT", "BTN_EAST", "BTN_SOUTH", "BTN_NORTH",
                        "BTN_WEST", "BTN_START", "BTN_SELECT", "BTN_TL",
                        "BTN_TR", "BTN_TL2", "BTN_TR2"]
-# Reviewed contract outputs: arrows/enter/end + Jive char-path keys
-# ('['->now playing, f->favorites, space->pause, z/b->prev/next, -->vol).
+# Reviewed contract outputs: arrows/enter/end + Jive keys. Transport is
+# media keys (the C keymap has no SPACE entry; AudioPlay/Prev/Next
+# become JIVE_KEY_PLAY/REW/FWD): playpause->pause(toggle),
+# previous/nextsong->prev/next. Z/B remain via the right stick.
 MAP_REQUIRED_OUTPUTS = ["KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT",
                         "KEY_ENTER", "KEY_END", "KEY_LEFTBRACE", "KEY_F",
-                        "KEY_SPACE", "KEY_Z", "KEY_B", "KEY_MINUS", "KEY_EQUAL"]
+                        "KEY_PLAYPAUSE", "KEY_PREVIOUSSONG", "KEY_NEXTSONG",
+                        "KEY_Z", "KEY_B", "KEY_MINUS", "KEY_EQUAL"]
 
 PATTERNS = ["ui/input/*.json", "ui/input/*.conf", "ui/input/*.map"]
 

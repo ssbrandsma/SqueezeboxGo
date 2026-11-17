@@ -1,7 +1,7 @@
 # Project status
 
-Last updated: 2026-11-17 (Go 0.2.10 live: Now Playing fixed, wallpaper
-seed, capabilities truth, tap-bounce; user tap-verifying).
+Last updated: 2026-11-17 (Go 0.2.11 on card: UPnP MP3 E2E + NP art,
+pause, queue, stale-retry; skin transport; media-key map).
 
 ## Overnight: Standalone Radio E2E (2026-11-16/17)
 
@@ -64,6 +64,47 @@ seed, capabilities truth, tap-bounce; user tap-verifying).
 - 0.2.10 on card + running (upgrade preserved config): bounce OK,
   wallpaper seeded, 131/131 + 27/27 green. Awaiting user confirm of
   wallpaper home + NP re-verify post-upgrade.
+
+## Evening session 2026-11-17 (UPnP MP3 E2E + Go 0.2.11)
+
+- UPnP MP3 no-audio root-caused (proven by replay vs Synology
+  lighttpd): `NetworkMusic.playDirect` sent bare-LF HTTP, server
+  never responds. CRLF one-liner; Hysteria streams at exactly
+  44.1 kHz. Hotfix on device; repo diff packaged for SBStandaloneBase.
+- UPnP NP: synthesis extended (artwork via stock fetchArtwork direct
+  GET — cover renders; `rate` default fixed a showNowPlaying crash;
+  15 s heartbeat vs laptop-LMS cometd wipes). Live-verified:
+  title/artist/album/art/1/1 + ticking elapsed + transport buttons.
+- Pause: NP transport unhidden in Landscape skin (generator rule,
+  WQVGA icons 2x'd, unordered children hidden, titlebar suppressed
+  per WQVGA precedent — verified clean). Start remapped to
+  KEY_PLAYPAUSE: stock C keymap has NO SPACE entry (Start was
+  dropped); AudioPlay arrives as JIVE_KEY_PLAY and Base toggles
+  decode pause/resume on it (+ on-screen button via pause action).
+  Verified: pause/resume markers + NP icon flips. Audible silence
+  needs ears (hw_ptr advances on fork silence either way).
+- Queue: local queue (ADD button + Queued confirm rows +
+  auto-advance on track end + L1/R1 to PREVIOUS/NEXTSONG for
+  restart/next + NP rew/fwd via jump actions). Verified: queued
+  Butterflies, skipped Hysteria→Butterflies (new stream + NP swap).
+  Natural-end advance shares the path but wants a soak.
+- Unreachable Base: retry-on-stale (403/409 → re-discover +
+  one retry) written, needs field proof. Found live: all five Base
+  daemons exit cleanly with Jive restarts and only return via
+  applet boot-init; a suspected peer mid-deploy (fresh 644
+  binaries) may also stop them — coordinate before touching.
+- Maps: Start/L1/R1 now media keys in both maps (fixes dead SPACE
+  assumption the old comments encoded); fixtures + mapping gate
+  updated (16/16 input; mainline mapping PASS; stock-map axis/DPAD
+  failures pre-date this change).
+- 0.2.11 packed (`58324551…`, icons + skin + map verified inside)
+  and deployed to card (installs on next launch; device runs
+  equivalent hotfixes meanwhile). Gates: 140/140 package, 27/27
+  selftest, 16/16 input, skin/shellcheck/shim/identity green, 33/33
+  lua. Committed + pushed to ssbrandsma/SqueezeboxGo.
+- Pending user: ears-check pause silence; physical Start/L1/R1 tap
+  confirm; natural queue-advance soak; Base repo takes the
+  NetworkMusic diff (+ npPost 201 fix + Radio Start-pause twin).
 
 ## Live hardware session 2026-11-16 (RG35XX H V4.0, stock Ubuntu 22.04)
 
