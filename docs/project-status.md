@@ -1,29 +1,28 @@
 # Project status
 
-Last updated: 2026-11-17 (Standalone Radio playing end-to-end; Go 0.2.7).
+Last updated: 2026-11-17 (Standalone Radio E2E GREEN on Go 0.2.8;
+tint root-caused + fixed; device parked clean overnight).
 
 ## Overnight: Standalone Radio E2E (2026-11-16/17)
 
-- SqueezeboxGo 0.2.7 on card + running: Radio applet loads, opens,
-  browses (Popular populated via nslookup shim), NPO Radio 1 PLAYING:
-  AAC decode, ICY metadata, PCM RUNNING realtime, 0 XRUNs (10-min soak).
-- Fixes: json.lua cjson bridge (HlsMetadata require), nslookup shim
-  (Resolver shells out; absent on stock) with loader sanitize,
-  config-preserving upgrades (entry wiped jive-home!), sem no-ops in
-  shim (watchdog flood gone), product logconf names applets+net.http
-  (unlisted categories default OFF, even errors vanish).
-- KNOWN ISSUE (cosmetic, intermittent): UI tint lottery (white /
-  magenta / teal / yellow = single channels dropping) varying per
-  moment within one boot, no mode PUTs involved. Navigable throughout.
-  Excluded: mode/bitfields (verified correct), skins (no alpha/fade
-  literals), fades (alpha-blend, can't drop channels). Open.
+- SqueezeboxGo 0.2.8 (`049f8aec` zip) deployed via App Center entry:
+  Radio applet loads, opens, browses (Popular populated), NPO Radio 1
+  PLAYING: AAC decode, ICY metadata, PCM RUNNING realtime at exactly
+  44100 Hz (hw_ptr delta over 540s soak), 0 XRUNs, stream +2.1MB.
+  Full evidence: docs/test-results/overnight-radio-20261117.md.
+- Fixes (0.2.5->0.2.8, all committed, gates green): json.lua cjson
+  bridge; nslookup shim + loader sanitize; config-preserving upgrades;
+  sem no-ops in shim; product logconf (applets+net.http); EXPLICIT fb
+  RGB bitfields in preset (tint root cause closed — SDL read stale
+  var fields; green-negative proof; deterministic WHITE x3 windows).
 - KNOWN ISSUE (cosmetic): language-setup help/list overlap (see 0.2.3).
 - dmenu verdict: HEALTHY (paints ~100s after start, display-sleeps
-  ~250s idle). Earlier black-screen reads were too-early/too-late.
-- Peer coordination: device held overnight per user mandate; west told
-  to vendor json + use socket.dns; locks unified to /tmp/sb-hw-test.lock.
-- Pending user: ears-check Radio audio; tap-through 0.2.7; Standalone
-  Base source location; release peers in the morning.
+  ~250s idle). Overnight park: Jive down, dmenu back, fb0 stock
+  1280x1024, locks released, /tmp cleaned.
+- Peer coordination: west/saffron hold stands till user morning
+  release; west owes durable applet fixes (vendor json, socket.dns).
+- Pending user: ears-check Radio audio; tap-through 0.2.8 fresh
+  App Center launch; Standalone Base source location; release peers.
 
 ## Live hardware session 2026-11-16 (RG35XX H V4.0, stock Ubuntu 22.04)
 
