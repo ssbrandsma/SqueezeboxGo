@@ -41,7 +41,7 @@ need() { command -v "$1" >/dev/null 2>&1; }
 # ------------------------------------------------- 1. files present
 for f in pack.sh VERSION README.md INSTALL.md UNINSTALL.md \
 		apps/SqueezeboxGo.sh runtime/launch.sh runtime/restore.sh \
-		runtime/vt-reset.py runtime/fb-preset.py \
+		runtime/vt-reset.py runtime/fb-preset.py runtime/jive-compat/json.lua \
 		icon/make-icon.py tests/test-package.sh tests/test-jive-action.lua; do
 	if [ -f "$GO_ROOT/$f" ]; then ok "file present: $f"; else fail "file missing: $f"; fi
 done
@@ -82,11 +82,25 @@ fi
 grep -qF 'unset SQUEEZEPLAY_NOPLAYBACK' "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 	&& ok 'launch.sh unsets NOPLAYBACK by default' \
 	|| fail 'launch.sh lacks NOPLAYBACK unset'
+# json compat seed (0.2.4: applets requiring "json" died; desktop Jive
+# ships cjson only). launch.sh must seed userpath/json.lua.
+for marker in 'jive-compat/json.lua' 'userpath/json.lua'; do
+	grep -qF "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
+		&& ok "launch.sh seeds json compat: $marker" \
+		|| fail "launch.sh lacks json seed: $marker"
+done
+# product logconf must name the operationally critical facilities:
+# unlisted categories default to OFF (even their errors vanish).
+for marker in 'squeezeplay.applets' 'net.http'; do
+	grep -qF "$marker" "$GO_ROOT/runtime/logconf.lua" 2>/dev/null \
+		&& ok "logconf names $marker" \
+		|| fail "logconf lacks $marker (blind spot)"
+done
 # helpers must run with SYSTEM libs: jive/lib's ancient libexpat breaks
 # system python3 (proven live: XML_SetHashSalt lookup error killed both
 # python helpers). Fixed strings match the run_helper() implementation.
 for marker in 'run_helper() {' 'run_helper "$ROOT/vt-reset.py"' \
-		'run_helper "$ROOT/fb-preset.py"'; do
+		'run_helper "$ROOT/fb-preset.py"' 'fb pre-set to 640x480x32'; do
 	grep -qF "$marker" "$GO_ROOT/runtime/launch.sh" 2>/dev/null \
 		&& ok "launch.sh helper sanitize: $marker" \
 		|| fail "launch.sh helper not sanitized: $marker"
@@ -229,6 +243,39 @@ else
 	skip 'no lua5.1 for action harness'
 fi
 
+# ------------------------------------------------- 5b. json facade
+# The shipped shim must delegate decode/encode to cjson (stubbed here
+# so the test is hermetic).
+if need lua5.1 && [ -f "$GO_ROOT/runtime/jive-compat/json.lua" ]; then
+	if lua5.1 - "$GO_ROOT/runtime/jive-compat/json.lua" >"$TMP/json.out" 2>&1 <<'EOF'
+local calls = {}
+package.preload["cjson"] = function()
+	return {
+		decode = function(s) calls[#calls + 1] = {"decode", s}; return {ok = true} end,
+		encode = function(t) calls[#calls + 1] = {"encode", t}; return "{}" end,
+		null = {},
+	}
+end
+local json = dofile(arg[1])
+assert(json.decode('{"a":1}').ok, "decode must delegate")
+assert(json.encode({}) == "{}", "encode must delegate")
+assert(calls[1][1] == "decode" and calls[2][1] == "encode", "delegate order")
+assert(json.null ~= nil, "null sentinel wanted")
+print("facade delegates")
+EOF
+	then
+		grep -q 'facade delegates' "$TMP/json.out" \
+			&& ok 'json facade delegates to cjson' \
+			|| fail "json facade: $(cat "$TMP/json.out")"
+	else
+		fail "json facade: $(cat "$TMP/json.out")"
+	fi
+elif need lua5.1; then
+	fail 'json facade missing (jive-compat/json.lua)'
+else
+	skip 'no lua5.1 for json facade check'
+fi
+
 # ------------------------------------------------- 6. fixture ZIP build
 ZIP1="$TMP/zip1"; ZIP2="$TMP/zip2"
 if need python3 && need tar && need gzip && need sha256sum && need unzip; then
@@ -287,6 +334,7 @@ APPS/SqueezeboxGo/payload.tar.gz'
 	fi
 	for f in MANIFEST VERSION launch.sh restore.sh vt-reset.py fb-preset.py jive/bin/jive \
 				lib-fbcon/libSDL-1.2.so.0 lib-compat/sysv_shim.so \
+				jive-compat/json.lua \
 				input/evdev2jive-stock input/rg35xxh-stock.map \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHApplet.lua \
 				jive/share/jive/applets/SqueezeboxRG35XXH/SqueezeboxRG35XXHMeta.lua \

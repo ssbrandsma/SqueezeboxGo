@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/sem.h>
 #include <sys/stat.h>
 #include <sys/shm.h>
 #include <unistd.h>
@@ -134,6 +135,34 @@ int shmdt(const void *shmaddr)
 	}
 	errno = EINVAL;
 	return -1;
+}
+
+/* SysV semaphores: the stock kernel lacks these too, and Jive's
+ * platform watchdog (platform_linux.c) calls semget/semctl on every
+ * keepalive, flooding stderr 25x/second. Nothing consumes the
+ * watchdog on this box, so succeed silently. */
+int semget(key_t key, int nsems, int semflg)
+{
+	(void)key;
+	(void)nsems;
+	(void)semflg;
+	return 42;
+}
+
+int semctl(int semid, int semnum, int cmd, ...)
+{
+	(void)semid;
+	(void)semnum;
+	(void)cmd;
+	return 0;
+}
+
+int semop(int semid, struct sembuf *sops, size_t nsops)
+{
+	(void)semid;
+	(void)sops;
+	(void)nsops;
+	return 0;
 }
 
 int shmctl(int shmid, int cmd, struct shmid_ds *buf)

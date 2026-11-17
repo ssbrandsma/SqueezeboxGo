@@ -47,6 +47,10 @@ ls -t "$STATE"/logs/launch-*.log 2>/dev/null | tail -n +6 | xargs -r rm -f
 exec >>"$LOG" 2>&1
 
 log() { printf '[launch] %s\n' "$*"; }
+# Helpers (vt-reset, fb-preset) must run with SYSTEM libraries only:
+# jive/lib ships an ancient libexpat that breaks system python3
+# (proven live: XML_SetHashSalt lookup error killed both helpers).
+run_helper() { env -u LD_LIBRARY_PATH -u LD_PRELOAD "$@"; }
 log "SqueezeboxGo $VERSION starting (root=$ROOT state=$STATE)"
 
 # Persistent operator overrides (SSH-editable, survives upgrades of /opt).
@@ -298,6 +302,15 @@ fi
 stop_frontend
 snapshot
 
+# Pre-set the Jive mode BEFORE SDL inits: SDL reads the current var
+# bitfields at SetVideoMode and mis-shifts green when it starts from
+# the stock 16-bit mode (proven live: white text rendered magenta).
+if [ -x "$ROOT/fb-preset.py" ]; then
+	run_helper "$ROOT/fb-preset.py" 640x480x32 >>"$LOG" 2>&1 \
+		&& log 'fb pre-set to 640x480x32' \
+		|| log 'WARN: fb pre-set failed (watcher may still fix it)'
+fi
+
 start_mapper
 
 # Jive environment (stock-verified defaults; see stock/bundle/jive-env.sh).
@@ -329,6 +342,17 @@ if [ ! -f "$SQUEEZEPLAY_HOME/userpath/logconf.lua" ]; then
 		log 'WARN: payload logconf.lua missing; Jive may not boot'
 	fi
 fi
+# Compat modules some applets expect (luajson "json" lives here, not
+# in the desktop tree). Seed once; never overwrite user files.
+if [ ! -f "$SQUEEZEPLAY_HOME/userpath/json.lua" ]; then
+	if [ -f "$ROOT/jive-compat/json.lua" ]; then
+		cp "$ROOT/jive-compat/json.lua" "$SQUEEZEPLAY_HOME/userpath/json.lua" 2>/dev/null \
+			&& log 'seeded userpath/json.lua (cjson bridge)' \
+			|| log 'WARN: json.lua seed copy failed (json applets will fail)'
+	else
+		log 'WARN: payload jive-compat/json.lua missing; json applets will fail'
+	fi
+fi
 export LD_LIBRARY_PATH="$ROOT/lib-fbcon:$ROOT/jive/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 # SysV SHM shim for the SYSVIPC=n stock kernel: without it
 # decode_alsa_init fails and Jive has no audio (proven live).
@@ -354,10 +378,6 @@ if [ -n "${SQUEEZEPLAY_NOPLAYBACK:-}" ] && [ "$SQUEEZEPLAY_NOPLAYBACK" != '0' ];
 else
 	unset SQUEEZEPLAY_NOPLAYBACK
 fi
-# Helpers (vt-reset, fb-preset) must run with SYSTEM libraries only:
-# jive/lib ships an ancient libexpat that breaks system python3
-# (proven live: XML_SetHashSalt lookup error killed both helpers).
-run_helper() { env -u LD_LIBRARY_PATH -u LD_PRELOAD "$@"; }
 log "env: SQUEEZEBOX_GO=1 JIVE=$JIVE_BIN"
 log "env: SDL video=$SDL_VIDEODRIVER fbdev=$SDL_FBDEV audio=$SDL_AUDIODRIVER/$USEALSADEVICE"
 log "env: LD_LIBRARY_PATH=$LD_LIBRARY_PATH"

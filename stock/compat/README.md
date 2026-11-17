@@ -14,7 +14,7 @@ The shim implements the used subset (`shmget`/`shmat`/`shmdt`/
 
 ### Binary provenance (explicitly justified)
 
-`sysv_shim.so` (12968 bytes, md5 `a3e88487ea82e30360d928b6f3a92bb9`)
+`sysv_shim.so` (md5 `11fb70778e42317a323224aa61da07e5`)
 is committed because the release packer runs on an x86_64 host with no
 aarch64 toolchain, while the app cannot produce audio without it.
 Built natively on the RG35XX H (glibc 2.35, max symbol `GLIBC_2.34`):
@@ -23,9 +23,10 @@ Built natively on the RG35XX H (glibc 2.35, max symbol `GLIBC_2.34`):
 gcc -shared -fPIC -O2 -o sysv_shim.so sysv_shim.c
 ```
 
-from `sysv_shim.c` at commit `824e65e`. Rebuild any time on the
-device with the same one-liner; replace with a cross-built copy once
-the host toolchain exists (then delete this binary and note it here).
+from current `sysv_shim.c` (SHM + sem no-ops; sem added 2026-11-16
+to silence the watchdog flood). Rebuild any time on the device with
+the same one-liner; replace with a cross-built copy once the host
+toolchain exists (then delete this binary and note it here).
 
 ## evdev2jive-stock (from ui/input/evdev2jive.c)
 
